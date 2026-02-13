@@ -10,8 +10,6 @@ import br.com.orquestrator.orquestrator.domain.model.DataSpec;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Component;
 
@@ -19,7 +17,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
+/**
+ * Agendador de tarefas globais.
+ * Java 21: Refatorado para execução síncrona via Bootstrapper.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -31,9 +34,11 @@ public class GlobalTaskScheduler {
     private final GlobalDataCache globalCache;
     private final TaskScheduler taskScheduler;
 
-    @EventListener(ApplicationReadyEvent.class)
-    public void onStartup() {
-        log.info("Inicializando tasks globais...");
+    /**
+     * Inicializa o agendamento de tasks globais. Chamado pelo OrchestratorBootstrapper.
+     */
+    public void initialize() {
+        log.info("Inicializando agendamento de tasks globais...");
         List<TaskDefinition> globalTasks = taskProvider.findAllActive().stream()
                 .filter(TaskDefinition::isGlobal)
                 .toList();
@@ -46,23 +51,29 @@ public class GlobalTaskScheduler {
     private void scheduleTask(TaskDefinition def) {
         Runnable taskRunner = () -> executeGlobalTask(def);
 
+        // Execução inicial síncrona
         taskRunner.run();
 
         if (def.getRefreshIntervalMs() > 0) {
             taskScheduler.scheduleAtFixedRate(taskRunner, Duration.ofMillis(def.getRefreshIntervalMs()));
-            log.info("Task global [{}] agendada a cada {}ms", def.getNodeId(), def.getRefreshIntervalMs());
+            log.info(STR."Task global [\{def.getNodeId()}] agendada a cada \{def.getRefreshIntervalMs()}ms");
         }
     }
 
     private void executeGlobalTask(TaskDefinition def) {
         try {
-            log.debug("Executando refresh da task global: {}", def.getNodeId());
+            log.debug(STR."Executando refresh da task global: \{def.getNodeId()}");
             
-            String correlationId = "GLOBAL-REFRESH-" + def.getNodeId();
+            String correlationId = STR."GLOBAL-REFRESH-\{def.getNodeId()}";
+            String operationType = "GLOBAL_SYSTEM";
             ExecutionTracker tracker = new ExecutionTracker();
             
-            // CORREÇÃO: Removido o argumento globalCache
-            ExecutionContext context = new ExecutionContext(correlationId, Collections.emptyMap(), tracker);
+            ExecutionContext context = new ExecutionContext(
+                    correlationId, 
+                    operationType, 
+                    tracker, 
+                    Map.of()
+            );
             
             long timeout = def.getTimeoutMs() > 0 ? def.getTimeoutMs() : 3600000;
             context.setDeadline(Instant.now().plusMillis(timeout));
@@ -80,10 +91,10 @@ public class GlobalTaskScheduler {
                     }
                 }
             }
-            log.debug("Task global [{}] atualizada com sucesso.", def.getNodeId());
+            log.debug(STR."Task global [\{def.getNodeId()}] atualizada com sucesso.");
 
         } catch (Exception e) {
-            log.error("Falha ao atualizar task global [{}]: {}", def.getNodeId(), e.getMessage());
+            log.error(STR."Falha ao atualizar task global [\{def.getNodeId()}]: \{e.getMessage()}");
         }
     }
 }

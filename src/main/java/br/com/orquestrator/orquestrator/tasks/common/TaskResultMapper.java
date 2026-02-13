@@ -6,10 +6,8 @@ import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.infra.el.EvaluationContext;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionService;
 import br.com.orquestrator.orquestrator.tasks.base.TaskData;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.convert.ConversionService;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -17,69 +15,78 @@ import org.springframework.util.StringUtils;
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
-
+/**
+ * Especialista em mapear o resultado bruto de uma task para o TaskData.
+ * Realiza o espalhamento de dados baseado no contrato (DataSpec) ou mapeamento total.
+ * Java 21: Refatorado para maior clareza semântica e performance.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class TaskResultMapper {
 
     private final ExpressionService expressionService;
-    private final ConversionService conversionService;
-    private final ObjectMapper objectMapper;
 
+    /**
+     * Mapeia o resultado bruto para o barramento de dados da task.
+     */
     public void mapResult(@NonNull final TaskData data, final Object result, @NonNull final TaskDefinition definition) {
+        // 1. Garante metadados básicos de observabilidade
         data.addMetadata(TaskMetadataHelper.BODY, result);
-        
-        if (isNull(data.getMetadata(TaskMetadataHelper.STATUS))) {
-            data.addMetadata(TaskMetadataHelper.STATUS, 200);
-        }
+        ensureDefaultStatus(data);
 
         final List<DataSpec> produces = definition.getProduces();
-        if (isNull(produces) || produces.isEmpty()) {
-            if (nonNull(result)) {
-                @SuppressWarnings("unchecked")
-                final Map<String, Object> map = conversionService.convert(result, Map.class);
-                if (nonNull(map)) {
-                    map.forEach(data::put);
-                }
-            }
+
+        // 2. Cenário: Sem contrato de saída (Mapeia tudo que puder se for um Mapa)
+        if (produces == null || produces.isEmpty()) {
+            mapEverything(data, result);
             return;
         }
 
+        // 3. Cenário: Mapeamento Semântico (Usa o EvaluationContext para extrair caminhos específicos)
         mapSemanticOutputs(data, result, produces);
     }
 
-    private void mapSemanticOutputs(final TaskData data, final Object result, final List<DataSpec> produces) {
-        final EvaluationContext evalContext = expressionService.create(result);
-
-        for (int i = 0; i < produces.size(); i++) {
-            DataSpec spec = produces.get(i);
-            final Object value = resolveValue(spec, result, evalContext);
-            
-            if (nonNull(value)) {
-                data.put(spec.name(), value);
-            }
+    private void ensureDefaultStatus(TaskData data) {
+        if (data.getMetadata(TaskMetadataHelper.STATUS) == null) {
+            data.addMetadata(TaskMetadataHelper.STATUS, 200);
         }
     }
 
-    private Object resolveValue(final DataSpec spec, final Object rootResult, final EvaluationContext evalContext) {
-        if (StringUtils.hasText(spec.path())) {
-            if (rootResult instanceof Map<?, ?> mapResult && mapResult.containsKey(spec.path())) {
-                return mapResult.get(spec.path());
-            }
-            try {
-                return evalContext.evaluate(spec.path(), Object.class);
-            } catch (Exception e) {
-                log.trace("Falha ao avaliar path '{}': {}", spec.path(), e.getMessage());
-            }
+    private void mapEverything(TaskData data, Object result) {
+        // Java 21: Pattern Matching para extração rápida de mapas
+        if (result instanceof Map<?, ?> map) {
+            map.forEach((k, v) -> data.put(String.valueOf(k), v));
+        } else if (result != null) {
+            log.trace("Resultado não é um mapa e não há 'produces' definido. O dado não foi espalhado.");
         }
-        
+    }
+
+    private void mapSemanticOutputs(TaskData data, Object result, List<DataSpec> produces) {
+        // Criamos o contexto de avaliação com o RESULTADO como raiz para navegação de caminhos
+        final EvaluationContext evalContext = expressionService.create(result);
+
+        // Java 21: Iteração funcional e limpa
+        produces.forEach(spec -> {
+            Object value = resolveValue(spec, result, evalContext);
+            if (value != null) {
+                data.put(spec.name(), value);
+            }
+        });
+    }
+
+    private Object resolveValue(DataSpec spec, Object root, EvaluationContext context) {
+        // Se não tem path definido, o valor é o próprio objeto raiz (útil para retornos atômicos)
         if (!StringUtils.hasText(spec.path())) {
-            return rootResult;
+            return root;
         }
 
-        return null;
+        // Tenta avaliar o path (ex: "user.id", "response.data[0]", etc)
+        try {
+            return context.evaluate(spec.path(), Object.class);
+        } catch (Exception e) {
+            log.debug("Não foi possível extrair o path '{}' do resultado da task.", spec.path());
+            return null;
+        }
     }
 }

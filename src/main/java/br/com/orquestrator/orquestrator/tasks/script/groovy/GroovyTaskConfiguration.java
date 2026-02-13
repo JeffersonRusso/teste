@@ -1,9 +1,13 @@
 package br.com.orquestrator.orquestrator.tasks.script.groovy;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.util.Map;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+/**
+ * Configuração imutável e tipada para a GroovyTask.
+ * Representa o contrato de negócio da tarefa, isolado da infraestrutura de parsing.
+ */
 public record GroovyTaskConfiguration(
+    String scriptName,
     String scriptBody,
-    String scriptName
+    Map<String, Object> additionalParams
 ) {}

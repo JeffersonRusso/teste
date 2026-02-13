@@ -11,12 +11,15 @@ import br.com.orquestrator.orquestrator.tasks.interceptor.config.CacheConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Interceptor responsável pela lógica de cache de resultados.
+ * Java 21: Utiliza String Templates e Pattern Matching para manipulação de dados.
+ */
 @Slf4j
 @Component("CACHE")
 public class CacheInterceptor extends TypedTaskInterceptor<CacheConfig> {
@@ -38,65 +41,71 @@ public class CacheInterceptor extends TypedTaskInterceptor<CacheConfig> {
             return;
         }
 
-        CacheProvider provider = providers.getOrDefault(config.provider(), providers.get("IN_MEMORY"));
         String cacheName = definition.getNodeId().value();
-        
-        // Nota: Aqui ainda precisamos do contexto original para resolver a chave do cache.
-        // Como o TaskData é uma ContractView, podemos acessar o contexto se necessário,
-        // mas por simplicidade, vamos assumir que a chave pode ser resolvida com o que a task tem.
-        // Se falhar, precisaremos de um método no TaskData para expor o contexto de avaliação.
-        EvaluationContext evalContext = expressionService.create(data); 
-        String cacheKey = evalContext.resolve(config.key(), String.class);
-        
-        data.addMetadata("cache.key", cacheKey);
-        data.addMetadata("cache.provider", provider.getType());
+        CacheProvider provider = providers.getOrDefault(config.provider(), providers.get("IN_MEMORY"));
 
-        Optional<Object> cachedResult = provider.get(cacheName, cacheKey);
-        
-        if (cachedResult.isPresent()) {
-            data.addMetadata("cache.hit", true);
-            mapCachedResultToContext(data, cachedResult.get(), definition);
-            return;
-        }
+        try {
+            // 1. Resolução da Chave (Fast Path)
+            EvaluationContext evalContext = expressionService.create(data);
+            String cacheKey = evalContext.resolve(config.key(), String.class);
 
-        data.addMetadata("cache.hit", false);
-        next.proceed(data);
-        
-        Object resultToCache = extractResultToCache(data, definition);
-        if (resultToCache != null) {
-            provider.put(cacheName, cacheKey, resultToCache, config.ttlMs());
+            data.addMetadata("cache.key", cacheKey);
+
+            // 2. Tentativa de Recuperação
+            Optional<Object> cachedResult = provider.get(cacheName, cacheKey);
+
+            if (cachedResult.isPresent()) {
+                data.addMetadata("cache.hit", true);
+                applyCachedData(data, cachedResult.get(), definition);
+                return;
+            }
+
+            // 3. Cache Miss: Executa a Task
+            data.addMetadata("cache.hit", false);
+            next.proceed(data);
+
+            // 4. Armazenamento Assíncrono/Silencioso
+            storeInCache(data, definition, provider, cacheName, cacheKey, config.ttlMs());
+
+        } catch (Exception e) {
+            // Se o cache falhar (infra), o pipeline DEVE continuar
+            log.error(STR."Falha na operação de cache para \{cacheName}: \{e.getMessage()}");
+            
+            // Java 21: Verificação de metadado usando getMetadata e comparação nula
+            if (data.getMetadata("cache.hit") == null) {
+                next.proceed(data);
+            }
         }
     }
 
-    private void mapCachedResultToContext(TaskData data, Object result, TaskDefinition definition) {
+    private void applyCachedData(TaskData data, Object result, TaskDefinition definition) {
         List<DataSpec> produces = definition.getProduces();
         if (produces == null || produces.isEmpty()) return;
 
+        // Java 21 Pattern Matching para extração de Mapas
         if (result instanceof Map<?, ?> mapResult) {
-             for (int i = 0; i < produces.size(); i++) {
-                 String name = produces.get(i).name();
-                 Object value = mapResult.get(name);
-                 data.put(name, value != null ? value : result);
-             }
-        } else {
+            produces.forEach(spec -> {
+                Object val = mapResult.get(spec.name());
+                if (val != null) data.put(spec.name(), val);
+            });
+        } else if (produces.size() == 1) {
             data.put(produces.getFirst().name(), result);
         }
     }
 
-    private Object extractResultToCache(TaskData data, TaskDefinition definition) {
-        List<DataSpec> produces = definition.getProduces();
-        if (produces == null || produces.isEmpty()) return null;
+    private void storeInCache(TaskData data, TaskDefinition def, CacheProvider provider, String name, String key, long ttl) {
+        List<DataSpec> produces = def.getProduces();
+        if (produces == null || produces.isEmpty()) return;
 
-        if (produces.size() == 1) {
-            return data.get(produces.getFirst().name());
-        }
+        // Construção eficiente do payload de cache usando Stream API
+        Object resultToCache = produces.size() == 1
+                ? data.get(produces.getFirst().name())
+                : produces.stream()
+                .filter(spec -> data.get(spec.name()) != null)
+                .collect(Collectors.toMap(DataSpec::name, spec -> data.get(spec.name())));
 
-        Map<String, Object> combined = new HashMap<>();
-        for (int i = 0; i < produces.size(); i++) {
-            String name = produces.get(i).name();
-            Object val = data.get(name);
-            if (val != null) combined.put(name, val);
+        if (resultToCache != null) {
+            provider.put(name, key, resultToCache, ttl);
         }
-        return combined.isEmpty() ? null : combined;
     }
 }

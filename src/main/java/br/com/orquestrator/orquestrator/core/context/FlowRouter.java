@@ -1,5 +1,8 @@
 package br.com.orquestrator.orquestrator.core.context;
 
+import br.com.orquestrator.orquestrator.adapter.persistence.repository.FlowConfigProvider;
+import br.com.orquestrator.orquestrator.domain.model.FlowDefinition;
+import br.com.orquestrator.orquestrator.exception.PipelineException;
 import br.com.orquestrator.orquestrator.infra.config.AppConfigService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,7 +15,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Estrategista de roteamento de fluxos.
- * Decide a versão do fluxo a ser executada, suportando estratégias de Canary Release.
+ * Decide a versão do fluxo a ser executada e entrega a definição completa (Mapa do Caminho).
+ * Suporta estratégias de Canary Release e Versionamento.
  */
 @Slf4j
 @Component
@@ -20,20 +24,50 @@ import java.util.concurrent.ThreadLocalRandom;
 public class FlowRouter {
 
     private final AppConfigService appConfigService;
+    private final FlowConfigProvider flowConfigProvider;
     private final ObjectMapper objectMapper;
 
     /**
-     * Resolve a versão do fluxo para o tipo de operação fornecido.
+     * Rota a operação para a definição de fluxo correta, aplicando regras de Canary.
+     * Java 21: Retorna a FlowDefinition completa, encapsulando a complexidade de roteamento.
      */
-    public Integer resolveVersion(String operationType) {
+    public FlowDefinition route(String operationType) {
+        // 1. Resolve a versão ideal (Canary ou Default)
+        Integer version = resolveVersion(operationType);
+        
+        log.debug("Roteando operação [{}] para versão [{}]", 
+                operationType, version != null ? version : "LATEST");
+
+        // 2. Obtém a definição completa do fluxo
+        return flowConfigProvider.getFlow(operationType, version)
+                .orElseThrow(() -> new PipelineException(STR."Fluxo não encontrado para: \{operationType} (v\{version})"));
+    }
+
+    private Integer resolveVersion(String operationType) {
         return parseConfig(operationType)
-                .map(config -> resolveFromConfig(config, operationType))
+                .map(config -> resolveByStrategy(config, operationType))
                 .orElse(null);
     }
 
+    private Integer resolveByStrategy(FlowRoutingConfig config, String operationType) {
+        if (config.canary() != null && isCanaryActive(config.canary().getPercentage())) {
+            return config.canary().getVersion();
+        }
+        return config.getDefaultVersion();
+    }
+
+    private boolean isCanaryActive(int percentage) {
+        if (percentage <= 0) return false;
+        if (percentage >= 100) return true;
+        return ThreadLocalRandom.current().nextInt(100) < percentage;
+    }
+
     private Optional<FlowRoutingConfig> parseConfig(String operationType) {
-        JsonNode rawConfig = appConfigService.getConfig(operationType);
-        
+        JsonNode rawConfig = appConfigService.getConfig(STR."routing.\{operationType}");
+        if (rawConfig == null || rawConfig.isMissingNode()) {
+            rawConfig = appConfigService.getConfig(operationType);
+        }
+
         if (rawConfig == null || rawConfig.isMissingNode()) {
             return Optional.empty();
         }
@@ -41,24 +75,8 @@ public class FlowRouter {
         try {
             return Optional.of(objectMapper.treeToValue(rawConfig, FlowRoutingConfig.class));
         } catch (Exception e) {
-            log.error("Falha ao parsear configuração de roteamento para [{}]: {}", operationType, e.getMessage());
+            log.error("Erro no roteamento de [{}]: {}", operationType, e.getMessage());
             return Optional.empty();
         }
-    }
-
-    private Integer resolveFromConfig(FlowRoutingConfig config, String operationType) {
-        if (config.canary() != null && shouldRouteToCanary(config.canary().getPercentage())) {
-            int canaryVersion = config.canary().getVersion();
-            log.info("Roteamento CANARY ativado para [{}]: Direcionando para v{}", operationType, canaryVersion);
-            return canaryVersion;
-        }
-
-        return config.getDefaultVersion();
-    }
-
-    private boolean shouldRouteToCanary(int percentage) {
-        if (percentage <= 0) return false;
-        if (percentage >= 100) return true;
-        return ThreadLocalRandom.current().nextInt(100) < percentage;
     }
 }

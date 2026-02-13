@@ -6,8 +6,6 @@ import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +13,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Responsável pelo aquecimento do cache de instâncias de Task.
+ * Java 21: Refatorado para execução síncrona via Bootstrapper.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -23,9 +25,11 @@ public class TaskRegistryWarmup {
     private final TaskCatalogProvider taskProvider;
     private final TaskRegistry taskRegistry;
 
-    @EventListener(ApplicationReadyEvent.class)
-    public void onStartup() {
-        log.info("Iniciando aquecimento (warmup) do catálogo de tasks...");
+    /**
+     * Executa o aquecimento inicial do catálogo. Chamado pelo OrchestratorBootstrapper.
+     */
+    public void warmup() {
+        log.info("Aquecendo catálogo de instâncias de Task...");
         refreshTasks();
     }
 
@@ -54,15 +58,14 @@ public class TaskRegistryWarmup {
                 Task task = taskRegistry.createNewTask(def);
                 newCache.put(def.getNodeId(), task);
             } catch (Exception e) {
-                log.error("FALHA ao carregar task [{}]: {}", def.getNodeId(), e.getMessage());
+                log.error(STR."FALHA ao carregar task [\{def.getNodeId()}]: \{e.getMessage()}");
                 errorCount++;
             }
         }
 
         if (!newCache.isEmpty()) {
             taskRegistry.refreshRegistry(newCache);
-            log.info("Catálogo atualizado em {}ms. Tasks: {}, Erros: {}", 
-                    System.currentTimeMillis() - start, newCache.size(), errorCount);
+            log.info(STR."Catálogo de instâncias atualizado em \{System.currentTimeMillis() - start}ms. Tasks: \{newCache.size()}, Erros: \{errorCount}");
         } else {
             log.warn("Nenhuma task válida encontrada. Cache não atualizado.");
         }

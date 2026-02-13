@@ -1,13 +1,14 @@
 package br.com.orquestrator.orquestrator.tasks.http;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
+import java.util.Map;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+/**
+ * Representa a configuração imutável e tipada de uma HttpTask.
+ * Totalmente desacoplada de infraestrutura de JSON (Jackson).
+ */
 public record HttpTaskConfiguration(
-    @JsonProperty("url") String urlTemplate,
-    @JsonProperty("method") String method,
-    @JsonProperty("body") JsonNode bodyConfig,
-    @JsonProperty("headers") JsonNode headersConfig
+    String urlTemplate,
+    String method,
+    String bodyTemplate,
+    Map<String, String> headersTemplates
 ) {}

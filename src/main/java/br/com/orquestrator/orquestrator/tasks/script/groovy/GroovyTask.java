@@ -14,33 +14,43 @@ public class GroovyTask extends AbstractTask {
 
     private final GroovyBindingFactory bindingFactory;
     private final TaskResultMapper resultMapper;
-    private final Class<? extends Script> scriptClass;
+    private final GroovyScriptLoader scriptLoader;
+    private final GroovyTaskConfiguration config;
 
-    public GroovyTask(TaskDefinition definition, 
+    public GroovyTask(TaskDefinition definition,
                       GroovyScriptLoader scriptLoader,
                       GroovyBindingFactory bindingFactory,
-                      TaskResultMapper resultMapper) {
+                      TaskResultMapper resultMapper,
+                      GroovyTaskConfiguration config) {
         super(definition);
+        this.scriptLoader = scriptLoader;
         this.bindingFactory = bindingFactory;
         this.resultMapper = resultMapper;
-        scriptLoader.validateConfig(definition.getConfig(), definition.getNodeId());
-        this.scriptClass = scriptLoader.load(definition.getConfig(), definition.getNodeId());
+        this.config = config;
     }
 
     @Override
     public void validateConfig() {
+        if ((config.scriptName() == null || config.scriptName().isBlank()) && 
+            (config.scriptBody() == null || config.scriptBody().isBlank())) {
+            throw new PipelineException("Configuração inválida: scriptName ou scriptBody deve ser fornecido.");
+        }
     }
 
     @Override
     public void execute(TaskData data) {
         try {
-            data.addMetadata("scriptName", scriptClass.getSimpleName());
+            // Carrega a classe do script (pode vir do cache)
+            Class<? extends Script> scriptClass = loadScriptClass();
+            
+            data.addMetadata("scriptIdentifier", config.scriptName() != null ? config.scriptName() : "inline");
 
             // Cria o binding a partir do TaskData (respeitando o contrato)
             Binding binding = bindingFactory.createBinding(data, definition);
 
             log.debug("   [GroovyTask] Executando script: {}", definition.getNodeId().value());
 
+            // Java 21: Instanciação moderna
             Script script = scriptClass.getConstructor(Binding.class).newInstance(binding);
             Object result = script.run();
 
@@ -53,5 +63,13 @@ public class GroovyTask extends AbstractTask {
             throw new PipelineException("Erro na execução do script Groovy: " + nodeId, e)
                     .withNodeId(nodeId);
         }
+    }
+
+    private Class<? extends Script> loadScriptClass() {
+        // O loader ainda é necessário para gerenciar o cache de compilação
+        if (config.scriptBody() != null) {
+            return scriptLoader.loadFromSource("inline:" + definition.getNodeId().value(), config.scriptBody());
+        }
+        return scriptLoader.loadFromFile(config.scriptName());
     }
 }

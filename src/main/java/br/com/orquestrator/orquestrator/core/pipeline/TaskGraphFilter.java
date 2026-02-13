@@ -16,9 +16,17 @@ public class TaskGraphFilter {
      * Filtra a lista de tasks mantendo apenas aquelas necessárias para produzir os outputs desejados
      * (Backward Chaining).
      */
-    public List<TaskDefinition> filterByDependencies(@NonNull final List<TaskDefinition> tasks, @NonNull final Set<String> finalOutputKeys) {
+    public List<TaskDefinition> filterByDependencies(@NonNull final List<TaskDefinition> tasks, final Set<String> finalOutputKeys) {
+        // Java 21: Garantia de conjunto não nulo para evitar NPE na inicialização da Queue
+        final Set<String> targets = (finalOutputKeys == null) ? Collections.emptySet() : finalOutputKeys;
+        
+        if (targets.isEmpty()) {
+            log.debug("Nenhum output requerido especificado. Retornando lista original de tasks.");
+            return tasks;
+        }
+
         final Map<String, TaskDefinition> producerMap = buildProducerMap(tasks);
-        final Set<TaskDefinition> necessaryTasks = identifyNecessaryTasks(producerMap, finalOutputKeys);
+        final Set<TaskDefinition> necessaryTasks = identifyNecessaryTasks(producerMap, targets);
         
         return pruneList(tasks, necessaryTasks);
     }
@@ -37,7 +45,7 @@ public class TaskGraphFilter {
 
         while (!keysToResolve.isEmpty()) {
             final String key = keysToResolve.poll();
-            if (!resolvedKeys.add(key)) continue;
+            if (key == null || !resolvedKeys.add(key)) continue;
 
             processKey(key, producerMap, necessaryTasks, keysToResolve);
             processNestedKey(key, resolvedKeys, keysToResolve);
@@ -51,7 +59,9 @@ public class TaskGraphFilter {
         
         if (producer != null && necessaryTasks.add(producer)) {
             if (producer.getRequires() != null) {
-                producer.getRequires().forEach(req -> keysToResolve.add(req.name()));
+                producer.getRequires().forEach(req -> {
+                    if (req.name() != null) keysToResolve.add(req.name());
+                });
             }
         }
     }

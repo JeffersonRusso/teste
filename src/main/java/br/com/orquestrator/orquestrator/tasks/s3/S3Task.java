@@ -7,7 +7,6 @@ import br.com.orquestrator.orquestrator.infra.el.ExpressionService;
 import br.com.orquestrator.orquestrator.tasks.base.AbstractTask;
 import br.com.orquestrator.orquestrator.tasks.base.TaskData;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,19 +19,12 @@ public class S3Task extends AbstractTask {
 
     public S3Task(TaskDefinition definition, 
                   ObjectMapper objectMapper,
-                  ExpressionService expressionService) {
+                  ExpressionService expressionService,
+                  S3TaskConfiguration config) {
         super(definition);
         this.objectMapper = objectMapper;
         this.expressionService = expressionService;
-        this.config = parseConfiguration(definition.getConfig());
-    }
-
-    private S3TaskConfiguration parseConfiguration(JsonNode jsonConfig) {
-        try {
-            return objectMapper.treeToValue(jsonConfig, S3TaskConfiguration.class);
-        } catch (JsonProcessingException e) {
-            throw new TaskConfigurationException("Erro ao parsear configuração da S3Task: " + definition.getNodeId(), e);
-        }
+        this.config = config;
     }
 
     @Override
@@ -58,12 +50,16 @@ public class S3Task extends AbstractTask {
         uploadToS3(config.bucket(), key, content);
 
         data.addMetadata("s3.location", STR."s3://\{config.bucket()}/\{key}");
+        if (config.region() != null) {
+            data.addMetadata("s3.region", config.region());
+        }
     }
 
     private void uploadToS3(String bucket, String key, Object content) {
         try {
             String jsonContent = objectMapper.writeValueAsString(content);
             log.info("[S3Task] Uploading to s3://{}/{} (Size: {} bytes)", bucket, key, jsonContent.length());
+            // Aqui entraria a chamada real ao SDK da AWS
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Erro ao serializar conteúdo para S3", e);
         }

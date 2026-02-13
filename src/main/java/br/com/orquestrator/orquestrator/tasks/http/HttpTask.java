@@ -1,67 +1,85 @@
 package br.com.orquestrator.orquestrator.tasks.http;
 
-import br.com.orquestrator.orquestrator.exception.TaskConfigurationException;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
+import br.com.orquestrator.orquestrator.exception.TaskConfigurationException;
+import br.com.orquestrator.orquestrator.infra.el.EvaluationContext;
+import br.com.orquestrator.orquestrator.infra.el.ExpressionService;
 import br.com.orquestrator.orquestrator.tasks.base.AbstractTask;
 import br.com.orquestrator.orquestrator.tasks.base.TaskData;
-import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Task responsável por realizar chamadas HTTP.
+ * Centraliza a lógica de resolução de templates (URL, Body, Headers) antes da execução.
+ */
 @Slf4j
 public class HttpTask extends AbstractTask {
 
-    private final HttpRequestFactory requestFactory;
     private final HttpExecutor executor;
     private final HttpTaskConfiguration config;
+    private final ExpressionService expressionService;
 
     public HttpTask(TaskDefinition definition,
-                    HttpRequestFactory requestFactory,
-                    HttpExecutor executor) {
+                    HttpExecutor executor,
+                    HttpTaskConfiguration config,
+                    ExpressionService expressionService) {
         super(definition);
-        this.requestFactory = requestFactory;
         this.executor = executor;
-        this.config = parseConfiguration(definition.getConfig());
-    }
-
-    private HttpTaskConfiguration parseConfiguration(JsonNode jsonConfig) {
-        if (jsonConfig == null || jsonConfig.isMissingNode()) {
-            throw new TaskConfigurationException("Configuração ausente para HttpTask: " + definition.getNodeId());
-        }
-
-        String url = jsonConfig.has("url") ? jsonConfig.get("url").asText() : null;
-        String method = jsonConfig.has("method") ? jsonConfig.get("method").asText() : "GET";
-        JsonNode body = jsonConfig.get("body");
-        JsonNode headers = jsonConfig.get("headers");
-
-        if (url == null || url.isBlank()) {
-            throw new TaskConfigurationException("URL obrigatória para HttpTask: " + definition.getNodeId());
-        }
-
-        return new HttpTaskConfiguration(url, method, body, headers);
+        this.config = config;
+        this.expressionService = expressionService;
     }
 
     @Override
     public void validateConfig() {
-        if (config.method() == null || config.method().isBlank()) {
-            throw new TaskConfigurationException("Config 'method' é obrigatória para a task: " + definition.getNodeId());
+        if (config.urlTemplate() == null || config.urlTemplate().isBlank()) {
+            throw new TaskConfigurationException("URL obrigatória para HttpTask: " + definition.getNodeId());
         }
     }
 
     @Override
     public void execute(TaskData data) {
-        // O timeout é gerenciado pela infraestrutura do pipeline, mas podemos passar o valor da definição
-        long timeoutMs = definition.getTimeoutMs();
+        EvaluationContext evalContext = expressionService.create(data);
 
-        OrchestratorRequest request = requestFactory.create(
-                config.urlTemplate(),
+        // 1. Resolve URL
+        String url = evalContext.resolve(config.urlTemplate(), String.class);
+
+        // 2. Resolve Body (como String/JSON)
+        String body = config.bodyTemplate() != null ? 
+                      evalContext.resolve(config.bodyTemplate(), String.class) : null;
+
+        // 3. Resolve Headers
+        Map<String, String> headers = resolveHeaders(evalContext);
+
+        // 4. Cria a Intenção de Requisição
+        OrchestratorRequest request = new OrchestratorRequest(
                 config.method(),
-                timeoutMs,
-                config.bodyConfig(),
-                config.headersConfig(),
-                data
+                URI.create(url),
+                headers,
+                body,
+                definition.getTimeoutMs()
         );
 
-        // O executor precisa do TaskData para registrar o status e o body
+        // 5. Delega a execução para a infraestrutura
         executor.execute(request, definition, data);
+    }
+
+    private Map<String, String> resolveHeaders(EvaluationContext context) {
+        Map<String, String> resolved = new HashMap<>();
+        
+        // Headers padrão
+        resolved.put("Content-Type", "application/json");
+        resolved.put("Accept", "application/json");
+
+        // Headers configurados (sobrescrevem os padrões se necessário)
+        if (config.headersTemplates() != null) {
+            config.headersTemplates().forEach((key, template) -> 
+                resolved.put(key, context.resolve(template, String.class))
+            );
+        }
+        return resolved;
     }
 }

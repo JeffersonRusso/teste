@@ -14,13 +14,15 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  * Adaptador JPA para fornecimento de configurações de fluxo.
  * Realiza a tradução entre entidades de banco de dados e o modelo de domínio.
+ * Java 21: Refatorado para maior performance, imutabilidade e fluidez.
  */
 @Slf4j
 @Component
@@ -34,7 +36,7 @@ public class JpaFlowConfigAdapter implements FlowConfigProvider {
     @Override
     @Cacheable(value = "flow_configs", key = "#operationType", unless = "#result == null")
     public Optional<FlowDefinition> getFlow(String operationType) {
-        log.debug("Cache MISS: Buscando FlowConfig mais recente para [{}]", operationType);
+        log.debug(STR."Cache MISS: Buscando FlowConfig mais recente para [\{operationType}]");
         return repository.findLatestActive(operationType)
                 .map(this::mapToDefinition);
     }
@@ -42,36 +44,47 @@ public class JpaFlowConfigAdapter implements FlowConfigProvider {
     @Override
     @Cacheable(value = "flow_configs_version", key = "#operationType + '-' + #version", unless = "#result == null")
     public Optional<FlowDefinition> getFlow(String operationType, Integer version) {
-        if (version == null) {
-            return getFlow(operationType);
-        }
-        log.debug("Cache MISS: Buscando FlowConfig para [{}] versão [{}]", operationType, version);
-        return repository.findSpecificVersion(operationType, version)
+        return Optional.ofNullable(version)
+                .flatMap(v -> {
+                    log.debug(STR."Cache MISS: Buscando FlowConfig para [\{operationType}] versão [\{v}]");
+                    return repository.findSpecificVersion(operationType, v);
+                })
+                .or(() -> repository.findLatestActive(operationType)) // Fallback elegante para a última versão
                 .map(this::mapToDefinition);
     }
 
     private FlowDefinition mapToDefinition(FlowConfigEntity entity) {
+        // Otimização: Extraímos strings simples diretamente sem overhead do Jackson convertValue
+        Set<String> requiredOutputs = extractStringSet(entity.getRequiredOutputs());
+        
+        // Para objetos complexos (TaskReference), mantemos o parsing tipado
+        Set<TaskReference> allowedTasks = parseJson(entity.getAllowedTasks(), new TypeReference<Set<TaskReference>>() {});
+
         return new FlowDefinition(
                 entity.getOperationType(),
-                parseJson(entity.getRequiredOutputs(), new TypeReference<Set<String>>() {}),
-                parseJson(entity.getAllowedTasks(), new TypeReference<Set<TaskReference>>() {})
+                requiredOutputs,
+                allowedTasks
         );
     }
 
-    /**
-     * Método genérico para converter JsonNode em coleções tipadas.
-     */
+    private Set<String> extractStringSet(JsonNode node) {
+        if (node == null || !node.isArray()) return Set.of();
+        
+        // Java 21: Stream direto para Set imutável e eficiente
+        return StreamSupport.stream(node.spliterator(), false)
+                .map(JsonNode::asText)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
     private <T> Set<T> parseJson(JsonNode json, TypeReference<Set<T>> typeReference) {
-        if (json == null || !json.isArray()) {
-            return Collections.emptySet();
-        }
+        if (json == null || !json.isArray()) return Set.of();
+        
         try {
-            // O Jackson resolve automaticamente a conversão de JsonNode para o Set desejado
             Set<T> result = objectMapper.convertValue(json, typeReference);
-            return result != null ? Collections.unmodifiableSet(result) : Collections.emptySet();
+            return result != null ? Set.copyOf(result) : Set.of();
         } catch (Exception e) {
-            log.error("Falha ao parsear configuração JSON: {} [Tipo: {}]", e.getMessage(), typeReference.getType());
-            return Collections.emptySet();
+            log.error(STR."Falha ao parsear configuração JSON: \{e.getMessage()}");
+            return Set.of();
         }
     }
 }

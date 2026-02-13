@@ -1,6 +1,5 @@
 package br.com.orquestrator.orquestrator.service;
 
-import br.com.orquestrator.orquestrator.core.context.FlowRouter;
 import br.com.orquestrator.orquestrator.core.context.RiskContextFactory;
 import br.com.orquestrator.orquestrator.core.engine.PipelineEngine;
 import br.com.orquestrator.orquestrator.core.pipeline.PipelineManager;
@@ -17,7 +16,8 @@ import java.util.stream.Collectors;
 
 /**
  * Orquestrador principal de análise de risco.
- * Coordena o ciclo de vida da execução: Contexto -> Roteamento -> Pipeline -> Motor -> Resposta.
+ * Coordena o ciclo de vida da execução: Contexto -> Pipeline -> Motor -> Resposta.
+ * Agora totalmente desacoplado da lógica de roteamento e versões.
  */
 @Slf4j
 @Service
@@ -27,7 +27,6 @@ public class RiskAnalysisService {
     private final RiskContextFactory contextFactory;
     private final PipelineManager pipelineManager;
     private final PipelineEngine engine;
-    private final FlowRouter flowRouter;
 
     public Map<String, Object> analyze(final String operationType, final Map<String, String> headers, final JsonNode rawBody) {
         return analyze(operationType, headers, rawBody, null);
@@ -41,19 +40,13 @@ public class RiskAnalysisService {
         // 1. Inicialização do Contexto (Normalização inclusa)
         final ExecutionContext context = contextFactory.create(operationType, headers, rawBody);
         
-        // 2. Roteamento Dinâmico (Canary/Versão)
-        final Integer version = flowRouter.resolveVersion(operationType);
-        if (version != null) {
-            context.addTaskMetadata("system", "flow_version", version);
-        }
+        // 2. Construção do Pipeline (O roteamento agora é interno ao PipelineManager/Factory)
+        final Pipeline pipeline = pipelineManager.createAndValidate(context, requiredOutputs, null);
         
-        // 3. Construção do Pipeline (Otimizado por dependências)
-        final Pipeline pipeline = pipelineManager.createAndValidate(context, requiredOutputs, version);
-        
-        // 4. Execução Orquestrada
+        // 3. Execução Orquestrada
         engine.run(context, pipeline);
 
-        // 5. Extração do Resultado Final (Baseado no contrato do Pipeline)
+        // 4. Extração do Resultado Final (Baseado no contrato do Pipeline)
         return extractResults(context, pipeline);
     }
 

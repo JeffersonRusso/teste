@@ -18,7 +18,7 @@ import java.util.UUID;
 
 /**
  * Fábrica responsável pela criação e inicialização do contexto de execução.
- * Agora utiliza ContextHolder (ScopedValue) para obter o Correlation ID.
+ * Utiliza a nova estrutura de ExecutionContext e ExecutionTracker.
  */
 @Slf4j
 @Component
@@ -30,16 +30,25 @@ public class RiskContextFactory {
     public ExecutionContext create(String operationType, Map<String, String> headers, JsonNode rawBody) {
         Objects.requireNonNull(operationType, "O tipo de operação (operationType) é obrigatório");
 
+        // 1. Resolve Identificação (Correlation ID)
         String correlationId = ContextHolder.getCorrelationId()
                 .orElseGet(() -> UUID.randomUUID().toString());
 
+        // 2. Prepara Dados Iniciais
         Map<String, Object> initialData = buildInitialData(operationType, headers, rawBody);
-        
-        ExecutionContext context = new ExecutionContext(correlationId, initialData, new ExecutionTracker());
 
+        // 3. Instancia o Contexto com seus especialistas
+        ExecutionContext context = new ExecutionContext(
+                correlationId, 
+                operationType, 
+                new ExecutionTracker(), 
+                initialData
+        );
+
+        // 4. Executa Inicializadores (Normalização, etc)
         runInitializers(context, operationType);
 
-        log.debug("Contexto criado: {} [Correlation: {}]", operationType, correlationId);
+        log.debug(STR."Contexto criado: \{operationType} [Correlation: \{correlationId}]");
         return context;
     }
 
@@ -56,7 +65,7 @@ public class RiskContextFactory {
             try {
                 initializer.initialize(context, operationType);
             } catch (Exception e) {
-                log.error("Falha no inicializador [{}]: {}", initializer.getClass().getSimpleName(), e.getMessage());
+                log.error(STR."Falha no inicializador [\{initializer.getClass().getSimpleName()}]: \{e.getMessage()}");
             }
         });
     }

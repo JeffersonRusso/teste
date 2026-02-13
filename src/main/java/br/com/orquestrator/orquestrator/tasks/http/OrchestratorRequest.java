@@ -7,7 +7,8 @@ import java.util.TreeMap;
 
 /**
  * Representa uma requisição HTTP imutável na pipeline do orquestrador.
- * Utilizamos TreeMap com CASE_INSENSITIVE_ORDER para garantir conformidade com a RFC 7230.
+ * Otimizado para evitar alocações desnecessárias e garantir conformidade com a RFC 7230.
+ * Java 21: Utiliza Records para imutabilidade e clareza.
  */
 public record OrchestratorRequest(
         String method,
@@ -17,20 +18,27 @@ public record OrchestratorRequest(
         long timeoutMs
 ) {
     /**
-     * Construtor canônico protegido para garantir que os headers sejam sempre
-     * tratados de forma case-insensitive e fiquem protegidos contra mutação externa.
+     * Construtor canônico: Garante a defesa dos dados e normalização de protocolos.
      */
     public OrchestratorRequest {
-        // Garantimos que o Map de headers não seja nulo e ignore Case
-        Map<String, String> caseInsensitiveMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        if (headers != null) {
+        // Garantimos que o Map de headers seja case-insensitive e imutável
+        if (headers == null || headers.isEmpty()) {
+            headers = Collections.emptyMap();
+        } else {
+            Map<String, String> caseInsensitiveMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
             caseInsensitiveMap.putAll(headers);
+            headers = Collections.unmodifiableMap(caseInsensitiveMap);
         }
-        headers = Collections.unmodifiableMap(caseInsensitiveMap);
+
+        // Normalização para evitar falhas no HttpMethod.valueOf
+        method = method != null ? method.toUpperCase() : "GET";
     }
 
+    /**
+     * Construtor de conveniência para requisições simples.
+     */
     public OrchestratorRequest(String method, URI uri, long timeoutMs) {
-        this(method, uri, new TreeMap<>(String.CASE_INSENSITIVE_ORDER), null, timeoutMs);
+        this(method, uri, Collections.emptyMap(), null, timeoutMs);
     }
 
     /**
@@ -41,13 +49,24 @@ public record OrchestratorRequest(
     }
 
     /**
-     * Retorna uma NOVA instância com o header adicionado, mantendo a imutabilidade do record.
-     * Segue o padrão 'Wither' para objetos imutáveis.
+     * Retorna uma NOVA instância com o header adicionado, mantendo a imutabilidade.
+     * Otimização: Se o valor já for idêntico, retorna a própria instância (this).
      */
     public OrchestratorRequest withHeader(String key, String value) {
+        if (value != null && value.equals(headers.get(key))) {
+            return this;
+        }
+
         Map<String, String> newHeaders = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         newHeaders.putAll(this.headers);
         newHeaders.put(key, value);
         return new OrchestratorRequest(method, uri, newHeaders, body, timeoutMs);
+    }
+
+    /**
+     * Atalho útil para o Executor: Garante que o corpo nunca seja nulo na chamada do RestClient.
+     */
+    public String bodyOrEmpty() {
+        return body != null ? body : "";
     }
 }

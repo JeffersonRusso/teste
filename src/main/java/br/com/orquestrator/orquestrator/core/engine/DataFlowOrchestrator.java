@@ -1,7 +1,6 @@
 package br.com.orquestrator.orquestrator.core.engine;
 
 import br.com.orquestrator.orquestrator.core.context.ContextHolder;
-import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.domain.vo.Pipeline;
 import br.com.orquestrator.orquestrator.exception.PipelineException;
@@ -10,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.concurrent.StructuredTaskScope;
 import java.util.concurrent.TimeoutException;
 
@@ -25,22 +23,21 @@ public class DataFlowOrchestrator implements PipelineEngine {
 
     @Override
     public void run(final ExecutionContext context, final Pipeline pipeline) {
-        String correlationId = ContextHolder.getCorrelationId().orElse("-");
+        DataBus dataBus = dataBusFactory.create(context, pipeline.getTasks());
+        String correlationId = context.getCorrelationId();
 
         ScopedValue.where(ContextHolder.CORRELATION_ID, correlationId)
-                .run(() -> executePipeline(context, pipeline));
+                .run(() -> executePipeline(context, pipeline, dataBus));
     }
 
-    private void executePipeline(ExecutionContext context, Pipeline pipeline) {
-        DataBus dataBus = dataBusFactory.create(context, pipeline.getTasks());
-        boolean success = true;
-
+    private void executePipeline(ExecutionContext context, Pipeline pipeline, DataBus dataBus) {
+        boolean success = false;
         try {
             executeTasksInParallel(context, pipeline, dataBus);
             context.getTracker().finish();
+            success = true;
         } catch (Exception e) {
-            success = false;
-            throw (e instanceof RuntimeException re) ? re : new PipelineException(e.getMessage(), e);
+            throw (RuntimeException) e;
         } finally {
             eventPublisher.publishFinished(context, success);
         }
@@ -48,18 +45,15 @@ public class DataFlowOrchestrator implements PipelineEngine {
 
     private void executeTasksInParallel(ExecutionContext context, Pipeline pipeline, DataBus dataBus) {
         try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
-            
-            for (int i = 0; i < pipeline.getTasks().size(); i++) {
-                final TaskDefinition taskDef = pipeline.getTasks().get(i);
-                scope.fork(() -> {
-                    taskExecutor.execute(taskDef, context, dataBus);
-                    return null;
-                });
-            }
+            pipeline.getTasks().forEach(taskDef ->
+                    scope.fork(() -> {
+                        taskExecutor.execute(taskDef, context, dataBus);
+                        return null;
+                    })
+            );
 
-            scope.joinUntil(context.getDeadline());
+            scope.joinUntil(context.runtime().deadline());
             scope.throwIfFailed();
-
         } catch (Exception e) {
             throw handleParallelException(e);
         }
@@ -72,10 +66,9 @@ public class DataFlowOrchestrator implements PipelineEngine {
                 Thread.currentThread().interrupt();
                 yield new PipelineException("Orquestração interrompida");
             }
-            case java.util.concurrent.ExecutionException ee -> 
-                (ee.getCause() instanceof RuntimeException re) ? re : new PipelineException(ee.getCause().getMessage(), ee.getCause());
-            case RuntimeException re -> re;
-            default -> new PipelineException(e.getMessage(), e);
+            case java.util.concurrent.ExecutionException ee ->
+                    (ee.getCause() instanceof RuntimeException re) ? re : new PipelineException(ee.getCause().getMessage(), ee.getCause());
+            default -> (e instanceof RuntimeException re) ? re : new PipelineException(e.getMessage(), e);
         };
     }
 }

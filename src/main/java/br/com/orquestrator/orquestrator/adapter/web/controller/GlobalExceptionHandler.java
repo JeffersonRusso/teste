@@ -41,11 +41,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGeneric(Exception e) {
         log.error("Erro inesperado: {}", e.getMessage(), e);
-        
+
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Ocorreu um erro inesperado.");
         problem.setType(URI.create(URN_PREFIX + "internal-error"));
         problem.setTitle("Internal Server Error");
-        
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problem);
     }
 

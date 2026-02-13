@@ -1,6 +1,5 @@
 package br.com.orquestrator.orquestrator.core.engine.listener;
 
-import br.com.orquestrator.orquestrator.domain.ContextKey;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.domain.tracker.ExecutionSpan;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
@@ -14,7 +13,8 @@ import java.util.List;
 
 /**
  * Listener de rastreamento de alta performance.
- * MDC removido completamente para eliminar overhead de CPU em Virtual Threads.
+ * Utiliza o ExecutionTracker para gerenciar o ciclo de vida dos spans de forma desacoplada do contexto de dados.
+ * Java 21: Utiliza try-with-resources para fechamento automático de spans.
  */
 @Slf4j
 @Component
@@ -27,8 +27,8 @@ public class TracingTaskListener implements TaskExecutionListener {
     public void onStart(TaskDefinition taskDef, ExecutionContext context) {
         String nodeId = taskDef.getNodeId().value();
         
-        ExecutionSpan span = context.getTracker().start(nodeId, taskDef.getType());
-        context.put(ContextKey.SPAN_PREFIX + nodeId, span);
+        // Agora o tracker gerencia o span. Não precisamos poluir o dataStore do contexto.
+        ExecutionSpan span = context.getTracker().startSpan(nodeId, taskDef.getType());
 
         captureInputs(taskDef, context, span);
         captureMetadata(taskDef, span);
@@ -46,26 +46,23 @@ public class TracingTaskListener implements TaskExecutionListener {
 
     private void finishSpan(TaskDefinition taskDef, ExecutionContext context, Exception error) {
         String nodeId = taskDef.getNodeId().value();
-        String spanKey = ContextKey.SPAN_PREFIX + nodeId;
-        Object spanObj = context.get(spanKey);
         
-        if (!(spanObj instanceof ExecutionSpan span)) {
-            return;
-        }
-
-        try (span) {
-            if (error == null) {
-                captureOutputs(taskDef, context, span);
-                span.success();
-            } else {
-                if (error instanceof PipelineException pe) {
-                    pe.getMetadata().forEach(span::addMetadata);
+        // Buscamos o span diretamente no tracker via Facade
+        context.getTracker().getSpan(nodeId).ifPresent(span -> {
+            // Java 21: O span é AutoCloseable e chamará o recordCompletion ao fechar
+            try (span) { 
+                if (error == null) {
+                    captureOutputs(taskDef, context, span);
+                    span.success();
+                } else {
+                    if (error instanceof PipelineException pe) {
+                        pe.getMetadata().forEach(span::addMetadata);
+                    }
+                    span.fail(error);
                 }
-                span.fail(error);
             }
-        } finally {
-            context.remove(spanKey);
-        }
+            // A limpeza do mapa de spans ativos é automática dentro do close() -> recordCompletion()
+        });
     }
 
     private void captureInputs(TaskDefinition def, ExecutionContext ctx, ExecutionSpan span) {

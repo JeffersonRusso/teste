@@ -17,6 +17,8 @@ import java.util.Map;
 
 /**
  * Validador de resposta que aplica regras de negócio sobre o resultado da task.
+ * Utiliza expressões SpEL para inspecionar status e corpo da resposta.
+ * Java 21: Refatorado para maior clareza, imutabilidade e rastro rico de erros.
  */
 @Slf4j
 @Component("RESPONSE_VALIDATOR")
@@ -37,35 +39,21 @@ public class ResponseValidatorInterceptor extends TypedTaskInterceptor<ResponseV
 
     @Override
     protected void interceptTyped(TaskData data, TaskChain next, ResponseValidatorConfig config, TaskDefinition taskDef) {
-        // 1. Executa a task (ou o próximo interceptor)
+        // 1. Executa a task primeiro (ou o próximo interceptor)
         next.proceed(data);
 
-        // 2. Se a task falhou na infraestrutura (exceção lançada), este código não será alcançado.
-        // Se chegou aqui, a task "completou". Verificamos se ela produziu um status.
+        // 2. Fail Fast: Sem regras ou sem status, não há o que validar
         Object rawStatus = data.getMetadata(TaskMetadataHelper.STATUS);
-        if (rawStatus == null) {
-            log.trace("   [ResponseValidator] Ignorando validação: Nenhum status code encontrado para {}", taskDef.getNodeId());
+        if (rawStatus == null || config == null || config.rules() == null || config.rules().isEmpty()) {
             return;
         }
 
-        if (config == null || config.rules() == null || config.rules().isEmpty()) {
-            return;
-        }
+        // 3. Preparação do Contexto de Expressão (Unificado)
+        EvaluationContext evalContext = createEvalContext(data, taskDef, rawStatus);
 
-        Integer status = conversionService.convert(rawStatus, Integer.class);
-        Object body = data.getMetadata(TaskMetadataHelper.BODY);
-
-        Map<String, Object> vars = Map.of(
-            "node_id", taskDef.getNodeId().value(),
-            "node_status", status != null ? status : 0,
-            "node_body", body != null ? body : Map.of()
-        );
-        
-        EvaluationContext evalContext = expressionService.create(data, vars);
-
+        // 4. Validação das Regras
         for (ResponseValidatorConfig.Rule rule : config.rules()) {
-            if (rule.condition() != null && Boolean.TRUE.equals(evalContext.evaluate(rule.condition(), Boolean.class))) {
-                data.addMetadata("validation.failed_condition", rule.condition());
+            if (isConditionMet(rule, evalContext)) {
                 handleValidationFailure(data, taskDef, rule, evalContext);
             }
         }
@@ -73,27 +61,41 @@ public class ResponseValidatorInterceptor extends TypedTaskInterceptor<ResponseV
         data.addMetadata("validation.passed", true);
     }
 
+    private EvaluationContext createEvalContext(TaskData data, TaskDefinition taskDef, Object rawStatus) {
+        // Java 21: Map.of para imutabilidade e clareza
+        Map<String, Object> vars = Map.of(
+            "node_id", taskDef.getNodeId().value(),
+            "node_status", conversionService.convert(rawStatus, Integer.class),
+            "node_body", data.getMetadata(TaskMetadataHelper.BODY) != null ? data.getMetadata(TaskMetadataHelper.BODY) : Map.of()
+        );
+        return expressionService.create(data, vars);
+    }
+
+    private boolean isConditionMet(ResponseValidatorConfig.Rule rule, EvaluationContext evalContext) {
+        return rule.condition() != null && 
+               Boolean.TRUE.equals(evalContext.evaluate(rule.condition(), Boolean.class));
+    }
+
     private void handleValidationFailure(TaskData data, TaskDefinition taskDef, ResponseValidatorConfig.Rule rule, EvaluationContext evalContext) {
-        String messageTemplate = getMessageTemplate(rule);
+        String messageTemplate = rule.message() != null ? rule.message() : 
+                                 (rule.errorCode() != null ? errorTemplateService.getTemplate(rule.errorCode()) : "Validation Error");
+        
         String resolvedMessage = evalContext.resolve(messageTemplate, String.class);
 
+        // Java 21: Construção de exceção rica com metadados e String Templates
         PipelineException ex = new PipelineException(resolvedMessage)
                 .withNodeId(taskDef.getNodeId().value())
                 .addMetadata("interceptor", "RESPONSE_VALIDATOR")
-                .addMetadata("condition", rule.condition());
+                .addMetadata("failed_condition", rule.condition());
 
+        // Extração limpa de metadados customizados da regra
         if (rule.metadata() != null && rule.metadata().isObject()) {
-            rule.metadata().fieldNames().forEachRemaining(fieldName -> 
-                ex.addMetadata(fieldName, rule.metadata().get(fieldName).asText())
+            rule.metadata().fields().forEachRemaining(entry -> 
+                ex.addMetadata(entry.getKey(), entry.getValue().asText())
             );
         }
 
-        log.error("   [ResponseValidator] Falha na validação da task {}: {}", taskDef.getNodeId(), resolvedMessage);
+        log.error("   [ResponseValidator] Validation failure on {}: {}", taskDef.getNodeId(), resolvedMessage);
         throw ex;
-    }
-
-    private String getMessageTemplate(ResponseValidatorConfig.Rule rule) {
-        if (rule.message() != null) return rule.message();
-        return rule.errorCode() != null ? errorTemplateService.getTemplate(rule.errorCode()) : "Erro de validação";
     }
 }

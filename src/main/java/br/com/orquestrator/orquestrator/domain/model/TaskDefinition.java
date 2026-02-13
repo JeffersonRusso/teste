@@ -2,6 +2,8 @@ package br.com.orquestrator.orquestrator.domain.model;
 
 import br.com.orquestrator.orquestrator.domain.FeatureDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.NodeId;
+import br.com.orquestrator.orquestrator.domain.vo.Path;
+import br.com.orquestrator.orquestrator.domain.vo.TaskContract;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Builder;
 import lombok.Getter;
@@ -9,6 +11,8 @@ import lombok.Getter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @Getter
@@ -35,6 +39,9 @@ public class TaskDefinition {
     private final List<DataSpec> produces;
     
     private final List<FeatureDefinition> allFeaturesOrdered;
+    
+    // Contrato pré-calculado para performance máxima na ContractView
+    private final TaskContract contract;
 
     @Builder
     public TaskDefinition(NodeId nodeId, Integer version, String name, String type, long timeoutMs,
@@ -63,6 +70,12 @@ public class TaskDefinition {
         this.produces = produces != null ? List.copyOf(produces) : Collections.emptyList();
         
         this.allFeaturesOrdered = buildFeaturesList(features);
+        
+        // Pré-calcula o contrato no momento da criação da definição
+        this.contract = new TaskContract(
+            computeAllowedPaths(this.requires),
+            extractNames(this.produces)
+        );
     }
     
     private List<FeatureDefinition> buildFeaturesList(FeaturePhases features) {
@@ -80,6 +93,21 @@ public class TaskDefinition {
         if (source != null && !source.isEmpty()) {
             target.addAll(source);
         }
+    }
+
+    private Set<String> computeAllowedPaths(List<DataSpec> specs) {
+        return specs.stream()
+                .map(DataSpec::name)
+                .map(Path::of)
+                .flatMap(path -> path.hierarchy().stream())
+                .map(Path::value)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    private Set<String> extractNames(List<DataSpec> specs) {
+        return specs.stream()
+                .map(DataSpec::name)
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     public boolean produces(String key) {

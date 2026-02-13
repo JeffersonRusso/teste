@@ -9,11 +9,9 @@ import br.com.orquestrator.orquestrator.tasks.common.TaskResultMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.camunda.bpm.dmn.engine.DmnDecision;
 import org.camunda.bpm.dmn.engine.DmnDecisionTableResult;
 import org.camunda.bpm.dmn.engine.DmnEngine;
 
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,58 +20,49 @@ import java.util.Map;
 public class DmnTask extends AbstractTask {
 
     private final DmnEngine dmnEngine;
-    private final DmnDecision decision;
     private final TaskResultMapper resultMapper;
     private final ObjectMapper objectMapper;
     private final MapBuilder mapBuilder;
+    private final DmnTaskConfiguration config;
 
     public DmnTask(TaskDefinition definition, 
                    DmnEngine dmnEngine, 
                    TaskResultMapper resultMapper, 
                    ObjectMapper objectMapper,
-                   MapBuilder mapBuilder) {
+                   MapBuilder mapBuilder,
+                   DmnTaskConfiguration config) {
         super(definition);
         this.dmnEngine = dmnEngine;
         this.resultMapper = resultMapper;
         this.objectMapper = objectMapper;
         this.mapBuilder = mapBuilder;
-        this.decision = loadDecision();
-    }
-
-    private DmnDecision loadDecision() {
-        String dmnFile = definition.getConfig().path("dmnFile").asText();
-        String decisionKey = definition.getConfig().path("decisionKey").asText();
-        String path = STR."/dmn/\{dmnFile}";
-        
-        try (InputStream is = getClass().getResourceAsStream(path)) {
-            if (is == null) throw new IllegalArgumentException(STR."Arquivo DMN não encontrado: \{path}");
-            return dmnEngine.parseDecision(decisionKey, is);
-        } catch (Exception e) {
-            throw new RuntimeException(STR."Erro ao carregar DMN: \{e.getMessage()}", e);
-        }
+        this.config = config;
     }
 
     @Override
     public void validateConfig() {
+        if (config.decision() == null) {
+            throw new IllegalStateException("DMN Decision não foi carregada para a task: " + definition.getNodeId());
+        }
     }
 
     @Override
     public void execute(TaskData data) {
-        log.debug("   [DmnTask] Executando decisão: {}", decision.getName());
+        log.debug("   [DmnTask] Executando decisão: {}", config.decision().getName());
 
         Map<String, Object> inputs = prepareHierarchicalInputs(data);
 
         try {
-            DmnDecisionTableResult result = dmnEngine.evaluateDecisionTable(decision, inputs);
+            DmnDecisionTableResult result = dmnEngine.evaluateDecisionTable(config.decision(), inputs);
 
             if (result.isEmpty()) {
-                log.warn("   [DmnTask] Nenhuma regra satisfeita para: {}", decision.getName());
+                log.warn("   [DmnTask] Nenhuma regra satisfeita para: {}", config.decision().getName());
                 return;
             }
 
             resultMapper.mapResult(data, result.getFirstResult().getEntryMap(), definition);
         } catch (Exception e) {
-            log.error("Erro na avaliação DMN {}: {}", decision.getKey(), e.getMessage());
+            log.error("Erro na avaliação DMN {}: {}", config.decision().getKey(), e.getMessage());
             throw e;
         }
     }
@@ -86,7 +75,6 @@ public class DmnTask extends AbstractTask {
 
         for (int i = 0; i < requires.size(); i++) {
             String key = requires.get(i).name();
-            // Otimização Crítica: Usamos unwrap() para passar o valor real ao DMN
             Object value = data.get(key).unwrap();
             
             if (value != null) {

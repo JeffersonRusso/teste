@@ -19,48 +19,56 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Especialista em extrair dados da resposta HTTP.
+ * Delega o mapeamento semântico para o TaskResultMapper.
+ * Java 21: Refatorado para garantir isolamento de responsabilidades.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class HttpResponseProcessor {
 
     private final ObjectMapper objectMapper;
-    private final TaskResultMapper resultMapper;
     private final StreamingJsonExtractor streamingExtractor;
+    private final TaskResultMapper resultMapper;
 
+    /**
+     * Processa a resposta HTTP, extraindo o corpo e delegando o mapeamento.
+     */
     public void process(ClientHttpResponse response, TaskDefinition definition, TaskData data) {
-        Object result = null;
-        
         try {
-            int statusCode = response.getStatusCode().value();
-            data.addMetadata(TaskMetadataHelper.STATUS, statusCode);
+            // 1. Registro do status (Metadado de infraestrutura)
+            data.addMetadata(TaskMetadataHelper.STATUS, response.getStatusCode().value());
 
+            // 2. Extração do corpo (Streaming vs Full Tree)
             try (InputStream bodyStream = response.getBody()) {
-                if (hasProjection(definition)) {
-                    result = projectWithStreaming(bodyStream, definition.getProduces());
-                } else {
-                    result = parseFullBody(bodyStream);
-                }
+                Object rawResult = shouldStream(definition) 
+                    ? projectWithStreaming(bodyStream, definition.getProduces())
+                    : parseFullBody(bodyStream);
+
+                // 3. Delega o mapeamento semântico e o rastro de BODY para o especialista
+                resultMapper.mapResult(data, rawResult, definition);
             }
         } catch (Exception e) {
-            log.warn("   [HttpTask] Erro ao processar resposta: {}", e.getMessage());
+            log.error("   [HttpResponseProcessor] Falha ao processar payload da task {}: {}", 
+                    definition.getNodeId(), e.getMessage());
+            data.addMetadata("http.error.parsing", e.getMessage());
         }
-
-        // O resultMapper agora precisa ser adaptado para TaskData
-        resultMapper.mapResult(data, result, definition);
     }
 
-    private boolean hasProjection(TaskDefinition def) {
-        if (def.getProduces() == null || def.getProduces().isEmpty()) return false;
-        return def.getProduces().stream().allMatch(s -> s.path() != null && !s.path().isBlank());
+    private boolean shouldStream(TaskDefinition def) {
+        List<DataSpec> produces = def.getProduces();
+        if (produces == null || produces.isEmpty()) return false;
+        return produces.stream().anyMatch(s -> s.path() != null && !s.path().isBlank());
     }
 
     private Map<String, Object> projectWithStreaming(InputStream stream, List<DataSpec> produces) {
         Set<String> targetFields = produces.stream()
                 .map(DataSpec::path)
                 .filter(Objects::nonNull)
+                .filter(p -> !p.isBlank())
                 .collect(Collectors.toSet());
-                
         return streamingExtractor.extractFields(stream, targetFields);
     }
 

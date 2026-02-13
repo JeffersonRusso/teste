@@ -24,8 +24,8 @@ public interface TaskData {
     /** Obtém um metadado */
     Object getMetadata(String key);
 
-    /** 
-     * Retorna uma visão desta interface como um Map<String, Object> 
+    /**
+     * Retorna uma visão desta interface como um Map<String, Object>
      * contendo os valores brutos (unwrapped) para integração com engines.
      */
     Map<String, Object> asMap();

@@ -1,17 +1,13 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor;
 
 import br.com.orquestrator.orquestrator.domain.TaskMetadataHelper;
-import br.com.orquestrator.orquestrator.domain.model.DataSpec;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.exception.PipelineException;
 import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
 import br.com.orquestrator.orquestrator.tasks.base.TaskData;
 import br.com.orquestrator.orquestrator.tasks.interceptor.config.ErrorHandlerConfig;
-import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Slf4j
 @Component("ERROR_HANDLER")
@@ -26,45 +22,63 @@ public class ErrorHandlerInterceptor extends TypedTaskInterceptor<ErrorHandlerCo
         try {
             next.proceed(data);
         } catch (Exception e) {
+            // Java 21: Proteção contra interrupções de sistema
+            if (Thread.currentThread().isInterrupted()) {
+                throw e;
+            }
+
             if (shouldIgnore(e, config)) {
-                log.warn("   [ErrorHandler] Erro ignorado na task {}: {}", taskDef.getNodeId().value(), e.getMessage());
-
-                applyFallback(data, config, taskDef);
-
-                data.addMetadata(TaskMetadataHelper.STATUS, 500);
-                data.addMetadata(TaskMetadataHelper.ERROR, "ERROR_IGNORED: " + e.getMessage());
+                handleIgnoredError(data, taskDef, e, config);
                 return;
             }
             throw e;
         }
     }
 
-    private boolean shouldIgnore(Exception e, ErrorHandlerConfig config) {
-        if (config == null) return false;
-        if ("FAIL".equalsIgnoreCase(config.action())) return false;
+    private void handleIgnoredError(TaskData data, TaskDefinition taskDef, Exception e, ErrorHandlerConfig config) {
+        String nodeId = taskDef.getNodeId().value();
+        log.warn(STR."   [ErrorHandler] Error ignored on task \{nodeId}: \{e.getMessage()}");
 
+        // Centralização do rastro no ExecutionContext
+        data.addMetadata(TaskMetadataHelper.STATUS, 500);
+        data.addMetadata(TaskMetadataHelper.ERROR, STR."ERROR_IGNORED: \{e.getMessage()}");
+        data.addMetadata("error_handler.applied", true);
+
+        // Se houver valor de fallback configurado, aplicamos
+        if (config.fallbackValue() != null) {
+            applySimpleFallback(data, taskDef, config.fallbackValue());
+        }
+    }
+
+    private boolean shouldIgnore(Exception e, ErrorHandlerConfig config) {
+        if (config == null || "FAIL".equalsIgnoreCase(config.action())) return false;
+
+        // Regra de wildcard: ignora tudo
         if (config.ignoreExceptions().contains("*") || config.ignoreNodes().contains("*")) return true;
 
-        if (e instanceof PipelineException pe && pe.getNodeId() != null) {
-            if (config.ignoreNodes().contains(pe.getNodeId())) return true;
+        // Verificação por ID do Nó (específico para PipelineException)
+        if (e instanceof PipelineException pe && pe.getNodeId() != null
+                && config.ignoreNodes().contains(pe.getNodeId())) {
+            return true;
         }
 
+        // Se as listas estiverem vazias e a ação não for FAIL, assume-se que deve ignorar
         if (config.ignoreExceptions().isEmpty() && config.ignoreNodes().isEmpty()) return true;
 
+        // Verificação por tipo de exceção (Hierarquia simples)
+        return isExceptionInList(e, config);
+    }
+
+    private boolean isExceptionInList(Exception e, ErrorHandlerConfig config) {
         String exName = e.getClass().getName();
         String causeName = (e.getCause() != null) ? e.getCause().getClass().getName() : "";
-
         return config.ignoreExceptions().contains(exName) || config.ignoreExceptions().contains(causeName);
     }
 
-    private void applyFallback(TaskData data, ErrorHandlerConfig config, TaskDefinition taskDef) {
-        JsonNode fallbackValue = config.fallbackValue();
-        List<DataSpec> produces = taskDef.getProduces();
-
-        if (produces != null && fallbackValue != null) {
-            for (int i = 0; i < produces.size(); i++) {
-                data.put(produces.get(i).name(), fallbackValue);
-            }
+    private void applySimpleFallback(TaskData data, TaskDefinition taskDef, Object value) {
+        // Lógica simplificada: se a task produz dados, preenchemos todos com o valor de escape
+        if (taskDef.getProduces() != null) {
+            taskDef.getProduces().forEach(spec -> data.put(spec.name(), value));
         }
     }
 }

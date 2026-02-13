@@ -13,79 +13,68 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-
-/**
- * Executor de tasks que gerencia o isolamento de dados e a integridade do barramento.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class TaskRunner implements TaskExecutor {
 
     private final TaskRegistry taskRegistry;
-    private final List<TaskExecutionListener> listeners;
+    // Injetamos o Composite (ou a lista se preferir iterar aqui, mas o Composite é mais limpo)
+    private final TaskExecutionListener executionListener;
 
     @Override
     public void execute(final TaskDefinition definition, final ExecutionContext context, final DataBus dataBus) {
         String nodeId = definition.getNodeId().value();
 
+        // Java 21: Propagação de contexto imutável e eficiente
         ScopedValue.where(ContextHolder.CURRENT_NODE, nodeId)
                 .run(() -> runWithContext(definition, context, dataBus));
     }
 
     private void runWithContext(TaskDefinition definition, ExecutionContext context, DataBus dataBus) {
-        notifyStart(definition, context);
+        // 1. Início do Rastro (Delegado)
+        executionListener.onStart(definition, context);
 
         try {
-            // 1. Sincronização (Interruptível)
+            // 2. Barreira de Sincronização (Interruptível para StructuredTaskScope)
             dataBus.waitForDependencies(definition);
             
-            // 2. Execução
+            // 3. Preparação e Localização
             TaskData taskData = new ContractView(context, definition);
             Task task = taskRegistry.getTask(definition);
+            
+            // 4. Execução (Pode ser a Task pura ou a InterceptorStack)
             task.execute(taskData);
             
-            // 3. Finalização
-            markSuccess(definition, context);
+            // 5. Sucesso: Metadados, Barramento e Notificação
+            updateSuccessMetadata(definition, context);
             dataBus.publishResults(definition, context);
-            
-            notifySuccess(definition, context);
+            executionListener.onSuccess(definition, context);
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            dataBus.failResults(definition); // Desbloqueia dependentes
-            notifyError(definition, context, e);
+            handleTaskError(definition, context, dataBus, e);
         } catch (Exception e) {
-            dataBus.failResults(definition); // Desbloqueia dependentes
-            notifyError(definition, context, e);
-            handleFailure(definition, dataBus, e);
+            handleTaskError(definition, context, dataBus, e);
+            
+            // Lógica de Fail-Fast: O motor decide se o pipeline morre
+            if (definition.isFailFast()) {
+                throw (e instanceof RuntimeException re) ? re : new RuntimeException(e);
+            }
         }
     }
 
-    private void markSuccess(TaskDefinition definition, ExecutionContext context) {
+    private void handleTaskError(TaskDefinition def, ExecutionContext ctx, DataBus bus, Exception e) {
+        bus.failResults(def); // Desbloqueia dependentes no Barramento
+        executionListener.onError(def, ctx, e); // Notifica erro com segurança
+        log.error("Falha na execução do nó [{}]: {}", def.getNodeId(), e.getMessage());
+    }
+
+    private void updateSuccessMetadata(TaskDefinition definition, ExecutionContext context) {
         String nodeId = definition.getNodeId().value();
+        // Garante rastro de status 200 se a task não o fez explicitamente
         if (TaskMetadataHelper.get(context, nodeId, TaskMetadataHelper.STATUS) == null) {
             TaskMetadataHelper.update(context, nodeId, TaskMetadataHelper.STATUS, 200);
         }
-    }
-
-    private void handleFailure(final TaskDefinition definition, final DataBus dataBus, final Exception e) {
-        if (definition.isFailFast()) {
-            throw (e instanceof RuntimeException re) ? re : new RuntimeException(e);
-        }
-        log.warn("Task [{}] falhou (failFast=false). Erro: {}", definition.getNodeId(), e.getMessage());
-    }
-
-    private void notifyStart(TaskDefinition def, ExecutionContext ctx) {
-        listeners.forEach(l -> l.onStart(def, ctx));
-    }
-
-    private void notifySuccess(TaskDefinition def, ExecutionContext ctx) {
-        listeners.forEach(l -> l.onSuccess(def, ctx));
-    }
-
-    private void notifyError(TaskDefinition def, ExecutionContext ctx, Exception e) {
-        listeners.forEach(l -> l.onError(def, ctx, e));
     }
 }

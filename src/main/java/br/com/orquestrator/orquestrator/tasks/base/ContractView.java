@@ -1,74 +1,58 @@
 package br.com.orquestrator.orquestrator.tasks.base;
 
-import br.com.orquestrator.orquestrator.domain.TaskMetadataHelper;
-import br.com.orquestrator.orquestrator.domain.model.DataSpec;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.DataValue;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
-import br.com.orquestrator.orquestrator.domain.vo.Path;
-import com.fasterxml.jackson.databind.JsonNode;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * Implementação de TaskData que enforça o contrato e suporta navegação em caminhos.
- * Atua como um adaptador, expondo uma visão de Map para engines externas via asMap().
+ * Atua como um Sandbox (Sandbox Pattern), garantindo o Princípio do Menor Privilégio.
+ * Java 21: Refatorado para maior performance via delegação especializada e contrato pré-calculado.
  */
+@Slf4j
 public class ContractView extends AbstractMap<String, Object> implements TaskData {
 
     private final ExecutionContext context;
-    private final TaskDefinition definition;
+    private final String nodeId;
     private final Set<String> allowedInputs;
     private final Set<String> allowedOutputs;
+    
+    // Cache para o entrySet para evitar reconstrução constante durante a execução
+    private Set<Entry<String, Object>> cachedEntrySet;
 
     public ContractView(ExecutionContext context, TaskDefinition definition) {
         this.context = context;
-        this.definition = definition;
-        this.allowedInputs = computeAllowedPaths(definition.getRequires());
-        this.allowedOutputs = extractNames(definition.getProduces());
+        this.nodeId = definition.getNodeId().value();
+        
+        // PERFORMANCE: O TaskDefinition agora já entrega o contrato pré-calculado no Warmup
+        var contract = definition.getContract(); 
+        this.allowedInputs = contract.allowedInputs();
+        this.allowedOutputs = contract.allowedOutputs();
     }
 
     @Override
     public DataValue get(String key) {
-        if (!allowedInputs.contains(key)) return DataValue.of(null);
-        
-        Object value = context.get(key);
-        if (value != null) return DataValue.of(value);
-
-        Path path = Path.of(key);
-        return path.isNested() ? DataValue.of(resolveNestedPath(path)) : DataValue.of(null);
-    }
-
-    private Object resolveNestedPath(Path path) {
-        String[] segments = path.segments();
-        Object current = context.get(segments[0]);
-
-        for (int i = 1; i < segments.length && current != null; i++) {
-            current = extractProperty(current, segments[i]);
+        if (!allowedInputs.contains(key)) {
+            log.trace(STR."Acesso negado: campo '\{key}' fora do contrato da task \{nodeId}");
+            return DataValue.of(null);
         }
-        return current;
-    }
 
-    private Object extractProperty(Object obj, String property) {
-        return switch (obj) {
-            case Map<?, ?> map -> map.get(property);
-            case JsonNode node -> {
-                JsonNode child = node.path(property);
-                yield child.isMissingNode() ? null : child;
-            }
-            case null, default -> null;
-        };
+        // DELEGAÇÃO: PathResolver cuida da complexidade de navegação em Maps/JSON
+        return PathResolver.resolve(context, key);
     }
 
     @Override
     public Object put(String key, Object value) {
         if (!allowedOutputs.contains(key)) {
-            throw new SecurityException(STR."Acesso negado: A task não declarou '\{key}' como saída.");
+            // Decisão Sênior: Se o dado não é esperado, a pipeline está corrompida ou a task violou o contrato
+            throw new SecurityException(STR."Task [\{nodeId}] tentou gravar '\{key}', mas só tem permissão para: \{allowedOutputs}");
         }
-        Object previous = context.get(key);
         context.put(key, value);
-        return previous;
+        return value;
     }
 
     @Override
@@ -78,41 +62,24 @@ public class ContractView extends AbstractMap<String, Object> implements TaskDat
 
     @Override
     public void addMetadata(String key, Object value) {
-        context.addTaskMetadata(definition.getNodeId().value(), key, value);
+        // FACADE: Acesso direto via contexto para rastro de alta performance
+        context.trackTaskAction(nodeId, key, value);
     }
 
     @Override
     public Object getMetadata(String key) {
-        return TaskMetadataHelper.get(context, definition.getNodeId().value(), key);
+        // Busca metadados diretamente do tracker via Facade
+        return context.getTracker().getSpan(nodeId)
+                .map(span -> span.toMetrics().metadata().get(key))
+                .orElse(null);
     }
 
     @Override
     public Map<String, Object> asMap() {
-        return new AbstractMap<String, Object>() {
-            @Override
-            public Set<Entry<String, Object>> entrySet() {
-                return allowedInputs.stream()
-                        .map(k -> {
-                            Object raw = ContractView.this.get(k).unwrap();
-                            return raw != null ? new AbstractMap.SimpleImmutableEntry<>(k, raw) : null;
-                        })
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toSet());
-            }
-
-            @Override
-            public Object get(Object key) {
-                return (key instanceof String s) ? ContractView.this.get(s).unwrap() : null;
-            }
-
-            @Override
-            public boolean containsKey(Object key) {
-                return (key instanceof String s) && ContractView.this.has(s);
-            }
-        };
+        return this; // A própria ContractView já estende AbstractMap
     }
 
-    // --- Implementação de Map para a própria ContractView (para compatibilidade com AbstractMap) ---
+    // --- Implementação de Map para a própria ContractView (para compatibilidade com engines externas) ---
 
     @Override
     public Object get(Object key) {
@@ -121,37 +88,23 @@ public class ContractView extends AbstractMap<String, Object> implements TaskDat
 
     @Override
     public boolean containsKey(Object key) {
-        return key instanceof String s && allowedInputs.contains(s) && get(s).isPresent();
+        return (key instanceof String s) && allowedInputs.contains(s) && get(s).isPresent();
     }
 
     @Override
     public Set<Entry<String, Object>> entrySet() {
-        return allowedInputs.stream()
-                .map(k -> {
-                    Object raw = get(k).unwrap();
-                    return raw != null ? new AbstractMap.SimpleImmutableEntry<>(k, raw) : null;
-                })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-    }
-
-    private Set<String> computeAllowedPaths(List<DataSpec> specs) {
-        if (specs == null || specs.isEmpty()) return Set.of();
-        return specs.stream()
-                .map(DataSpec::name)
-                .map(Path::of)
-                .flatMap(path -> path.hierarchy().stream())
-                .map(Path::value)
-                .collect(Collectors.toUnmodifiableSet());
-    }
-
-    private Set<String> extractNames(List<DataSpec> specs) {
-        if (specs == null || specs.isEmpty()) return Set.of();
-        return specs.stream()
-                .map(DataSpec::name)
-                .collect(Collectors.toUnmodifiableSet());
+        if (cachedEntrySet == null) {
+            this.cachedEntrySet = allowedInputs.stream()
+                    .map(k -> {
+                        Object val = get(k).unwrap();
+                        return val != null ? new AbstractMap.SimpleImmutableEntry<>(k, val) : null;
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toUnmodifiableSet());
+        }
+        return cachedEntrySet;
     }
 
     @Override
-    public int size() { return allowedInputs.size(); }
+    public int size() { return entrySet().size(); }
 }
