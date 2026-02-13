@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/risk/analyze"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "decision": "APPROVED",
+      "final_score": 85,
+      "factors": [
+        "DEVICE_TRUSTED",
+        "LIMIT_OK"
+      ],
+      "action": "PROCEED"
+    }
+  }
+}

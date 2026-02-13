@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/v1/analise-cliente"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "status": "PROCESSED",
+      "recommendation": "UPSELL"
+    },
+    "fixedDelayMilliseconds": 50
+  }
+}

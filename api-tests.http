@@ -1,0 +1,53 @@
+### Análise de Risco - Requisição App Mobile
+# Este arquivo pode ser executado diretamente no IntelliJ IDEA ou VS Code (REST Client)
+
+POST http://localhost:8080/api/v1/analise
+Content-Type: application/json
+X-Correlation-ID: teste-manual-01
+
+{
+  "operationType": "STANDARD_RISK",
+  "transaction": {
+    "amount": 2500.00,
+    "currency": "BRL"
+  },
+  "customer": {
+    "document": "12345678900"
+  },
+  "device": {
+    "id": "android_v14_secure_xyz",
+    "ip": "192.168.0.1"
+  }
+}
+
+### Teste sem Normalização (Raw Body)
+POST http://localhost:8080/api/v1/analise
+Content-Type: application/json
+
+{
+  "operationType": "DESCONHECIDO",
+  "campo_aleatorio": "valor",
+  "tags": ["ALL"]
+}
+
+### Configurar Delay Global no WireMock (100ms)
+POST http://localhost:9999/__admin/settings
+Content-Type: application/json
+
+{
+  "fixedDelay": 100
+}
+
+### Remover Delay Global
+POST http://localhost:9999/__admin/settings
+Content-Type: application/json
+
+{
+    "fixedDelay": 0
+}
+
+### Teste Isolado: Get Cliente (Esperado: Rápido ou 100ms)
+GET http://localhost:9999/v1/clientes/12345678900
+
+### Teste Isolado: Get Device (O Suspeito dos 500ms)
+GET http://localhost:9999/v1/devices/android_v14_secure_xyz

@@ -1,0 +1,1 @@
+// Deleted - Replaced by direct SpEL evaluation in ContextNormalizer

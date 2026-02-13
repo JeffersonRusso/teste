@@ -1,0 +1,43 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/v1/estatisticas/.*"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "campo_01": "valor_01", "campo_02": "valor_02", "campo_03": "valor_03", "campo_04": "valor_04", "campo_05": "valor_05",
+      "media_gastos_mensal": 1500.50,
+      "frequencia_compras": 12,
+      "maior_compra_ano": 5000.00,
+      "dias_desde_ultima_compra": 2,
+      "categoria_cliente": "GOLD",
+      "score_interno": 89,
+      "risco_churn": "BAIXO",
+      "lifetime_value": 45000.00,
+      "canal_preferido": "APP",
+      "regiao_principal": "SUDESTE",
+      "campo_16": "valor_16", "campo_17": "valor_17", "campo_18": "valor_18", "campo_19": "valor_19", "campo_20": "valor_20",
+      "campo_21": "valor_21", "campo_22": "valor_22", "campo_23": "valor_23", "campo_24": "valor_24", "campo_25": "valor_25",
+      "campo_26": "valor_26", "campo_27": "valor_27", "campo_28": "valor_28", "campo_29": "valor_29", "campo_30": "valor_30",
+      "campo_31": "valor_31", "campo_32": "valor_32", "campo_33": "valor_33", "campo_34": "valor_34", "campo_35": "valor_35",
+      "campo_36": "valor_36", "campo_37": "valor_37", "campo_38": "valor_38", "campo_39": "valor_39", "campo_40": "valor_40",
+      "campo_41": "valor_41", "campo_42": "valor_42", "campo_43": "valor_43", "campo_44": "valor_44", "campo_45": "valor_45",
+      "campo_46": "valor_46", "campo_47": "valor_47", "campo_48": "valor_48", "campo_49": "valor_49", "campo_50": "valor_50",
+      "campo_51": "valor_51", "campo_52": "valor_52", "campo_53": "valor_53", "campo_54": "valor_54", "campo_55": "valor_55",
+      "campo_56": "valor_56", "campo_57": "valor_57", "campo_58": "valor_58", "campo_59": "valor_59", "campo_60": "valor_60",
+      "campo_61": "valor_61", "campo_62": "valor_62", "campo_63": "valor_63", "campo_64": "valor_64", "campo_65": "valor_65",
+      "campo_66": "valor_66", "campo_67": "valor_67", "campo_68": "valor_68", "campo_69": "valor_69", "campo_70": "valor_70",
+      "campo_71": "valor_71", "campo_72": "valor_72", "campo_73": "valor_73", "campo_74": "valor_74", "campo_75": "valor_75",
+      "campo_76": "valor_76", "campo_77": "valor_77", "campo_78": "valor_78", "campo_79": "valor_79", "campo_80": "valor_80",
+      "campo_81": "valor_81", "campo_82": "valor_82", "campo_83": "valor_83", "campo_84": "valor_84", "campo_85": "valor_85",
+      "campo_86": "valor_86", "campo_87": "valor_87", "campo_88": "valor_88", "campo_89": "valor_89", "campo_90": "valor_90",
+      "campo_91": "valor_91", "campo_92": "valor_92", "campo_93": "valor_93", "campo_94": "valor_94", "campo_95": "valor_95",
+      "campo_96": "valor_96", "campo_97": "valor_97", "campo_98": "valor_98", "campo_99": "valor_99", "campo_100": "valor_100"
+    },
+    "fixedDelayMilliseconds": 150
+  }
+}

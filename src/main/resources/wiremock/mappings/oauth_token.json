@@ -1,0 +1,18 @@
+  {
+  "request": {
+    "method": "POST",
+    "url": "/oauth/token"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.TOKEN_FAKE_GLOBAL",
+      "token_type": "bearer",
+      "expires_in": 600
+    },
+    "fixedDelayMilliseconds": 50
+  }
+}

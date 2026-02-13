@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/v1/bacen/sanctions/.*"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "listed": false,
+      "lastCheck": "{{now}}"
+    },
+    "fixedDelayMilliseconds": 50
+  }
+}

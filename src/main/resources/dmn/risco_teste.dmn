@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+             id="Definitions_Risco"
+             name="Regras de Risco"
+             namespace="http://camunda.org/schema/1.0/dmn">
+  <decision id="decisao_risco_simples" name="Decisao de Risco Simples">
+    <decisionTable id="DecisionTable_0risk" hitPolicy="FIRST">
+      <input id="Input_1" label="Score">
+        <inputExpression id="InputExpression_1" typeRef="integer">
+          <text>serasa_info.score</text>
+        </inputExpression>
+      </input>
+      <input id="Input_2" label="Valor">
+        <inputExpression id="InputExpression_2" typeRef="double">
+          <text>standard.valor</text>
+        </inputExpression>
+      </input>
+      <output id="Output_1" label="Resultado" name="resultado" typeRef="string" />
+      <output id="Output_2" label="Motivo" name="motivo" typeRef="string" />
+
+      <rule id="DecisionRule_1">
+        <inputEntry id="UnaryTests_1">
+          <text>&lt; 300</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_2">
+          <text></text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_1">
+          <text>"REPROVADO"</text>
+        </outputEntry>
+        <outputEntry id="LiteralExpression_2">
+          <text>"Score insuficiente"</text>
+        </outputEntry>
+      </rule>
+
+      <rule id="DecisionRule_2">
+        <inputEntry id="UnaryTests_3">
+          <text>[300..700]</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_4">
+          <text>&gt; 5000</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_3">
+          <text>"ANALISE_HUMANA"</text>
+        </outputEntry>
+        <outputEntry id="LiteralExpression_4">
+          <text>"Valor alto para o score"</text>
+        </outputEntry>
+      </rule>
+
+      <rule id="DecisionRule_3">
+        <inputEntry id="UnaryTests_5">
+          <text></text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_6">
+          <text></text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_5">
+          <text>"APROVADO"</text>
+        </outputEntry>
+        <outputEntry id="LiteralExpression_6">
+          <text>"Risco aceitavel"</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

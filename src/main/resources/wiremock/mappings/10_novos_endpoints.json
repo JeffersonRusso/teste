@@ -1,0 +1,94 @@
+{
+  "mappings": [
+    {
+      "request": { "method": "GET", "urlPathPattern": "/v1/historico-pagamentos/.*" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "pagamentos": [ {"valor": 100, "data": "2023-01-01"}, {"valor": 200, "data": "2023-02-01"} ], "total_pago": 300, "atrasos": 0 },
+        "fixedDelayMilliseconds": 80
+      }
+    },
+    {
+      "request": { "method": "POST", "urlPathPattern": "/v1/score-comportamental" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "score_comp": 850, "perfil": "CONSERVADOR", "tendencia": "ESTAVEL" },
+        "fixedDelayMilliseconds": 120
+      }
+    },
+    {
+      "request": { "method": "GET", "urlPathPattern": "/v1/lista-negra-fraude/.*" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "listed": false, "reason": null, "source": "INTERNAL_DB" },
+        "fixedDelayMilliseconds": 40
+      }
+    },
+    {
+      "request": { "method": "GET", "urlPathPattern": "/v1/dados-cadastrais-receita/.*" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "nome_oficial": "JEFFERSON TESTE", "situacao_cpf": "REGULAR", "data_nascimento": "1990-01-01", "mae": "MARIA TESTE" },
+        "fixedDelayMilliseconds": 100
+      }
+    },
+    {
+      "request": { "method": "POST", "urlPathPattern": "/v1/match-cadastral" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "match_score": 98, "divergencias": [], "status": "VERIFIED" },
+        "fixedDelayMilliseconds": 60
+      }
+    },
+    {
+      "request": { "method": "GET", "urlPathPattern": "/v1/open-finance/contas/.*" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "bancos": ["ITAU", "NUBANK"], "saldo_total": 15000.00, "limite_cartao_global": 20000.00 },
+        "fixedDelayMilliseconds": 100
+      }
+    },
+    {
+      "request": { "method": "POST", "urlPathPattern": "/v1/capacidade-pagamento" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "renda_presumida": 8000.00, "comprometimento": 0.25, "capacidade_mensal": 2000.00 },
+        "fixedDelayMilliseconds": 90
+      }
+    },
+    {
+      "request": { "method": "GET", "urlPathPattern": "/v1/biometria-facial/.*" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "match_facial": true, "liveness": true, "score_biometria": 99.9 },
+        "fixedDelayMilliseconds": 100
+      }
+    },
+    {
+      "request": { "method": "GET", "urlPathPattern": "/v1/device-reputation/.*" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "device_score": 45, "is_emulator": false, "is_rooted": false, "ip_reputation": "HIGH" },
+        "fixedDelayMilliseconds": 150
+      }
+    },
+    {
+      "request": { "method": "POST", "urlPathPattern": "/v1/fraude-ml-v2" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "fraud_probability": 0.02, "risk_level": "LOW", "model_version": "v2.5.1" },
+        "fixedDelayMilliseconds": 110
+      }
+    }
+  ]
+}

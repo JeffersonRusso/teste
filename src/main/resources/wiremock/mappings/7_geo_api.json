@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/v1/geo/ip/.*"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "country": "BR",
+      "city": "Sao Paulo",
+      "lat": -23.5505,
+      "lon": -46.6333
+    },
+    "fixedDelayMilliseconds": 100
+  }
+}

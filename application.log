@@ -1,0 +1,195 @@
+2026-02-10 16:27:49.090 [main] INFO  b.c.o.o.OrquestratorApplication - Starting OrquestratorApplication using Java 21.0.9 with PID 54612 (C:\Users\Jeffe\Orquestrador - 01-03 Fim Projeto\orquestrator\target\classes started by Jeffe in C:\Users\Jeffe\Orquestrador - 01-03 Fim Projeto\orquestrator)
+2026-02-10 16:27:49.092 [main] INFO  b.c.o.o.OrquestratorApplication - No active profile set, falling back to 1 default profile: "default"
+2026-02-10 16:27:51.194 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-02-10 16:27:51.195 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.48]
+2026-02-10 16:27:51.289 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-02-10 16:27:52.006 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-02-10 16:27:52.047 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:orquestradordb user=SA
+2026-02-10 16:27:52.049 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-02-10 16:27:52.060 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-02-10 16:27:53.546 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-02-10 16:27:54.676 [main] WARN  o.s.b.a.g.t.GroovyTemplateAutoConfiguration - Cannot find template location: classpath:/templates/ (please add some templates, check your Groovy configuration, or set spring.groovy.template.check-template-location=false)
+2026-02-10 16:27:55.060 [main] INFO  b.c.o.o.OrquestratorApplication - Started OrquestratorApplication in 6.292 seconds (process running for 6.517)
+2026-02-10 16:27:55.064 [virtual-97] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Iniciando aquecimento (warmup) do catálogo de tasks...
+2026-02-10 16:27:55.064 [virtual-96] INFO  b.c.o.o.i.cache.GlobalTaskScheduler - Inicializando tasks globais...
+2026-02-10 16:27:55.349 [virtual-96] WARN  b.c.o.o.tasks.registry.TaskFactory - Task [authGlobalTask] não encontrada no cache. Criando instância sob demanda. Verifique o TaskRegistryWarmup.
+2026-02-10 16:27:55.471 [virtual-96] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 121ms. Status: SUCCESS
+2026-02-10 16:27:55.472 [virtual-96] INFO  b.c.o.o.i.cache.GlobalTaskScheduler - Task global [authGlobalTask] agendada a cada 300000ms
+2026-02-10 16:27:55.472 [scheduling-4] WARN  b.c.o.o.tasks.registry.TaskFactory - Task [authGlobalTask] não encontrada no cache. Criando instância sob demanda. Verifique o TaskRegistryWarmup.
+2026-02-10 16:27:55.525 [scheduling-4] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 53ms. Status: SUCCESS
+2026-02-10 16:27:55.875 [scheduling-3] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 16:27:55.875 [virtual-97] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 16:27:55.875 [scheduling-3] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 790ms. Tasks: 24, Erros: 0
+2026-02-10 16:27:55.876 [virtual-97] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 811ms. Tasks: 24, Erros: 0
+2026-02-10 16:32:55.067 [scheduling-65] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 16:32:55.067 [scheduling-65] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 16:32:55.550 [scheduling-66] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 63ms. Status: SUCCESS
+2026-02-10 16:37:55.072 [scheduling-127] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 16:37:55.072 [scheduling-127] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 16:37:55.550 [scheduling-128] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 62ms. Status: SUCCESS
+2026-02-10 16:42:55.067 [scheduling-189] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 16:42:55.067 [scheduling-189] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 16:42:55.549 [scheduling-190] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 62ms. Status: SUCCESS
+2026-02-10 16:47:55.064 [scheduling-251] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 16:47:55.065 [scheduling-251] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 16:47:55.544 [scheduling-252] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 61ms. Status: SUCCESS
+2026-02-10 16:52:55.066 [scheduling-313] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 16:52:55.066 [scheduling-313] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 16:52:55.546 [scheduling-314] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 62ms. Status: SUCCESS
+2026-02-10 16:57:55.070 [scheduling-375] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 16:57:55.071 [scheduling-375] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 16:57:55.536 [scheduling-376] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 61ms. Status: SUCCESS
+2026-02-10 17:25:30.154 [scheduling-437] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 17:25:30.154 [scheduling-437] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 17:25:30.155 [scheduling-499] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 17:25:30.155 [scheduling-499] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 17:25:30.155 [scheduling-561] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 17:25:30.155 [scheduling-561] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 17:25:30.156 [scheduling-623] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 17:25:30.156 [scheduling-623] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 17:25:30.157 [scheduling-685] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 17:25:30.157 [scheduling-685] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 17:25:30.216 [scheduling-686] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 59ms. Status: SUCCESS
+2026-02-10 17:25:30.216 [scheduling-438] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 62ms. Status: SUCCESS
+2026-02-10 17:25:30.216 [scheduling-562] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 60ms. Status: SUCCESS
+2026-02-10 17:25:30.216 [scheduling-500] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 61ms. Status: SUCCESS
+2026-02-10 17:25:30.216 [scheduling-624] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 59ms. Status: SUCCESS
+2026-02-10 17:25:40.207 [HikariPool-1:housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=25m17s732ms74µs).
+2026-02-10 17:27:54.851 [scheduling-747] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 17:27:54.852 [scheduling-747] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 17:27:55.321 [scheduling-748] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 63ms. Status: SUCCESS
+2026-02-10 17:32:54.856 [scheduling-809] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 17:32:54.857 [scheduling-809] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 17:32:55.324 [scheduling-810] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 62ms. Status: SUCCESS
+2026-02-10 17:37:54.853 [scheduling-871] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 17:37:54.854 [scheduling-871] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 17:37:55.322 [scheduling-872] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 62ms. Status: SUCCESS
+2026-02-10 21:05:24.224 [scheduling-933] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.224 [scheduling-933] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.224 [scheduling-995] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.224 [scheduling-995] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.224 [scheduling-1057] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.224 [scheduling-1057] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.225 [scheduling-1119] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.225 [scheduling-1119] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.225 [scheduling-1181] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.225 [scheduling-1181] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.227 [scheduling-1243] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.227 [scheduling-1243] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 2ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.227 [scheduling-1305] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.227 [scheduling-1305] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.227 [scheduling-1367] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.227 [scheduling-1367] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.228 [scheduling-1429] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.228 [scheduling-1429] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.230 [scheduling-1553] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.230 [scheduling-1863] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.230 [scheduling-1863] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.230 [scheduling-1553] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.231 [scheduling-1677] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.231 [scheduling-1677] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.231 [scheduling-1491] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.231 [scheduling-1491] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.232 [scheduling-2111] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.233 [scheduling-2111] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.232 [scheduling-1739] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.233 [scheduling-1739] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.233 [scheduling-1925] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.233 [scheduling-1925] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.234 [scheduling-1615] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.234 [scheduling-1801] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.234 [scheduling-2607] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.234 [scheduling-2607] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.234 [scheduling-1615] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 4ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.234 [scheduling-1801] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.234 [scheduling-2483] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.234 [scheduling-2483] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.235 [scheduling-1987] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.235 [scheduling-2545] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.235 [scheduling-1987] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.236 [scheduling-2545] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.236 [scheduling-2049] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.236 [scheduling-2049] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.236 [scheduling-2235] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.236 [scheduling-2235] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.237 [scheduling-2297] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.237 [scheduling-2297] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 4ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.238 [scheduling-2359] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.238 [scheduling-2359] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.239 [scheduling-3289] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.237 [scheduling-2669] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.239 [scheduling-2669] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 2ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.239 [scheduling-3289] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 2ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.239 [scheduling-2173] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.239 [scheduling-2731] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.239 [scheduling-2731] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.239 [scheduling-2421] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.239 [scheduling-2421] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.239 [scheduling-2173] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 6ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.240 [scheduling-3413] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.240 [scheduling-2793] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.240 [scheduling-3413] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.240 [scheduling-2793] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.240 [scheduling-2855] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.240 [scheduling-2855] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.240 [scheduling-2917] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.240 [scheduling-2917] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.242 [scheduling-3351] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.242 [scheduling-3351] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 3ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.243 [scheduling-3041] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.243 [scheduling-3041] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.244 [scheduling-3165] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.244 [scheduling-3165] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.244 [scheduling-3103] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.244 [scheduling-2979] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.244 [scheduling-3227] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:05:24.244 [scheduling-2979] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 4ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.244 [scheduling-3103] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 2ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.244 [scheduling-3227] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 0ms. Tasks: 24, Erros: 0
+2026-02-10 21:05:24.287 [scheduling-1244] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 60ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-1368] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 59ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-1306] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 60ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-1554] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 57ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-1802] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 53ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-1430] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 59ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-1616] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 56ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-2174] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 53ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-1678] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 55ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-1988] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 52ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-2608] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 52ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-1182] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 61ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-1926] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 56ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-1120] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 61ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-996] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 62ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-1058] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 62ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-1492] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 58ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-2298] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 52ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-1740] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 54ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-2484] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 52ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-1864] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 57ms. Status: SUCCESS
+2026-02-10 21:05:24.287 [scheduling-934] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 62ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-3414] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 62ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-2422] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 63ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-2546] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 66ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-2236] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 66ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-3228] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 58ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-2050] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 66ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-3352] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 63ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-3290] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 65ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-2794] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 62ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-2670] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 65ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-3166] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 59ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-2980] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 60ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-2856] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 60ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-2918] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 61ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-2732] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 63ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-2360] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 65ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-2112] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 69ms. Status: SUCCESS
+2026-02-10 21:05:24.302 [scheduling-3042] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 60ms. Status: SUCCESS
+2026-02-10 21:05:24.303 [scheduling-3104] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 60ms. Status: SUCCESS
+2026-02-10 21:05:32.861 [HikariPool-1:housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=3h24m52s638ms944µs201ns).
+2026-02-10 21:07:54.640 [scheduling-3475] INFO  b.c.o.o.tasks.registry.TaskFactory - Cache de tasks atualizado com 24 entradas.
+2026-02-10 21:07:54.640 [scheduling-3475] INFO  b.c.o.o.t.r.TaskRegistryWarmup - Catálogo atualizado em 1ms. Tasks: 24, Erros: 0
+2026-02-10 21:07:55.104 [scheduling-3476] INFO  b.c.o.o.domain.ExecutionTracker - Task [authGlobalTask] concluída em 62ms. Status: SUCCESS
+2026-02-10 21:11:02.035 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2026-02-10 21:11:02.036 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.

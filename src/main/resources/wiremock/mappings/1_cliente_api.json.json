@@ -1,0 +1,25 @@
+    {
+  "request": {
+    "method": "GET",
+    "urlPattern": "/v1/clientes/.*"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "dados": {
+        "nome": "Jefferson Developer",
+        "documento": "123.456.789-00",
+        "tipo": "PF",
+        "limiteCredito": 15000.00,
+        "segmento": "PRIME"
+      },
+      "metadata": {
+        "lastUpdate": "2023-10-01"
+      }
+    },
+    "fixedDelayMilliseconds": 50
+  }
+}
