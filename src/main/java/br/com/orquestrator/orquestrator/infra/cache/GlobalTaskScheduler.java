@@ -1,6 +1,6 @@
 package br.com.orquestrator.orquestrator.infra.cache;
 
-import br.com.orquestrator.orquestrator.domain.ExecutionTracker;
+import br.com.orquestrator.orquestrator.domain.tracker.TraceContext;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.adapter.persistence.repository.TaskCatalogProvider;
 import br.com.orquestrator.orquestrator.core.engine.TaskRunner;
@@ -60,7 +60,7 @@ public class GlobalTaskScheduler {
             ExecutionContext context = new ExecutionContext(
                     correlationId, 
                     operationType, 
-                    new ExecutionTracker(), 
+                    new TraceContext(),
                     Map.of()
             );
             

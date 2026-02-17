@@ -4,6 +4,7 @@ import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
 import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
+import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -32,7 +33,6 @@ public class InterceptorStack implements Task {
     private TaskChain createLink(InterceptorStep step, TaskDefinition def, TaskChain next) {
         return context -> {
             try {
-                // O interceptor agora deve retornar o resultado do proceed
                 return step.interceptor().intercept(context, next, step.config(), def);
             } catch (Exception e) {
                 log.error("Falha no interceptor [{}]: {}", 
@@ -43,7 +43,7 @@ public class InterceptorStack implements Task {
     }
 
     @Override
-    public Object execute(ExecutionContext context) {
+    public TaskResult execute(ExecutionContext context) {
         return headOfChain.proceed(context);
     }
 }

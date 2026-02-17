@@ -14,10 +14,9 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class PipelineManager {
 
-    private final PipelineFactory pipelineFactory;
+    private final PipelineService pipelineService;
 
     public Pipeline createAndValidate(ExecutionContext context, Set<String> requiredOutputs, Integer version) {
-        // A validação e a poda agora acontecem dentro do construtor do Pipeline
-        return pipelineFactory.create(context, requiredOutputs, version);
+        return pipelineService.create(context, requiredOutputs);
     }
 }

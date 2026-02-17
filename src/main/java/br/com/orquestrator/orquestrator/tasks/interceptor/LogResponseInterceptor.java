@@ -3,6 +3,7 @@ package br.com.orquestrator.orquestrator.tasks.interceptor;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
+import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import br.com.orquestrator.orquestrator.tasks.interceptor.config.LogResponseConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -19,8 +20,8 @@ public class LogResponseInterceptor extends TypedTaskInterceptor<LogResponseConf
     }
 
     @Override
-    protected Object interceptTyped(ExecutionContext context, TaskChain next, LogResponseConfig config, TaskDefinition taskDef) {
-        Object result = next.proceed(context);
+    protected TaskResult interceptTyped(ExecutionContext context, TaskChain next, LogResponseConfig config, TaskDefinition taskDef) {
+        TaskResult result = next.proceed(context);
 
         if (shouldLog(config)) {
             executeLogging(context, config, taskDef, result);
@@ -28,13 +29,12 @@ public class LogResponseInterceptor extends TypedTaskInterceptor<LogResponseConf
         return result;
     }
 
-    private void executeLogging(ExecutionContext context, LogResponseConfig config, TaskDefinition taskDef, Object result) {
+    private void executeLogging(ExecutionContext context, LogResponseConfig config, TaskDefinition taskDef, TaskResult result) {
         String nodeId = taskDef.getNodeId().value();
-        // Correção: Acesso via constante da ExecutionContext
-        Object status = context.getMeta(nodeId, ExecutionContext.STATUS);
-        Object body = config.isShowBody() ? result : "[REDACTED]";
+        int status = result.status();
+        Object body = config.isShowBody() ? result.body() : "[REDACTED]";
 
-        String message = STR."Task '\{nodeId}' finished with status: \{status != null ? status : "N/A"}";
+        String message = STR."Task '\{nodeId}' finished with status: \{status}";
         
         logAtLevel(config.getLevel(), message);
 

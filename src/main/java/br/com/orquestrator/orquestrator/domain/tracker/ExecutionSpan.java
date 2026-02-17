@@ -1,6 +1,6 @@
 package br.com.orquestrator.orquestrator.domain.tracker;
 
-import br.com.orquestrator.orquestrator.domain.ExecutionTracker;
+import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -10,58 +10,39 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Representa um intervalo de execução de uma tarefa (Span).
- * Acumula dados localmente e reporta ao Tracker ao finalizar.
+ * ExecutionSpan: Representa um intervalo de execução de uma tarefa.
+ * Segue o padrão OpenTelemetry.
  */
 @Slf4j
 public class ExecutionSpan implements AutoCloseable {
 
-    private final ExecutionTracker tracker;
+    private final TraceContext trace;
     private final String nodeId;
     private final String type;
-    private final Instant startTime;
     private final long startNano;
     
-    private final Map<String, Object> inputs = new ConcurrentHashMap<>();
-    private final Map<String, Object> outputs = new ConcurrentHashMap<>();
+    @Getter
     private final Map<String, Object> metadata = new ConcurrentHashMap<>();
     
     private volatile boolean finished = false;
     @Setter
-    private String status = "COMPLETED"; // Default se fechar sem success/fail explícito
+    private int status = 200;
     private String errorMessage = null;
 
-    public ExecutionSpan(ExecutionTracker tracker, String nodeId, String type) {
-        this.tracker = tracker;
+    public ExecutionSpan(TraceContext trace, String nodeId, String type) {
+        this.trace = trace;
         this.nodeId = nodeId;
         this.type = type;
-        this.startTime = Instant.now();
         this.startNano = System.nanoTime();
-    }
-
-    public void addInput(String key, Object value) {
-        if (value != null) inputs.put(key, value);
-    }
-
-    public void addOutput(String key, Object value) {
-        if (value != null) outputs.put(key, value);
     }
 
     public void addMetadata(String key, Object value) {
         if (value != null) metadata.put(key, value);
     }
 
-    public void success() {
-        this.status = "SUCCESS";
-    }
-
     public void fail(Throwable t) {
-        this.status = "FAILED";
+        this.status = 500;
         this.errorMessage = (t.getMessage() != null) ? t.getMessage() : t.getClass().getSimpleName();
-    }
-    
-    public boolean hasMetadata(String key) {
-        return metadata.containsKey(key);
     }
     
     public NodeMetrics toMetrics() {
@@ -69,13 +50,9 @@ public class ExecutionSpan implements AutoCloseable {
         return new NodeMetrics(
                 nodeId,
                 type,
-                startTime,
-                Instant.now(),
+                durationMs,
                 status,
                 errorMessage,
-                durationMs,
-                Map.copyOf(inputs),
-                Map.copyOf(outputs),
                 Map.copyOf(metadata)
         );
     }
@@ -84,8 +61,6 @@ public class ExecutionSpan implements AutoCloseable {
     public void close() {
         if (finished) return;
         finished = true;
-
-        NodeMetrics metrics = toMetrics();
-        tracker.record(metrics);
+        trace.record(toMetrics());
     }
 }

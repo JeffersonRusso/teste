@@ -1,49 +1,45 @@
 package br.com.orquestrator.orquestrator.tasks.http;
 
-import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.exception.TaskExecutionException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.PostConstruct;
+import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.util.Map;
+
 /**
- * Executor HTTP: Converte JSON para Map Java na fronteira.
+ * HttpExecutor: Executor técnico otimizado.
+ * SRP: Focado apenas na execução da chamada usando o cliente compartilhado.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class HttpExecutor {
 
-    private final RestClient.Builder restClientBuilder;
-    private final ObjectMapper objectMapper;
-    private RestClient client;
+    private final RestClient restClient;
 
-    @PostConstruct
-    public void init() {
-        this.client = restClientBuilder.build();
-    }
-
-    public Object execute(OrchestratorRequest request, String nodeId, ExecutionContext context) {
-        context.track(nodeId, "http.url", request.uri().toString());
-
+    public TaskResult execute(OrchestratorRequest request, String nodeId) {
         try {
-            return client.method(HttpMethod.valueOf(request.method()))
+            ResponseEntity<Object> response = restClient.method(HttpMethod.valueOf(request.method()))
                     .uri(request.uri())
                     .contentType(MediaType.APPLICATION_JSON)
                     .headers(h -> {
                         if (request.headers() != null) request.headers().forEach(h::add);
                     })
-                    .body(request.body() != null ? request.body() : "")
+                    .body(request.bodyOrEmpty())
                     .retrieve()
-                    .onStatus(status -> true, (req, res) -> {
-                        context.setStatus(nodeId, res.getStatusCode().value());
-                    })
-                    .body(Object.class); // Converte para Map/List Java nativo
+                    .toEntity(Object.class);
+
+            return new TaskResult(
+                response.getBody(), 
+                response.getStatusCode().value(), 
+                Map.of("http.url", request.uri().toString())
+            );
 
         } catch (Exception e) {
             throw handleHttpError(e, nodeId, request);

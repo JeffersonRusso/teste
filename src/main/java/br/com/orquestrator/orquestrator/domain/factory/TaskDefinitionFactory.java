@@ -13,12 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
- * Fábrica de TaskDefinition (Maestro).
- * Responsável pela orquestração da montagem da definição da tarefa, delegando o parsing
- * e o gerenciamento de features para especialistas.
- * Java 21: Utiliza String Templates e Objects.requireNonNullElse para clareza.
+ * TaskDefinitionFactory: Orquestra a montagem da definição da tarefa.
  */
 @Slf4j
 @Component
@@ -29,43 +27,39 @@ public class TaskDefinitionFactory {
     private final ConfigVariableResolver variableResolver;
     private final FeatureManager featureManager;
 
-    public TaskDefinition create(
-            String taskId,
-            Integer version,
-            String taskType,
-            JsonNode configJson,
-            FeaturePhases taskFeatures,
-            JsonNode profileFeaturesJson,
-            String selectorExpression,
-            Integer criticality,
-            JsonNode requiresJson,
-            JsonNode producesJson,
-            JsonNode responseSchema
-    ) {
-        // 1. Resolve variáveis de ambiente no JSON de configuração
-        JsonNode resolvedConfig = variableResolver.resolve(configJson);
+    public TaskDefinition create(TaskRawData raw) {
+        // 1. Resolve variáveis de ambiente
+        JsonNode resolvedConfig = variableResolver.resolve(raw.configJson());
         
-        // 2. Extrai a configuração técnica (timeout, failFast, etc)
-        TaskConfigRecord config = parseConfig(resolvedConfig, taskId);
+        // 2. Extrai configuração técnica
+        TaskConfigRecord config = parseConfig(resolvedConfig, raw.taskId());
         
-        // 3. Delega o gerenciamento de features (Merge + Resolução de Templates)
-        FeaturePhases finalFeatures = featureManager.mergeAndResolve(taskFeatures, profileFeaturesJson, taskId);
+        // 3. Gerencia features
+        FeaturePhases finalFeatures = featureManager.mergeAndResolve(
+            raw.taskFeatures(), 
+            raw.profileFeaturesJson(), 
+            raw.taskId()
+        );
 
-        // 4. Montagem final do objeto de domínio
+        // 4. Montagem final
+        return buildDefinition(raw, resolvedConfig, config, finalFeatures);
+    }
+
+    private TaskDefinition buildDefinition(TaskRawData raw, JsonNode resolvedConfig, TaskConfigRecord config, FeaturePhases finalFeatures) {
         return TaskDefinition.builder()
-                .nodeId(new NodeId(taskId))
-                .version(version)
-                .name(taskId)
-                .type(taskType)
+                .nodeId(new NodeId(raw.taskId()))
+                .version(raw.version())
+                .name(raw.taskId())
+                .type(raw.taskType())
                 .timeoutMs(config.timeoutMs())
                 .config(resolvedConfig)
                 .features(finalFeatures)
-                .ref(taskId)
-                .selectorExpression(selectorExpression)
-                .criticality(Objects.requireNonNullElse(criticality, 100))
-                .requires(DataSpecParser.parse(requiresJson))
-                .produces(DataSpecParser.parse(producesJson))
-                .responseSchema(responseSchema)
+                .ref(raw.taskId())
+                .selectorExpression(raw.selectorExpression())
+                .criticality(Objects.requireNonNullElse(raw.criticality(), 100))
+                .requires(DataSpecParser.parse(raw.requiresJson()))
+                .produces(DataSpecParser.parse(raw.producesJson()))
+                .responseSchema(raw.responseSchema())
                 .failFast(Objects.requireNonNullElse(config.failFast(), true))
                 .global(Objects.requireNonNullElse(config.global(), false))
                 .refreshIntervalMs(Objects.requireNonNullElse(config.refreshIntervalMs(), 0L))
@@ -74,17 +68,16 @@ public class TaskDefinitionFactory {
     }
 
     private TaskConfigRecord parseConfig(JsonNode json, String taskId) {
-        if (json == null || json.isMissingNode()) {
-            return new TaskConfigRecord(null, null, null, null, null);
-        }
-        
-        TaskConfigRecord record = objectMapper.convertValue(json, TaskConfigRecord.class);
-        
-        if (record.timeoutMs() == null) {
-             throw new IllegalArgumentException(STR."Timeout obrigatório ausente para a task: \{taskId}");
-        }
-        
-        return record;
+        return Optional.ofNullable(json)
+                .filter(n -> !n.isMissingNode())
+                .map(n -> objectMapper.convertValue(n, TaskConfigRecord.class))
+                .map(record -> {
+                    if (record.timeoutMs() == null) {
+                        throw new IllegalArgumentException(STR."Timeout obrigatório ausente para a task: \{taskId}");
+                    }
+                    return record;
+                })
+                .orElse(new TaskConfigRecord(null, null, null, null, null));
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

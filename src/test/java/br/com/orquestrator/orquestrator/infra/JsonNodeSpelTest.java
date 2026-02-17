@@ -1,6 +1,5 @@
 package br.com.orquestrator.orquestrator.infra;
 
-import br.com.orquestrator.orquestrator.infra.json.JsonNodeAccessor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;

@@ -5,6 +5,7 @@ import br.com.orquestrator.orquestrator.adapter.persistence.repository.TaskCatal
 import br.com.orquestrator.orquestrator.adapter.persistence.repository.entity.InfraProfileEntity;
 import br.com.orquestrator.orquestrator.adapter.persistence.repository.entity.TaskCatalogEntity;
 import br.com.orquestrator.orquestrator.domain.factory.TaskDefinitionFactory;
+import br.com.orquestrator.orquestrator.domain.factory.TaskRawData;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.adapter.persistence.repository.TaskCatalogProvider;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -19,7 +20,6 @@ import java.util.stream.Collectors;
 
 /**
  * Adaptador JPA para o catálogo de tasks.
- * Gerencia a recuperação de tasks ativas e a resolução de seus perfis de infraestrutura.
  */
 @Slf4j
 @Component
@@ -33,12 +33,8 @@ public class JpaTaskCatalogAdapter implements TaskCatalogProvider {
     @Override
     @Cacheable(value = "task_definitions", unless = "#result.isEmpty()")
     public List<TaskDefinition> findAllActive() {
-        log.debug("Cache MISS: Recarregando catálogo de tasks e perfis do banco de dados.");
-
-        // 1. Carrega todos os perfis para resolução em memória (Otimização N+1)
         Map<String, JsonNode> profileControls = loadProfileControls();
 
-        // 2. Busca tasks e realiza o mapeamento para o domínio
         return taskRepository.findAllActive().stream()
                 .map(entity -> mapToDomain(entity, profileControls))
                 .toList();
@@ -49,17 +45,17 @@ public class JpaTaskCatalogAdapter implements TaskCatalogProvider {
                 .collect(Collectors.toMap(
                         InfraProfileEntity::getProfileId,
                         InfraProfileEntity::getDefaultControls,
-                        (existing, replacement) -> replacement
+                        (existing, _) -> existing
                 ));
     }
 
     private TaskDefinition mapToDomain(TaskCatalogEntity entity, Map<String, JsonNode> profileControls) {
-        // Resolve os controles padrão do perfil, se houver um associado à task
         JsonNode defaultControls = entity.getInfraProfileId() != null 
                 ? profileControls.get(entity.getInfraProfileId()) 
                 : null;
 
-        return taskFactory.create(
+        // Uso do novo padrão TaskRawData (SOLID)
+        TaskRawData raw = new TaskRawData(
                 entity.getTaskId(),
                 entity.getVersion(),
                 entity.getTaskType(),
@@ -72,5 +68,7 @@ public class JpaTaskCatalogAdapter implements TaskCatalogProvider {
                 entity.getProduces(),
                 entity.getResponseSchema()
         );
+
+        return taskFactory.create(raw);
     }
 }

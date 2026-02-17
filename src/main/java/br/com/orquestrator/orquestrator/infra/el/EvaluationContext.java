@@ -12,28 +12,39 @@ public record EvaluationContext(StandardEvaluationContext nativeContext, Express
         Objects.requireNonNull(nativeContext, "O contexto nativo não pode ser nulo");
     }
 
+    /**
+     * Resolve um valor de forma inteligente.
+     * Se contiver #{...}, trata como template.
+     * Se começar com #, trata como lógica pura.
+     * Caso contrário, retorna o valor literal.
+     */
+    public <T> T resolve(String value, Class<T> type) {
+        if (value == null) return null;
+        
+        if (value.contains("#{")) {
+            return engine.resolve(value, nativeContext, type);
+        }
+        
+        if (value.startsWith("#")) {
+            return engine.evaluate(value, nativeContext, type);
+        }
+
+        return (type == String.class) ? type.cast(value) : (T) value;
+    }
+
+    /**
+     * Atalho para avaliar lógica pura (SpEL nativo).
+     */
     public <T> T evaluate(String expression, Class<T> type) {
         return engine.evaluate(expression, nativeContext, type);
     }
 
     /**
-     * Escreve um valor em um caminho SpEL (ex: "cliente.id").
-     * O SpEL cuida da criação da hierarquia se configurado corretamente.
+     * Escreve um valor em um caminho SpEL (ex: "#cliente.id").
      */
     public void set(String path, Object value) {
-        // Remove o '#' se presente para o comando de atribuição
-        String cleanPath = path.startsWith("#") ? path.substring(1) : path;
-        evaluate(STR."#\{cleanPath} = #value", Object.class); 
-        // Nota: O 'value' deve ser passado como variável no nativeContext
-    }
-
-    public <T> T resolve(String value, Class<T> type) {
-        if (value == null) return null;
-        if (isExplicitExpression(value)) return evaluate(value, type);
-        return (type == String.class) ? type.cast(value) : (T) value;
-    }
-
-    private boolean isExplicitExpression(String value) {
-        return value.startsWith("#") || value.contains("#{");
+        String cleanPath = path.startsWith("#") ? path : "#" + path;
+        nativeContext.setVariable("value", value);
+        evaluate(STR."\{cleanPath} = #value", Object.class);
     }
 }

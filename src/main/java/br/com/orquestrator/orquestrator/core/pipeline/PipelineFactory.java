@@ -12,7 +12,6 @@ import java.util.Set;
 
 /**
  * Orquestrador da criação de Pipelines.
- * Atua como a fachada que utiliza o FlowRouter para decidir o caminho e o PipelineAssembler para montar o trilho.
  */
 @Slf4j
 @Service
@@ -22,24 +21,18 @@ public class PipelineFactory {
     private final FlowRouter flowRouter;
     private final PipelineAssembler pipelineAssembler;
 
-    /**
-     * Cria um pipeline baseado no contexto de execução.
-     * O FlowRouter decide qual FlowDefinition usar.
-     */
     public Pipeline create(final ExecutionContext context) {
         FlowDefinition flowDef = flowRouter.route(context.getOperationType());
         return pipelineAssembler.assemble(context, flowDef);
     }
 
-    /**
-     * Cria um pipeline com alvos (outputs) específicos, sobrescrevendo a definição do fluxo.
-     */
     public Pipeline create(final ExecutionContext context, final Set<String> requiredOutputs) {
         FlowDefinition flowDef = flowRouter.route(context.getOperationType());
         
-        // Java 21: Cria uma nova definição com os outputs customizados mantendo as tasks permitidas
+        // Atualizado para incluir a versão no construtor do FlowDefinition
         FlowDefinition customFlow = new FlowDefinition(
                 flowDef.operationType(), 
+                flowDef.version(),
                 requiredOutputs, 
                 flowDef.allowedTasks()
         );
@@ -47,10 +40,6 @@ public class PipelineFactory {
         return pipelineAssembler.assemble(context, customFlow);
     }
 
-    /**
-     * Mantém compatibilidade com chamadas que passam versão explicitamente, 
-     * embora o FlowRouter agora deva gerenciar isso internamente.
-     */
     @Deprecated
     public Pipeline create(final ExecutionContext context, Integer version) {
         return create(context);

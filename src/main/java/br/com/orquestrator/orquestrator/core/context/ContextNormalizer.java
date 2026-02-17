@@ -4,7 +4,6 @@ import br.com.orquestrator.orquestrator.domain.ContextKey;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.infra.el.EvaluationContext;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionService;
-import br.com.orquestrator.orquestrator.infra.json.MapBuilder;
 import br.com.orquestrator.orquestrator.adapter.persistence.repository.entity.InputNormalizationEntity;
 import br.com.orquestrator.orquestrator.core.context.init.ContextInitializer;
 import br.com.orquestrator.orquestrator.core.context.normalization.NormalizationRuleProvider;
@@ -13,13 +12,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 /**
  * Orquestrador de normalização de contexto.
+ * Refatorado para operar diretamente no ExecutionContext (JSON Vivo).
  */
 @Slf4j
 @Service
@@ -29,7 +28,6 @@ public class ContextNormalizer implements ContextInitializer {
 
     private final NormalizationRuleProvider ruleProvider;
     private final ExpressionService expressionService;
-    private final MapBuilder mapBuilder;
 
     @Override
     public void initialize(ExecutionContext context, String operationType) {
@@ -40,28 +38,18 @@ public class ContextNormalizer implements ContextInitializer {
         log.debug("Iniciando normalização: {}", operationType);
 
         List<InputNormalizationEntity> rules = ruleProvider.getRules(operationType);
-        Map<String, Object> standardData = processAllRules(context, rules);
-
-        if (!standardData.isEmpty()) {
-            context.put(ContextKey.STANDARD, standardData);
-            log.debug("Normalização concluída. Campos: {}", standardData.keySet());
-        }
-    }
-
-    private Map<String, Object> processAllRules(ExecutionContext context, List<InputNormalizationEntity> rules) {
-        Map<String, Object> result = new HashMap<>();
         EvaluationContext evalContext = expressionService.create(context);
 
-        rules.forEach(rule -> applyRule(rule, evalContext, context, result));
+        rules.forEach(rule -> applyRule(rule, evalContext, context));
         
-        return result;
+        log.debug("Normalização concluída para {}", operationType);
     }
 
-    private void applyRule(InputNormalizationEntity rule, EvaluationContext evalContext, ExecutionContext context, Map<String, Object> result) {
+    private void applyRule(InputNormalizationEntity rule, EvaluationContext evalContext, ExecutionContext context) {
         try {
             extractValue(rule, evalContext)
                 .map(val -> transformValue(rule, val, context))
-                .ifPresent(val -> mapBuilder.addNested(result, rule.getTargetField(), val));
+                .ifPresent(val -> context.put(STR."\{ContextKey.STANDARD}.\{rule.getTargetField()}", val));
         } catch (Exception e) {
             log.warn("Falha ao processar regra de normalização [{}]: {}", rule.getTargetField(), e.getMessage());
         }

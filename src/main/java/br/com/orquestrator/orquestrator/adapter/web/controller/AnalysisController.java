@@ -1,6 +1,7 @@
 package br.com.orquestrator.orquestrator.adapter.web.controller;
 
 import br.com.orquestrator.orquestrator.core.context.OperationTypeResolver;
+import br.com.orquestrator.orquestrator.domain.vo.AnalysisRequest;
 import br.com.orquestrator.orquestrator.service.RiskAnalysisService;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +27,10 @@ public class AnalysisController {
 
         String operationType = operationTypeResolver.resolve(headers, rawBody);
 
-        Map<String, Object> response = riskAnalysisService.analyze(operationType, headers, rawBody);
+        // Uso do novo padrão AnalysisRequest (SOLID)
+        AnalysisRequest request = AnalysisRequest.simple(operationType, headers, rawBody);
+        
+        Map<String, Object> response = riskAnalysisService.analyze(request);
 
         return ResponseEntity.ok(response);
     }

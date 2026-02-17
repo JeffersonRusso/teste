@@ -21,8 +21,6 @@ import java.util.stream.StreamSupport;
 
 /**
  * Adaptador JPA para fornecimento de configurações de fluxo.
- * Realiza a tradução entre entidades de banco de dados e o modelo de domínio.
- * Java 21: Refatorado para maior performance, imutabilidade e fluidez.
  */
 @Slf4j
 @Component
@@ -36,7 +34,6 @@ public class JpaFlowConfigAdapter implements FlowConfigProvider {
     @Override
     @Cacheable(value = "flow_configs", key = "#operationType", unless = "#result == null")
     public Optional<FlowDefinition> getFlow(String operationType) {
-        log.debug(STR."Cache MISS: Buscando FlowConfig mais recente para [\{operationType}]");
         return repository.findLatestActive(operationType)
                 .map(this::mapToDefinition);
     }
@@ -45,23 +42,18 @@ public class JpaFlowConfigAdapter implements FlowConfigProvider {
     @Cacheable(value = "flow_configs_version", key = "#operationType + '-' + #version", unless = "#result == null")
     public Optional<FlowDefinition> getFlow(String operationType, Integer version) {
         return Optional.ofNullable(version)
-                .flatMap(v -> {
-                    log.debug(STR."Cache MISS: Buscando FlowConfig para [\{operationType}] versão [\{v}]");
-                    return repository.findSpecificVersion(operationType, v);
-                })
-                .or(() -> repository.findLatestActive(operationType)) // Fallback elegante para a última versão
+                .flatMap(v -> repository.findSpecificVersion(operationType, v))
+                .or(() -> repository.findLatestActive(operationType))
                 .map(this::mapToDefinition);
     }
 
     private FlowDefinition mapToDefinition(FlowConfigEntity entity) {
-        // Otimização: Extraímos strings simples diretamente sem overhead do Jackson convertValue
         Set<String> requiredOutputs = extractStringSet(entity.getRequiredOutputs());
-        
-        // Para objetos complexos (TaskReference), mantemos o parsing tipado
         Set<TaskReference> allowedTasks = parseJson(entity.getAllowedTasks(), new TypeReference<Set<TaskReference>>() {});
 
         return new FlowDefinition(
                 entity.getOperationType(),
+                entity.getVersion(),
                 requiredOutputs,
                 allowedTasks
         );
@@ -69,8 +61,6 @@ public class JpaFlowConfigAdapter implements FlowConfigProvider {
 
     private Set<String> extractStringSet(JsonNode node) {
         if (node == null || !node.isArray()) return Set.of();
-        
-        // Java 21: Stream direto para Set imutável e eficiente
         return StreamSupport.stream(node.spliterator(), false)
                 .map(JsonNode::asText)
                 .collect(Collectors.toUnmodifiableSet());
@@ -78,7 +68,6 @@ public class JpaFlowConfigAdapter implements FlowConfigProvider {
 
     private <T> Set<T> parseJson(JsonNode json, TypeReference<Set<T>> typeReference) {
         if (json == null || !json.isArray()) return Set.of();
-        
         try {
             Set<T> result = objectMapper.convertValue(json, typeReference);
             return result != null ? Set.copyOf(result) : Set.of();

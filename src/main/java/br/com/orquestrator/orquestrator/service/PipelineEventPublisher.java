@@ -20,19 +20,15 @@ public class PipelineEventPublisher {
 
     public void publishFinished(ExecutionContext context, boolean success) {
         try {
-            var tracker = context.getTracker();
+            var trace = context.getTrace();
             
-            if (tracker.getTotalDurationMs() <= 0) {
-                tracker.finish();
-            }
-
             var summary = new PipelineExecutionSummary(
                     context.getCorrelationId(),
                     context.getOperationType(),
-                    tracker.getStartTime(),
-                    tracker.getTotalDurationMs(),
-                    tracker.getMetrics(),
-                    context.asMap(),
+                    trace.getStartTime(),
+                    trace.getDurationMs(),
+                    trace.getMetrics(),
+                    context.getRoot(),
                     success
             );
 

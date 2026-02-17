@@ -1,20 +1,15 @@
 package br.com.orquestrator.orquestrator.domain.tracker;
 
-import java.time.Instant;
 import java.util.Map;
 
 /**
- * Snapshot imutável de métricas de um nó.
+ * NodeMetrics: Snapshot imutável da execução de uma task.
  */
 public record NodeMetrics(
-        String nodeId,
-        String type,
-        Instant startTime,
-        Instant endTime,
-        String status,
-        String errorMessage,
-        long durationMs,
-        Map<String, Object> inputs,
-        Map<String, Object> outputs,
-        Map<String, Object> metadata
+    String nodeId,
+    String type,
+    long durationMs,
+    int status,
+    String errorMessage,
+    Map<String, Object> metadata
 ) {}

@@ -13,11 +13,11 @@ public interface ExpressionService {
     EvaluationContext create(Object root, Map<String, Object> variables);
 
     default EvaluationContext create(ExecutionContext context) {
-        // Usa o mapa de dados do contexto como raiz para as expressões
-        return create(context.asMap());
+        // Usa o ObjectNode root do contexto diretamente para evitar conversões
+        return create(context.getRoot());
     }
 
     default EvaluationContext create(ExecutionContext context, Map<String, Object> variables) {
-        return create(context.asMap(), variables);
+        return create(context.getRoot(), variables);
     }
 }

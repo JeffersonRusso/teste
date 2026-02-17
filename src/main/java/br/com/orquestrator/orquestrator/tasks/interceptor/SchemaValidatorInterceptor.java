@@ -1,9 +1,9 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor;
 
-import br.com.orquestrator.orquestrator.domain.model.DataSpec;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
+import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import br.com.orquestrator.orquestrator.tasks.interceptor.config.SchemaValidatorConfig;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Component("SCHEMA_VALIDATOR")
@@ -35,15 +34,15 @@ public class SchemaValidatorInterceptor extends TypedTaskInterceptor<SchemaValid
     }
 
     @Override
-    protected Object interceptTyped(ExecutionContext context, TaskChain next, SchemaValidatorConfig config, TaskDefinition taskDef) {
-        Object result = next.proceed(context);
+    protected TaskResult interceptTyped(ExecutionContext context, TaskChain next, SchemaValidatorConfig config, TaskDefinition taskDef) {
+        TaskResult result = next.proceed(context);
 
         if (taskDef.getResponseSchema() == null || shouldSkipValidation(config)) {
             return result;
         }
 
         try {
-            JsonNode outputJson = buildOutputJson(context, taskDef);
+            JsonNode outputJson = buildOutputJson(result.body());
             if (outputJson != null) {
                 validateWithCache(outputJson, taskDef, config);
             }
@@ -58,14 +57,10 @@ public class SchemaValidatorInterceptor extends TypedTaskInterceptor<SchemaValid
         return ThreadLocalRandom.current().nextInt(100) >= config.sampleRate();
     }
 
-    private JsonNode buildOutputJson(ExecutionContext context, TaskDefinition taskDef) {
-        if (taskDef.getProduces() == null || taskDef.getProduces().isEmpty()) return null;
-
-        Map<String, Object> outputMap = taskDef.getProduces().stream()
-                .filter(spec -> context.get(spec.name()) != null)
-                .collect(Collectors.toMap(DataSpec::name, spec -> context.get(spec.name())));
-
-        return objectMapper.valueToTree(outputMap);
+    private JsonNode buildOutputJson(Object body) {
+        if (body == null) return null;
+        if (body instanceof JsonNode node) return node;
+        return objectMapper.valueToTree(body);
     }
 
     private void validateWithCache(JsonNode data, TaskDefinition taskDef, SchemaValidatorConfig config) {

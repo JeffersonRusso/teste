@@ -1,30 +1,30 @@
 package br.com.orquestrator.orquestrator.tasks.http;
 
-import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
+import br.com.orquestrator.orquestrator.core.context.ContextHolder;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
+import br.com.orquestrator.orquestrator.infra.el.EvaluationContext;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionService;
-import br.com.orquestrator.orquestrator.tasks.base.Task;
-import lombok.RequiredArgsConstructor;
+import br.com.orquestrator.orquestrator.tasks.base.BaseTask;
+import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * HttpTask: Puramente funcional.
+ * HttpTask: Agora estende BaseTask para ganhar resolução de templates automática.
  */
-@RequiredArgsConstructor
-public class HttpTask implements Task {
+public class HttpTask extends BaseTask<HttpTaskConfiguration> {
 
-    private final TaskDefinition definition;
     private final HttpExecutor executor;
-    private final HttpTaskConfiguration config;
-    private final ExpressionService expressionService;
+
+    public HttpTask(ExpressionService expressionService, HttpTaskConfiguration config, HttpExecutor executor) {
+        super(expressionService, config);
+        this.executor = executor;
+    }
 
     @Override
-    public Object execute(ExecutionContext context) {
-        var eval = expressionService.create(context);
-
+    protected TaskResult executeInternal(ExecutionContext context, EvaluationContext eval) {
         String url = eval.resolve(config.urlTemplate(), String.class);
         String body = config.bodyTemplate() != null ? eval.resolve(config.bodyTemplate(), String.class) : null;
         
@@ -33,6 +33,9 @@ public class HttpTask implements Task {
             config.headersTemplates().forEach((k, v) -> headers.put(k, eval.resolve(v, String.class)));
         }
 
-        return executor.execute(new OrchestratorRequest(config.method(), URI.create(url), headers, body, definition.getTimeoutMs()), definition.getNodeId().value(), context);
+        return executor.execute(
+            new OrchestratorRequest(config.method(), URI.create(url), headers, body, 0), 
+            ContextHolder.CURRENT_NODE.get()
+        );
     }
 }

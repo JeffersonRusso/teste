@@ -6,10 +6,11 @@ import br.com.orquestrator.orquestrator.exception.PipelineException;
 import br.com.orquestrator.orquestrator.infra.el.EvaluationContext;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionService;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
+import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import lombok.RequiredArgsConstructor;
 
 /**
- * SpelTask: Puramente funcional.
+ * SpelTask: Função pura de avaliação.
  */
 @RequiredArgsConstructor
 public class SpelTask implements Task {
@@ -19,7 +20,7 @@ public class SpelTask implements Task {
     private final SpelTaskConfiguration config;
 
     @Override
-    public Object execute(ExecutionContext context) {
+    public TaskResult execute(ExecutionContext context) {
         try {
             EvaluationContext evalContext = expressionService.create(context);
             Object result = evalContext.evaluate(config.expression(), Object.class);
@@ -27,7 +28,7 @@ public class SpelTask implements Task {
             if (result == null && config.required()) {
                 throw new PipelineException("Resultado da expressão SpEL é nulo, mas era obrigatório: " + config.expression());
             }
-            return result;
+            return TaskResult.success(result);
         } catch (Exception e) {
             throw new PipelineException("Erro ao avaliar expressão SpEL: " + config.expression(), e)
                     .withNodeId(definition.getNodeId().value());

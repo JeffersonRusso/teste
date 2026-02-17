@@ -7,8 +7,5 @@ import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
  */
 @FunctionalInterface
 public interface TaskChain {
-    /**
-     * Prossegue para o próximo elo da cadeia e retorna o resultado.
-     */
-    Object proceed(ExecutionContext context);
+    TaskResult proceed(ExecutionContext context);
 }

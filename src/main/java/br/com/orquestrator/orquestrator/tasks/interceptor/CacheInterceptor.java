@@ -5,6 +5,7 @@ import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.infra.el.EvaluationContext;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionService;
 import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
+import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import br.com.orquestrator.orquestrator.tasks.interceptor.cache.CacheProvider;
 import br.com.orquestrator.orquestrator.tasks.interceptor.config.CacheConfig;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +34,7 @@ public class CacheInterceptor extends TypedTaskInterceptor<CacheConfig> {
     }
 
     @Override
-    protected Object interceptTyped(ExecutionContext context, TaskChain next, CacheConfig config, TaskDefinition definition) {
+    protected TaskResult interceptTyped(ExecutionContext context, TaskChain next, CacheConfig config, TaskDefinition definition) {
         if (config == null || config.key() == null) {
             return next.proceed(context);
         }
@@ -51,14 +52,14 @@ public class CacheInterceptor extends TypedTaskInterceptor<CacheConfig> {
 
             if (cachedResult.isPresent()) {
                 context.track(nodeId, "cache.hit", true);
-                return cachedResult.get();
+                return TaskResult.success(cachedResult.get(), Map.of("cache_hit", true));
             }
 
             context.track(nodeId, "cache.hit", false);
-            Object result = next.proceed(context);
+            TaskResult result = next.proceed(context);
 
-            if (result != null) {
-                provider.put(nodeId, cacheKey, result, config.ttlMs());
+            if (result != null && result.body() != null) {
+                provider.put(nodeId, cacheKey, result.body(), config.ttlMs());
             }
             return result;
 

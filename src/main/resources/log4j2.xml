@@ -2,16 +2,19 @@
 <Configuration status="WARN">
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT">
-            <!--
-                Tentamos o lookup customizado. Se falhar, o Log4j2 mostrará o texto literal.
-                Adicionei um valor padrão '-' para o caso de não encontrar.
-            -->
             <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] [%ctx_val:correlation_id:-] [%ctx_val:node_id:-] %-5level %logger{36} - %msg%n"/>
         </Console>
+
+        <!-- Appender Assíncrono: O segredo da performance com Virtual Threads -->
+        <Async name="AsyncConsole">
+            <AppenderRef ref="Console"/>
+            <ArrayBlockingQueue/>
+        </Async>
     </Appenders>
+
     <Loggers>
         <Root level="INFO">
-            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncConsole"/>
         </Root>
     </Loggers>
 </Configuration>

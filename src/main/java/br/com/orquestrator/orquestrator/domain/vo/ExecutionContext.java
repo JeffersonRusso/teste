@@ -1,73 +1,66 @@
 package br.com.orquestrator.orquestrator.domain.vo;
 
 import br.com.orquestrator.orquestrator.domain.ExecutionTracker;
-import com.fasterxml.jackson.databind.JsonNode;
+import br.com.orquestrator.orquestrator.domain.tracker.TraceContext;
+import br.com.orquestrator.orquestrator.infra.json.PathNavigator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Contexto de Execução: Um Documento JSON Vivo.
+ * ExecutionContext: Documento Vivo, Lock-free e otimizado para Virtual Threads.
  */
 @Getter
-public class ExecutionContext {
-
-    public static final String STATUS = "status";
-    public static final String BODY = "body";
-    public static final String ERROR = "error";
+public class ExecutionContext implements DataStore, ExecutionMonitor {
 
     private final String correlationId;
     private final String operationType;
-    private final ExecutionTracker tracker;
-    private final ObjectNode root = JsonNodeFactory.instance.objectNode();
+    private final TraceContext trace;
+    private final Map<String, Object> root = new ConcurrentHashMap<>();
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    public ExecutionContext(String correlationId, String operationType, ExecutionTracker tracker, Map<String, Object> initialData) {
+    public ExecutionContext(String correlationId, String operationType, TraceContext trace, Map<String, Object> initialData) {
         this.correlationId = correlationId;
         this.operationType = operationType;
-        this.tracker = tracker;
-        if (initialData != null) {
-            initialData.forEach(this::put);
-        }
+        this.trace = trace;
+        if (initialData != null) this.root.putAll(initialData);
     }
 
-    public synchronized void put(String path, Object value) {
-        if (path == null || value == null) return;
-        
-        String[] segments = path.split("\\.");
-        ObjectNode current = root;
-        
-        for (int i = 0; i < segments.length - 1; i++) {
-            current = current.withObject("/" + segments[i]);
-        }
-        current.set(segments[segments.length - 1], mapper.valueToTree(value));
+    @Override
+    public void put(String path, Object value) {
+        PathNavigator.write(root, path, value);
     }
 
-    public JsonNode get(String path) {
-        if (path == null) return null;
-        JsonNode node = root.at("/" + path.replace(".", "/"));
-        return node.isMissingNode() ? null : node;
+    @Override
+    public Object get(String path) {
+        return PathNavigator.read(root, path);
     }
 
+    @Override
     public void track(String nodeId, String key, Object value) {
-        tracker.getSpan(nodeId).ifPresent(span -> span.addMetadata(key, value));
+        trace.getSpan(nodeId).ifPresent(span -> span.addMetadata(key, value));
     }
 
-    public void setStatus(String nodeId, int code) { track(nodeId, STATUS, code); }
-    
+    @Override
+    public void setStatus(String nodeId, int code) {
+        track(nodeId, "status", code);
+    }
+
+    @Override
+    public void setError(String nodeId, Object error) {
+        track(nodeId, "error", error);
+        put(STR."errors.\{nodeId}", error);
+    }
+
+    @Override
     public Object getMeta(String nodeId, String key) {
-        return tracker.getSpan(nodeId)
-                .map(s -> s.toMetrics().metadata().get(key))
+        return trace.getSpan(nodeId)
+                .map(s -> s.getMetadata().get(key))
                 .orElse(null);
     }
 
-    // --- API de Compatibilidade ---
-    public Map<String, Object> asMap() { return mapper.convertValue(root, Map.class); }
-    @Deprecated public Map<String, Object> readOnlyData() { return asMap(); }
-    @Deprecated public Map<String, Object> getDataStore() { return asMap(); }
-    @Deprecated public void trackTaskAction(String nodeId, String key, Object value) { track(nodeId, key, value); }
-    @Deprecated public void setMeta(String nodeId, String key, Object value) { track(nodeId, key, value); }
+    @Deprecated public ExecutionTracker getTracker() { return null; }
 }

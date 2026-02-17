@@ -3,13 +3,12 @@ package br.com.orquestrator.orquestrator.tasks.base;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 
 /**
- * Unidade de trabalho funcional.
- * Recebe o contexto e retorna o resultado da sua operação.
+ * Unidade de trabalho funcional com contrato de saída definido.
  */
 @FunctionalInterface
 public interface Task {
     /**
-     * Executa a lógica e retorna o dado produzido.
+     * Executa a lógica e retorna um resultado padronizado.
      */
-    Object execute(ExecutionContext context);
+    TaskResult execute(ExecutionContext context);
 }

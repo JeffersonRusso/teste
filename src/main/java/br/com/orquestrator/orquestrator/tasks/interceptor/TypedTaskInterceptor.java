@@ -3,6 +3,7 @@ package br.com.orquestrator.orquestrator.tasks.interceptor;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
+import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 
 import java.util.concurrent.TimeUnit;
 
@@ -24,7 +25,7 @@ public abstract class TypedTaskInterceptor<C> implements TaskInterceptor {
 
     @Override
     @SuppressWarnings("unchecked")
-    public final Object intercept(ExecutionContext context, TaskChain next, Object config, TaskDefinition taskDef) {
+    public final TaskResult intercept(ExecutionContext context, TaskChain next, Object config, TaskDefinition taskDef) {
         String interceptorName = this.getClass().getSimpleName().replace("Interceptor", "");
         long start = System.nanoTime();
         
@@ -36,5 +37,5 @@ public abstract class TypedTaskInterceptor<C> implements TaskInterceptor {
         }
     }
 
-    protected abstract Object interceptTyped(ExecutionContext context, TaskChain next, C config, TaskDefinition taskDef);
+    protected abstract TaskResult interceptTyped(ExecutionContext context, TaskChain next, C config, TaskDefinition taskDef);
 }
