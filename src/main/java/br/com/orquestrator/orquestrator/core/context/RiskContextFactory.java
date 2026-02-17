@@ -4,21 +4,22 @@ import br.com.orquestrator.orquestrator.domain.ContextKey;
 import br.com.orquestrator.orquestrator.domain.ExecutionTracker;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.core.context.init.ContextInitializer;
+import br.com.orquestrator.orquestrator.infra.cache.GlobalDataCache;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Fábrica responsável pela criação e inicialização do contexto de execução.
- * Utiliza a nova estrutura de ExecutionContext e ExecutionTracker.
+ * Fábrica de Contexto: Unifica dados globais e locais.
  */
 @Slf4j
 @Component
@@ -26,47 +27,30 @@ import java.util.UUID;
 public class RiskContextFactory {
 
     private final List<ContextInitializer> initializers;
+    private final ObjectMapper objectMapper;
+    private final GlobalDataCache globalCache;
 
     public ExecutionContext create(String operationType, Map<String, String> headers, JsonNode rawBody) {
-        Objects.requireNonNull(operationType, "O tipo de operação (operationType) é obrigatório");
+        String correlationId = ContextHolder.getCorrelationId().orElseGet(() -> UUID.randomUUID().toString());
 
-        // 1. Resolve Identificação (Correlation ID)
-        String correlationId = ContextHolder.getCorrelationId()
-                .orElseGet(() -> UUID.randomUUID().toString());
+        // 1. Inicia com dados globais (ex: tokens)
+        Map<String, Object> initialData = new HashMap<>(globalCache.getAll());
 
-        // 2. Prepara Dados Iniciais
-        Map<String, Object> initialData = buildInitialData(operationType, headers, rawBody);
+        // 2. Adiciona dados da requisição
+        Map<String, Object> bodyMap = rawBody != null ? objectMapper.convertValue(rawBody, Map.class) : new HashMap<>();
+        initialData.put(ContextKey.RAW, bodyMap);
+        initialData.put(ContextKey.HEADER, Objects.requireNonNullElse(headers, Collections.emptyMap()));
+        initialData.put(ContextKey.OPERATION_TYPE, operationType);
 
-        // 3. Instancia o Contexto com seus especialistas
-        ExecutionContext context = new ExecutionContext(
-                correlationId, 
-                operationType, 
-                new ExecutionTracker(), 
-                initialData
-        );
-
-        // 4. Executa Inicializadores (Normalização, etc)
+        ExecutionContext context = new ExecutionContext(correlationId, operationType, new ExecutionTracker(), initialData);
+        
+        // 3. Roda inicializadores (Normalização, etc)
         runInitializers(context, operationType);
 
-        log.debug(STR."Contexto criado: \{operationType} [Correlation: \{correlationId}]");
         return context;
     }
 
-    private Map<String, Object> buildInitialData(String operationType, Map<String, String> headers, JsonNode rawBody) {
-        return Map.of(
-            ContextKey.RAW, Objects.requireNonNullElseGet(rawBody, JsonNodeFactory.instance::objectNode),
-            ContextKey.HEADER, Objects.requireNonNullElse(headers, Collections.emptyMap()),
-            ContextKey.OPERATION_TYPE, operationType
-        );
-    }
-
     private void runInitializers(ExecutionContext context, String operationType) {
-        initializers.forEach(initializer -> {
-            try {
-                initializer.initialize(context, operationType);
-            } catch (Exception e) {
-                log.error(STR."Falha no inicializador [\{initializer.getClass().getSimpleName()}]: \{e.getMessage()}");
-            }
-        });
+        initializers.forEach(i -> i.initialize(context, operationType));
     }
 }

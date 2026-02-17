@@ -1,13 +1,15 @@
 package br.com.orquestrator.orquestrator.tasks.base;
 
+import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
+
 /**
- * Representa uma unidade de trabalho atômica.
- * Opera sobre uma visão restrita de dados (TaskData).
+ * Unidade de trabalho funcional.
+ * Recebe o contexto e retorna o resultado da sua operação.
  */
+@FunctionalInterface
 public interface Task {
     /**
-     * Executa a lógica da task.
-     * @param data Interface para leitura de inputs e escrita de outputs.
+     * Executa a lógica e retorna o dado produzido.
      */
-    void execute(TaskData data);
+    Object execute(ExecutionContext context);
 }

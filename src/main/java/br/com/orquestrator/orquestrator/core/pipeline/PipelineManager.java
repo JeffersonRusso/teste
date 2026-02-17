@@ -7,16 +7,17 @@ import org.springframework.stereotype.Service;
 
 import java.util.Set;
 
+/**
+ * Gerenciador de Pipeline: Simplificado para apenas delegar a criação.
+ */
 @Service
 @RequiredArgsConstructor
 public class PipelineManager {
 
     private final PipelineFactory pipelineFactory;
-    private final PipelineValidator validator;
 
     public Pipeline createAndValidate(ExecutionContext context, Set<String> requiredOutputs, Integer version) {
-        Pipeline pipeline = pipelineFactory.create(context, requiredOutputs, version);
-        validator.validate(pipeline, context);
-        return pipeline;
+        // A validação e a poda agora acontecem dentro do construtor do Pipeline
+        return pipelineFactory.create(context, requiredOutputs, version);
     }
 }

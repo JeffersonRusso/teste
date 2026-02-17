@@ -61,15 +61,10 @@ public class SpelExpressionService implements ExpressionService, ExpressionEngin
         StandardEvaluationContext context = new StandardEvaluationContext();
         context.setPropertyAccessors(List.of(MAP_ACCESSOR, JSON_ACCESSOR));
         
-        // Se o rootObject for um TaskData, usamos a visão de Map para o SpEL
-        Object effectiveRoot = rootObject;
-        if (rootObject instanceof br.com.orquestrator.orquestrator.tasks.base.TaskData data) {
-            effectiveRoot = data.asMap();
-        }
-
-        context.setRootObject(effectiveRoot);
+        // Configura o root e as variáveis
+        context.setRootObject(rootObject);
         
-        if (effectiveRoot instanceof Map<?, ?> map) {
+        if (rootObject instanceof Map<?, ?> map) {
             @SuppressWarnings("unchecked")
             Map<String, Object> typedMap = (Map<String, Object>) map;
             context.setVariables(typedMap);

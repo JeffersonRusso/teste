@@ -1,8 +1,8 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor;
 
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
+import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
-import br.com.orquestrator.orquestrator.tasks.base.TaskData;
 import br.com.orquestrator.orquestrator.tasks.interceptor.config.RetryConfig;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryRegistry;
@@ -13,14 +13,11 @@ import java.time.Duration;
 
 /**
  * Interceptor responsável pela lógica de retentativas (Retry).
- * Utiliza o Resilience4j para gerenciar as tentativas e o TaskData para rastro.
- * Java 21: Uso de String Templates e delegação para o RetryRegistry.
  */
 @Slf4j
 @Component("RETRY")
 public class RetryInterceptor extends TypedTaskInterceptor<RetryConfig> {
 
-    // Recomendação: Usar o Registry do próprio Resilience4j para gerenciar o ciclo de vida das instâncias
     private final RetryRegistry retryRegistry = RetryRegistry.ofDefaults();
 
     public RetryInterceptor() {
@@ -28,30 +25,26 @@ public class RetryInterceptor extends TypedTaskInterceptor<RetryConfig> {
     }
 
     @Override
-    protected void interceptTyped(TaskData data, TaskChain next, RetryConfig config, TaskDefinition taskDef) {
-        // Fail Fast: Se não há múltiplas tentativas configuradas, segue o fluxo normal
+    protected Object interceptTyped(ExecutionContext context, TaskChain next, RetryConfig config, TaskDefinition taskDef) {
         if (config.maxAttempts() <= 1) {
-            next.proceed(data);
-            return;
+            return next.proceed(context);
         }
 
         String taskId = taskDef.getNodeId().value();
-        // Java 21: String Templates para gerar uma chave única baseada na configuração
         String retryName = STR."\{taskId}_\{config.hashCode()}";
         
         Retry retry = retryRegistry.retry(retryName, () -> createR4jConfig(config));
 
-        retry.executeRunnable(() -> {
+        return retry.executeSupplier(() -> {
             try {
-                next.proceed(data);
-                // Se chegou aqui após retentativas, marcamos o sucesso no rastro
+                Object result = next.proceed(context);
                 if (retry.getMetrics().getNumberOfSuccessfulCallsWithRetryAttempt() > 0) {
-                    data.addMetadata("retry.status", "SUCCESS_WITH_RETRY");
-                    data.addMetadata("retry.attempts", retry.getMetrics().getNumberOfSuccessfulCallsWithRetryAttempt());
+                    context.track(taskId, "retry.status", "SUCCESS_WITH_RETRY");
+                    context.track(taskId, "retry.attempts", retry.getMetrics().getNumberOfSuccessfulCallsWithRetryAttempt());
                 }
+                return result;
             } catch (Exception e) {
-                // Registramos o erro da última tentativa para depuração
-                data.addMetadata("retry.last_error", e.getMessage());
+                context.track(taskId, "retry.last_error", e.getMessage());
                 throw e; 
             }
         });
@@ -61,7 +54,7 @@ public class RetryInterceptor extends TypedTaskInterceptor<RetryConfig> {
         return io.github.resilience4j.retry.RetryConfig.custom()
                 .maxAttempts(config.maxAttempts())
                 .waitDuration(Duration.ofMillis(config.waitDurationMs()))
-                .retryExceptions(Exception.class) // Captura todas as exceções para retry por padrão
+                .retryExceptions(Exception.class)
                 .build();
     }
 }

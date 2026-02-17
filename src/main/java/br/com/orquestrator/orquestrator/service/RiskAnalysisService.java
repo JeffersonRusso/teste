@@ -16,8 +16,6 @@ import java.util.stream.Collectors;
 
 /**
  * Orquestrador principal de análise de risco.
- * Coordena o ciclo de vida da execução: Contexto -> Pipeline -> Motor -> Resposta.
- * Agora totalmente desacoplado da lógica de roteamento e versões.
  */
 @Slf4j
 @Service
@@ -37,26 +35,21 @@ public class RiskAnalysisService {
                                        final JsonNode rawBody, 
                                        final Set<String> requiredOutputs) {
         
-        // 1. Inicialização do Contexto (Normalização inclusa)
         final ExecutionContext context = contextFactory.create(operationType, headers, rawBody);
-        
-        // 2. Construção do Pipeline (O roteamento agora é interno ao PipelineManager/Factory)
         final Pipeline pipeline = pipelineManager.createAndValidate(context, requiredOutputs, null);
         
-        // 3. Execução Orquestrada
         engine.run(context, pipeline);
 
-        // 4. Extração do Resultado Final (Baseado no contrato do Pipeline)
         return extractResults(context, pipeline);
     }
 
     private Map<String, Object> extractResults(ExecutionContext context, Pipeline pipeline) {
         return pipeline.getRequiredOutputs().stream()
-                .filter(context::has)
+                .filter(key -> context.get(key) != null)
                 .collect(Collectors.toMap(
-                        target -> target,
-                        context::get,
-                        (existing, _) -> existing
+                        key -> key,
+                        key -> context.get(key),
+                        (existing, replacement) -> existing
                 ));
     }
 }

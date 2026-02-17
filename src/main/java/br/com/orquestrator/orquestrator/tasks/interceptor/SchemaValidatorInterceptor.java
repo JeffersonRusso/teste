@@ -2,8 +2,8 @@ package br.com.orquestrator.orquestrator.tasks.interceptor;
 
 import br.com.orquestrator.orquestrator.domain.model.DataSpec;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
+import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
-import br.com.orquestrator.orquestrator.tasks.base.TaskData;
 import br.com.orquestrator.orquestrator.tasks.interceptor.config.SchemaValidatorConfig;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,7 +26,6 @@ public class SchemaValidatorInterceptor extends TypedTaskInterceptor<SchemaValid
 
     private final ObjectMapper objectMapper;
     private final JsonSchemaFactory schemaFactory;
-    // Cache de esquemas compilados para evitar parsing repetitivo
     private final Map<String, JsonSchema> compiledSchemaCache = new ConcurrentHashMap<>();
 
     public SchemaValidatorInterceptor(ObjectMapper objectMapper) {
@@ -36,22 +35,22 @@ public class SchemaValidatorInterceptor extends TypedTaskInterceptor<SchemaValid
     }
 
     @Override
-    protected void interceptTyped(TaskData data, TaskChain next, SchemaValidatorConfig config, TaskDefinition taskDef) {
-        next.proceed(data);
+    protected Object interceptTyped(ExecutionContext context, TaskChain next, SchemaValidatorConfig config, TaskDefinition taskDef) {
+        Object result = next.proceed(context);
 
-        // Fail Fast: Se não houver schema ou se a amostragem decidir pular
         if (taskDef.getResponseSchema() == null || shouldSkipValidation(config)) {
-            return;
+            return result;
         }
 
         try {
-            JsonNode outputJson = buildOutputJson(data, taskDef);
+            JsonNode outputJson = buildOutputJson(context, taskDef);
             if (outputJson != null) {
                 validateWithCache(outputJson, taskDef, config);
             }
         } catch (Exception e) {
             log.warn("Erro interno na validação de schema para task {}: {}", taskDef.getNodeId(), e.getMessage());
         }
+        return result;
     }
 
     private boolean shouldSkipValidation(SchemaValidatorConfig config) {
@@ -59,13 +58,12 @@ public class SchemaValidatorInterceptor extends TypedTaskInterceptor<SchemaValid
         return ThreadLocalRandom.current().nextInt(100) >= config.sampleRate();
     }
 
-    private JsonNode buildOutputJson(TaskData data, TaskDefinition taskDef) {
+    private JsonNode buildOutputJson(ExecutionContext context, TaskDefinition taskDef) {
         if (taskDef.getProduces() == null || taskDef.getProduces().isEmpty()) return null;
 
-        // Java 21: Stream API mais limpa para construir o mapa de saída
         Map<String, Object> outputMap = taskDef.getProduces().stream()
-                .filter(spec -> data.get(spec.name()) != null)
-                .collect(Collectors.toMap(DataSpec::name, spec -> data.get(spec.name())));
+                .filter(spec -> context.get(spec.name()) != null)
+                .collect(Collectors.toMap(DataSpec::name, spec -> context.get(spec.name())));
 
         return objectMapper.valueToTree(outputMap);
     }
@@ -73,7 +71,6 @@ public class SchemaValidatorInterceptor extends TypedTaskInterceptor<SchemaValid
     private void validateWithCache(JsonNode data, TaskDefinition taskDef, SchemaValidatorConfig config) {
         String nodeId = taskDef.getNodeId().value();
 
-        // Recupera ou compila o schema (operação atômica no cache)
         JsonSchema schema = compiledSchemaCache.computeIfAbsent(
                 STR."\{nodeId}_\{taskDef.getVersion()}",
                 _ -> schemaFactory.getSchema(taskDef.getResponseSchema())
@@ -91,7 +88,6 @@ public class SchemaValidatorInterceptor extends TypedTaskInterceptor<SchemaValid
         log.warn(message);
 
         if (config != null && config.failOnInvalid()) {
-            // Lançamos uma exceção de negócio para o motor tratar
             throw new RuntimeException(message);
         }
     }

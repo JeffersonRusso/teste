@@ -6,6 +6,7 @@ import br.com.orquestrator.orquestrator.domain.model.FlowDefinition;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.domain.vo.Pipeline;
+import br.com.orquestrator.orquestrator.infra.cache.GlobalDataCache;
 import br.com.orquestrator.orquestrator.infra.health.SystemHealthMonitor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,12 +14,12 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 /**
  * Mestre da montagem técnica do Pipeline.
- * Foca na seleção, filtragem e otimização das tarefas baseada no FlowDefinition fornecido.
  */
 @Slf4j
 @Service
@@ -30,37 +31,39 @@ public class PipelineAssembler {
     private final TaskCatalogProvider taskProvider;
     private final TaskSelectorStrategy selectorStrategy;
     private final SystemHealthMonitor healthMonitor;
-    private final TaskGraphFilter graphFilter;
     private final PipelineTimeoutCalculator timeoutCalculator;
+    private final GlobalDataCache globalCache;
 
-    /**
-     * Monta o Pipeline técnico a partir de uma definição de fluxo.
-     */
     public Pipeline assemble(final ExecutionContext context, final FlowDefinition flowDef) {
-        // 1. Seleção: Filtra o que pode rodar baseado no contexto e saúde do sistema
+        // 1. Seleciona as tasks que podem rodar
         final List<TaskDefinition> selected = selectTasks(context, flowDef);
         
+        // 2. Coleta as chaves iniciais (Input + Globais + Tasks Globais que VÃO rodar)
+        Set<String> initialKeys = new HashSet<>(context.asMap().keySet());
+        initialKeys.addAll(globalCache.getAll().keySet());
+        
+        // Adiciona as chaves que as tasks globais produzem (mesmo que ainda não tenham rodado)
+        taskProvider.findAllActive().stream()
+                .filter(TaskDefinition::isGlobal)
+                .forEach(t -> {
+                    initialKeys.add(t.getNodeId().value());
+                    if (t.getProduces() != null) t.getProduces().forEach(p -> initialKeys.add(p.name()));
+                });
+        
         if (selected.isEmpty()) {
-            log.warn("Nenhuma task selecionada para o contexto: {}", context.getOperationType());
             return new Pipeline(Collections.emptyList(), Duration.ZERO, 
-                    flowDef != null ? flowDef.requiredOutputs() : DEFAULT_TARGETS);
+                    flowDef != null ? flowDef.requiredOutputs() : DEFAULT_TARGETS, initialKeys);
         }
         
-        // Java 21: Garantia de alvos não nulos
         final Set<String> requiredOutputs = (flowDef != null && flowDef.requiredOutputs() != null) 
                 ? flowDef.requiredOutputs() 
                 : DEFAULT_TARGETS;
         
-        // 2. Otimização: Filtra apenas o necessário para os outputs requeridos (Graph Pruning)
-        final List<TaskDefinition> optimizedTasks = graphFilter.filterByDependencies(selected, requiredOutputs);
+        final Duration dynamicTimeout = timeoutCalculator.calculate(selected);
         
-        // 3. Orçamento: Calcula o tempo limite dinâmico baseado nas tarefas otimizadas
-        final Duration dynamicTimeout = timeoutCalculator.calculate(optimizedTasks);
-        
-        log.info("Pipeline montado para [{}]: {} tarefas, Timeout: {}ms", 
-                context.getOperationType(), optimizedTasks.size(), dynamicTimeout.toMillis());
+        log.info("Pipeline montado para [{}]: {} tarefas", context.getOperationType(), selected.size());
 
-        return new Pipeline(optimizedTasks, dynamicTimeout, requiredOutputs);
+        return new Pipeline(selected, dynamicTimeout, requiredOutputs, initialKeys);
     }
 
     private List<TaskDefinition> selectTasks(final ExecutionContext context, final FlowDefinition flowDef) {
@@ -83,11 +86,6 @@ public class PipelineAssembler {
     }
 
     private boolean isCriticalEnough(final TaskDefinition def, final int cutoffScore) {
-        if (def.getCriticality() < cutoffScore) {
-            log.debug("Task {} (Score {}) removida por Load Shedding (Corte: {})", 
-                    def.getNodeId(), def.getCriticality(), cutoffScore);
-            return false;
-        }
-        return true;
+        return def.getCriticality() >= cutoffScore;
     }
 }

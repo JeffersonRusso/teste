@@ -1,13 +1,14 @@
 package br.com.orquestrator.orquestrator.tasks.base;
 
+import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
+
 /**
  * Representa um elo na cadeia de execução de uma task.
  */
 @FunctionalInterface
 public interface TaskChain {
     /**
-     * Prossegue para o próximo elo da cadeia (interceptor ou task final).
-     * @param data O contrato de dados da task.
+     * Prossegue para o próximo elo da cadeia e retorna o resultado.
      */
-    void proceed(TaskData data);
+    Object proceed(ExecutionContext context);
 }

@@ -20,7 +20,6 @@ import java.util.Optional;
 
 /**
  * Orquestrador de normalização de contexto.
- * Transforma dados brutos em um modelo canônico (STANDARD) baseado em regras dinâmicas.
  */
 @Slf4j
 @Service
@@ -79,7 +78,7 @@ public class ContextNormalizer implements ContextInitializer {
             return value;
         }
 
-        EvaluationContext transContext = expressionService.create(context.getDataStore(), Map.of("value", value));
+        EvaluationContext transContext = expressionService.create(context, Map.of("value", value));
         return transContext.evaluate(transformExp, Object.class);
     }
 }

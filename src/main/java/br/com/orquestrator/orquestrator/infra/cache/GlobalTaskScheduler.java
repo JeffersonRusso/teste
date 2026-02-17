@@ -3,9 +3,7 @@ package br.com.orquestrator.orquestrator.infra.cache;
 import br.com.orquestrator.orquestrator.domain.ExecutionTracker;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.adapter.persistence.repository.TaskCatalogProvider;
-import br.com.orquestrator.orquestrator.core.engine.DataBus;
-import br.com.orquestrator.orquestrator.core.engine.DataBusFactory;
-import br.com.orquestrator.orquestrator.core.engine.TaskExecutor;
+import br.com.orquestrator.orquestrator.core.engine.TaskRunner;
 import br.com.orquestrator.orquestrator.domain.model.DataSpec;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import lombok.RequiredArgsConstructor;
@@ -14,14 +12,11 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Agendador de tarefas globais.
- * Java 21: Refatorado para execução síncrona via Bootstrapper.
  */
 @Slf4j
 @Component
@@ -29,14 +24,10 @@ import java.util.Map;
 public class GlobalTaskScheduler {
 
     private final TaskCatalogProvider taskProvider;
-    private final TaskExecutor taskExecutor;
-    private final DataBusFactory dataBusFactory;
+    private final TaskRunner taskRunner;
     private final GlobalDataCache globalCache;
     private final TaskScheduler taskScheduler;
 
-    /**
-     * Inicializa o agendamento de tasks globais. Chamado pelo OrchestratorBootstrapper.
-     */
     public void initialize() {
         log.info("Inicializando agendamento de tasks globais...");
         List<TaskDefinition> globalTasks = taskProvider.findAllActive().stream()
@@ -49,13 +40,12 @@ public class GlobalTaskScheduler {
     }
 
     private void scheduleTask(TaskDefinition def) {
-        Runnable taskRunner = () -> executeGlobalTask(def);
+        Runnable runner = () -> executeGlobalTask(def);
 
-        // Execução inicial síncrona
-        taskRunner.run();
+        runner.run();
 
         if (def.getRefreshIntervalMs() > 0) {
-            taskScheduler.scheduleAtFixedRate(taskRunner, Duration.ofMillis(def.getRefreshIntervalMs()));
+            taskScheduler.scheduleAtFixedRate(runner, Duration.ofMillis(def.getRefreshIntervalMs()));
             log.info(STR."Task global [\{def.getNodeId()}] agendada a cada \{def.getRefreshIntervalMs()}ms");
         }
     }
@@ -66,21 +56,15 @@ public class GlobalTaskScheduler {
             
             String correlationId = STR."GLOBAL-REFRESH-\{def.getNodeId()}";
             String operationType = "GLOBAL_SYSTEM";
-            ExecutionTracker tracker = new ExecutionTracker();
             
             ExecutionContext context = new ExecutionContext(
                     correlationId, 
                     operationType, 
-                    tracker, 
+                    new ExecutionTracker(), 
                     Map.of()
             );
             
-            long timeout = def.getTimeoutMs() > 0 ? def.getTimeoutMs() : 3600000;
-            context.setDeadline(Instant.now().plusMillis(timeout));
-
-            DataBus dataBus = dataBusFactory.create(context, Collections.singletonList(def));
-
-            taskExecutor.execute(def, context, dataBus);
+            taskRunner.run(def, context);
 
             if (def.getProduces() != null) {
                 for (DataSpec spec : def.getProduces()) {

@@ -1,8 +1,8 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor;
 
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
+import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
-import br.com.orquestrator.orquestrator.tasks.base.TaskData;
 
 /**
  * Contrato para interceptores de tasks.
@@ -10,13 +10,10 @@ import br.com.orquestrator.orquestrator.tasks.base.TaskData;
 public interface TaskInterceptor {
 
     /**
-     * Intercepta a execução de uma task.
+     * Intercepta a execução e retorna o resultado da task.
      */
-    void intercept(TaskData data, TaskChain next, Object config, TaskDefinition taskDef);
+    Object intercept(ExecutionContext context, TaskChain next, Object config, TaskDefinition taskDef);
     
-    /**
-     * Retorna a classe de configuração esperada.
-     */
     default Class<?> getConfigClass() {
         return null;
     }

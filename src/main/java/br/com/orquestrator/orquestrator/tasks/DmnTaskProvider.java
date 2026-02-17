@@ -2,9 +2,7 @@ package br.com.orquestrator.orquestrator.tasks;
 
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.exception.TaskConfigurationException;
-import br.com.orquestrator.orquestrator.infra.json.MapBuilder;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
-import br.com.orquestrator.orquestrator.tasks.common.TaskResultMapper;
 import br.com.orquestrator.orquestrator.tasks.script.dmn.DmnTask;
 import br.com.orquestrator.orquestrator.tasks.script.dmn.DmnTaskConfiguration;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -23,9 +21,7 @@ import java.util.Map;
 public class DmnTaskProvider implements TaskProvider {
 
     private final DmnEngine dmnEngine;
-    private final TaskResultMapper resultMapper;
     private final ObjectMapper objectMapper;
-    private final MapBuilder mapBuilder;
 
     @Override
     public String getType() {
@@ -35,7 +31,7 @@ public class DmnTaskProvider implements TaskProvider {
     @Override
     public Task create(TaskDefinition def) {
         DmnTaskConfiguration config = parseConfiguration(def);
-        return new DmnTask(def, dmnEngine, resultMapper, objectMapper, mapBuilder, config);
+        return new DmnTask(def, dmnEngine, config);
     }
 
     private DmnTaskConfiguration parseConfiguration(TaskDefinition def) {

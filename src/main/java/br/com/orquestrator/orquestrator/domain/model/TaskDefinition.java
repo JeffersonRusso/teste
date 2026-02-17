@@ -2,7 +2,6 @@ package br.com.orquestrator.orquestrator.domain.model;
 
 import br.com.orquestrator.orquestrator.domain.FeatureDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.NodeId;
-import br.com.orquestrator.orquestrator.domain.vo.Path;
 import br.com.orquestrator.orquestrator.domain.vo.TaskContract;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Builder;
@@ -10,8 +9,10 @@ import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
 
@@ -33,14 +34,13 @@ public class TaskDefinition {
     private final long refreshIntervalMs;
     private final long ttlMs;
     
-    private final JsonNode responseSchema; // Schema para validação
+    private final JsonNode responseSchema;
 
     private final List<DataSpec> requires;
     private final List<DataSpec> produces;
     
     private final List<FeatureDefinition> allFeaturesOrdered;
     
-    // Contrato pré-calculado para performance máxima na ContractView
     private final TaskContract contract;
 
     @Builder
@@ -71,7 +71,6 @@ public class TaskDefinition {
         
         this.allFeaturesOrdered = buildFeaturesList(features);
         
-        // Pré-calcula o contrato no momento da criação da definição
         this.contract = new TaskContract(
             computeAllowedPaths(this.requires),
             extractNames(this.produces)
@@ -96,12 +95,20 @@ public class TaskDefinition {
     }
 
     private Set<String> computeAllowedPaths(List<DataSpec> specs) {
-        return specs.stream()
-                .map(DataSpec::name)
-                .map(Path::of)
-                .flatMap(path -> path.hierarchy().stream())
-                .map(Path::value)
-                .collect(Collectors.toUnmodifiableSet());
+        Set<String> paths = new HashSet<>();
+        for (DataSpec spec : specs) {
+            String name = spec.name();
+            paths.add(name);
+            if (name.contains(".")) {
+                String[] segments = name.split("\\.");
+                StringJoiner current = new StringJoiner(".");
+                for (String segment : segments) {
+                    current.add(segment);
+                    paths.add(current.toString());
+                }
+            }
+        }
+        return Collections.unmodifiableSet(paths);
     }
 
     private Set<String> extractNames(List<DataSpec> specs) {

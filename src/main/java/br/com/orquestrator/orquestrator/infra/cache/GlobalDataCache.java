@@ -1,36 +1,26 @@
 package br.com.orquestrator.orquestrator.infra.cache;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-@Slf4j
+/**
+ * Repositório de Dados Globais: Simples e Direto.
+ */
 @Component
-@RequiredArgsConstructor
 public class GlobalDataCache {
 
-    private final CacheManager cacheManager;
-    private static final String CACHE_NAME = "global_data";
+    private final Map<String, Object> storage = new ConcurrentHashMap<>();
 
     public void put(String key, Object value) {
-        log.debug("[GlobalCache] PUT key={} value={}", key, value);
-        getCache().put(key, value);
+        if (key != null && value != null) storage.put(key, value);
     }
 
     public Object get(String key) {
-        Cache.ValueWrapper wrapper = getCache().get(key);
-        Object value = wrapper != null ? wrapper.get() : null;
-        if (value == null) {
-            log.debug("[GlobalCache] GET key={} -> MISS", key);
-        } else {
-            log.debug("[GlobalCache] GET key={} -> HIT", key);
-        }
-        return value;
+        return storage.get(key);
     }
 
-    private Cache getCache() {
-        return cacheManager.getCache(CACHE_NAME);
+    public Map<String, Object> getAll() {
+        return storage;
     }
 }

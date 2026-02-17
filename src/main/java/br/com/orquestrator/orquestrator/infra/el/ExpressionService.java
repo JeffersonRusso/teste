@@ -1,7 +1,6 @@
 package br.com.orquestrator.orquestrator.infra.el;
 
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
-import br.com.orquestrator.orquestrator.tasks.base.TaskData;
 import java.util.Map;
 
 /**
@@ -14,12 +13,11 @@ public interface ExpressionService {
     EvaluationContext create(Object root, Map<String, Object> variables);
 
     default EvaluationContext create(ExecutionContext context) {
-        return create(context.getDataStore());
+        // Usa o mapa de dados do contexto como raiz para as expressões
+        return create(context.asMap());
     }
 
-    default EvaluationContext create(TaskData data) {
-        // Como TaskData é uma interface, o motor SpEL saberá lidar com ela
-        // se o rootObject for a própria instância de TaskData.
-        return create((Object) data);
+    default EvaluationContext create(ExecutionContext context, Map<String, Object> variables) {
+        return create(context.asMap(), variables);
     }
 }

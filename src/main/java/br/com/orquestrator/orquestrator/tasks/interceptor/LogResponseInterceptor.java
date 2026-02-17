@@ -1,16 +1,14 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor;
 
-import br.com.orquestrator.orquestrator.domain.TaskMetadataHelper;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
+import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
-import br.com.orquestrator.orquestrator.tasks.base.TaskData;
 import br.com.orquestrator.orquestrator.tasks.interceptor.config.LogResponseConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
  * Interceptor responsável por logar a resposta da task.
- * Utiliza Java 21 String Templates para formatação eficiente e clara.
  */
 @Slf4j
 @Component("LOG_RESPONSE")
@@ -21,22 +19,21 @@ public class LogResponseInterceptor extends TypedTaskInterceptor<LogResponseConf
     }
 
     @Override
-    protected void interceptTyped(TaskData data, TaskChain next, LogResponseConfig config, TaskDefinition taskDef) {
-        // 1. Deixa a execução fluir
-        next.proceed(data);
+    protected Object interceptTyped(ExecutionContext context, TaskChain next, LogResponseConfig config, TaskDefinition taskDef) {
+        Object result = next.proceed(context);
 
-        // 2. Log Inteligente usando Java 21 String Templates
         if (shouldLog(config)) {
-            executeLogging(data, config, taskDef);
+            executeLogging(context, config, taskDef, result);
         }
+        return result;
     }
 
-    private void executeLogging(TaskData data, LogResponseConfig config, TaskDefinition taskDef) {
+    private void executeLogging(ExecutionContext context, LogResponseConfig config, TaskDefinition taskDef, Object result) {
         String nodeId = taskDef.getNodeId().value();
-        Object status = data.getMetadata(TaskMetadataHelper.STATUS);
-        Object body = config.isShowBody() ? data.getMetadata(TaskMetadataHelper.BODY) : "[REDACTED]";
+        // Correção: Acesso via constante da ExecutionContext
+        Object status = context.getMeta(nodeId, ExecutionContext.STATUS);
+        Object body = config.isShowBody() ? result : "[REDACTED]";
 
-        // Java 21: String Templates para mensagens de log ricas
         String message = STR."Task '\{nodeId}' finished with status: \{status != null ? status : "N/A"}";
         
         logAtLevel(config.getLevel(), message);

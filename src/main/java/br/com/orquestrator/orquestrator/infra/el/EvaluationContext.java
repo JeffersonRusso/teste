@@ -1,47 +1,39 @@
 package br.com.orquestrator.orquestrator.infra.el;
 
+import org.springframework.expression.spel.support.StandardEvaluationContext;
 import java.util.Objects;
 
 /**
- * Encapsula o estado de uma avaliação e expõe métodos fluentes para resolução.
- * Atua como uma ponte entre o domínio e o motor de expressões.
+ * Encapsula o poder do SpEL para leitura e escrita no contexto.
  */
-public record EvaluationContext(Object nativeContext, ExpressionEngine engine) {
+public record EvaluationContext(StandardEvaluationContext nativeContext, ExpressionEngine engine) {
 
     public EvaluationContext {
         Objects.requireNonNull(nativeContext, "O contexto nativo não pode ser nulo");
-        Objects.requireNonNull(engine, "O motor de expressões não pode ser nulo");
     }
 
-    /**
-     * Avalia uma expressão pura.
-     */
     public <T> T evaluate(String expression, Class<T> type) {
         return engine.evaluate(expression, nativeContext, type);
     }
 
     /**
-     * Resolve um valor que pode ser literal, template #{...} ou expressão #...
+     * Escreve um valor em um caminho SpEL (ex: "cliente.id").
+     * O SpEL cuida da criação da hierarquia se configurado corretamente.
      */
+    public void set(String path, Object value) {
+        // Remove o '#' se presente para o comando de atribuição
+        String cleanPath = path.startsWith("#") ? path.substring(1) : path;
+        evaluate(STR."#\{cleanPath} = #value", Object.class); 
+        // Nota: O 'value' deve ser passado como variável no nativeContext
+    }
+
     public <T> T resolve(String value, Class<T> type) {
         if (value == null) return null;
-        
-        // Só avalia se for explicitamente uma expressão (#...) ou template (#{...})
-        if (isExplicitExpression(value)) {
-            return evaluate(value, type);
-        }
-        
-        // Se for um literal e o tipo esperado for String, retorna direto
-        if (type == String.class) {
-            return type.cast(value);
-        }
-        
-        // Para outros tipos, retorna o valor original (o Jackson cuidará da conversão na árvore)
-        return (T) value;
+        if (isExplicitExpression(value)) return evaluate(value, type);
+        return (type == String.class) ? type.cast(value) : (T) value;
     }
 
     private boolean isExplicitExpression(String value) {
-        // Uma expressão SpEL válida para nós DEVE começar com # ou conter o delimitador de template #{
         return value.startsWith("#") || value.contains("#{");
     }
 }
