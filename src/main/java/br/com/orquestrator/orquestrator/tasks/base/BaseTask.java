@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * BaseTask: Abstração para tasks que dependem de expressões SpEL.
+ * Otimizado: O EvaluationContext é cacheado no ExecutionContext para ser reutilizado entre tasks.
  */
 @RequiredArgsConstructor
 public abstract class BaseTask<C> implements Task {
@@ -16,7 +17,8 @@ public abstract class BaseTask<C> implements Task {
 
     @Override
     public final TaskResult execute(ExecutionContext context) {
-        EvaluationContext eval = expressionService.create(context);
+        // Recupera ou cria o contexto de avaliação uma única vez por request
+        EvaluationContext eval = context.computeAttachmentIfAbsent(EvaluationContext.class, expressionService::create);
         return executeInternal(context, eval);
     }
 

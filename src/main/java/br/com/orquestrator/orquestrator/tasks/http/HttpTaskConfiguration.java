@@ -10,5 +10,6 @@ public record HttpTaskConfiguration(
     @JsonProperty("url") String urlTemplate,
     @JsonProperty("method") String method,
     @JsonProperty("body") String bodyTemplate,
-    @JsonProperty("headers") Map<String, String> headersTemplates
+    @JsonProperty("headers") Map<String, String> headersTemplates,
+    @JsonProperty("timeout") Integer timeout
 ) {}

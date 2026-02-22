@@ -1,12 +1,13 @@
 package br.com.orquestrator.orquestrator.domain;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
+import java.util.Map;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+/**
+ * Definição de uma feature (interceptor) associada a uma task.
+ * Java 21: Record para imutabilidade e clareza.
+ */
 public record FeatureDefinition(
-        @JsonProperty("type") String type,
-        @JsonProperty("templateRef") String templateRef,
-        @JsonProperty("config") JsonNode config
+    String type,
+    String templateRef,
+    Map<String, Object> config // Expurgado JsonNode
 ) {}

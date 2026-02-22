@@ -1,9 +1,9 @@
 package br.com.orquestrator.orquestrator.adapter.persistence.repository;
 
-import br.com.orquestrator.orquestrator.domain.model.FlowDefinition;
+import br.com.orquestrator.orquestrator.domain.model.FlowConfig;
 import java.util.Optional;
 
 public interface FlowConfigProvider {
-    Optional<FlowDefinition> getFlow(String operationType);
-    Optional<FlowDefinition> getFlow(String operationType, Integer version);
+    Optional<FlowConfig> getFlow(String operationType);
+    Optional<FlowConfig> getFlow(String operationType, Integer version);
 }

@@ -24,12 +24,13 @@
 		<connection/>
 		<developerConnection/>
 		<tag/>
-		<url/>
 	</scm>
 	<properties>
 		<java.version>21</java.version>
 		<aws.sdk.version>2.25.0</aws.sdk.version>
         <camunda.version>7.20.0</camunda.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
@@ -178,6 +179,12 @@
 			<version>${camunda.version}</version>
 		</dependency>
 
+		<!-- Apache HttpClient 5: High Performance Connection Pooling -->
+		<dependency>
+			<groupId>org.apache.httpcomponents.client5</groupId>
+			<artifactId>httpclient5</artifactId>
+		</dependency>
+
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
@@ -206,6 +213,18 @@
 					<source>21</source>
 					<target>21</target>
 					<compilerArgs>--enable-preview</compilerArgs>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.3.1</version>
+				<configuration>
+					<encoding>UTF-8</encoding>
+					<nonFilteredFileExtensions>
+						<nonFilteredFileExtension>properties</nonFilteredFileExtension>
+						<nonFilteredFileExtension>xml</nonFilteredFileExtension>
+					</nonFilteredFileExtensions>
 				</configuration>
 			</plugin>
 			<plugin>

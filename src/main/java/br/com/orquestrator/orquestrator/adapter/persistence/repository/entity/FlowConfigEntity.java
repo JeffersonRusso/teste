@@ -1,41 +1,37 @@
 package br.com.orquestrator.orquestrator.adapter.persistence.repository.entity;
 
-import br.com.orquestrator.orquestrator.adapter.persistence.repository.converter.JsonNodeConverter;
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.util.List;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "tb_flow_config")
 @IdClass(FlowConfigId.class)
 public class FlowConfigEntity {
 
     @Id
-    @EqualsAndHashCode.Include
     @Column(name = "operation_type")
     private String operationType;
 
     @Id
-    @EqualsAndHashCode.Include
-    @Column(name = "version")
-    private Integer version = 1;
+    private Integer version;
 
-    @Column(name = "required_outputs", columnDefinition = "TEXT")
-    @Convert(converter = JsonNodeConverter.class)
-    private JsonNode requiredOutputs;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "required_outputs")
+    private List<String> requiredOutputs;
 
-    @Column(name = "allowed_tasks", columnDefinition = "TEXT")
-    @Convert(converter = JsonNodeConverter.class)
-    private JsonNode allowedTasks;
+    @OneToMany(mappedBy = "flow", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private List<FlowTaskEntity> tasks;
 
-    @Column(name = "description")
     private String description;
-    
+
     @Column(name = "is_active")
-    private boolean active = true;
+    private boolean active;
+
 }

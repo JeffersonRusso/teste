@@ -1,0 +1,15 @@
+spring:
+  cloud:
+    aws:
+      endpoint: http://localstack:4566
+      region:
+        static: us-east-1
+      credentials:
+        access-key: test
+        secret-key: test
+
+# Configurações específicas para o AppConfig no ambiente Docker
+appconfig:
+  application-id: orchestrator-app
+  environment-id: dev
+  configuration-profile-id: features

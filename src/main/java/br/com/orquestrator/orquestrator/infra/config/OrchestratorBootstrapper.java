@@ -1,8 +1,6 @@
 package br.com.orquestrator.orquestrator.infra.config;
 
-import br.com.orquestrator.orquestrator.adapter.persistence.repository.FeatureCatalogProvider;
-import br.com.orquestrator.orquestrator.infra.cache.GlobalTaskScheduler;
-import br.com.orquestrator.orquestrator.tasks.registry.TaskRegistryWarmup;
+import br.com.orquestrator.orquestrator.core.pipeline.MetadataLoader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -10,41 +8,27 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 /**
- * Orquestrador de Inicialização (Bootstrapper).
- * Garante que o sistema seja inicializado em uma sequência síncrona e segura,
- * evitando condições de corrida entre o banco de dados, o catálogo e o agendador.
- * Java 21: Utiliza String Templates e execução sequencial garantida.
+ * OrchestratorBootstrapper: Garante que o motor suba com todos os metadados em memória.
+ * Java 21: Utiliza Virtual Threads para não bloquear o startup do Spring se o carregamento for pesado.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class OrchestratorBootstrapper {
 
-    private final FeatureCatalogProvider catalogProvider;
-    private final TaskRegistryWarmup taskWarmup;
-    private final GlobalTaskScheduler globalScheduler;
+    private final MetadataLoader metadataLoader;
 
-    /**
-     * Ponto de entrada único para a inicialização do sistema após o contexto estar pronto.
-     */
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
-        log.info("Iniciando sequência de boot sincronizada do Orquestrador...");
-
+        log.info("Iniciando Warmup do Orquestrador...");
+        
         try {
-            // 1. Carrega Templates e Perfis (Infraestrutura de suporte)
-            catalogProvider.loadInitialData();
-
-            // 2. Carrega e Instancia as Tasks (Domínio e Cache de Execução)
-            taskWarmup.warmup();
-
-            // 3. Inicia Agendamentos Globais (Execução de tarefas de sistema)
-            globalScheduler.initialize();
-
-            log.info("Sequência de boot concluída com sucesso. Orquestrador pronto para receber requisições.");
+            // Carregamento síncrono aqui é proposital: 
+            // Queremos que os metadados estejam prontos ANTES de qualquer request chegar.
+            metadataLoader.reloadAll();
+            log.info("Warmup concluído. Orquestrador pronto para processar requisições.");
         } catch (Exception e) {
-            log.error(STR."FALHA CRÍTICA NA INICIALIZAÇÃO DO SISTEMA: \{e.getMessage()}", e);
-            // Em um cenário real, poderíamos decidir encerrar a aplicação aqui
+            log.error("FALHA CRÍTICA NO WARMUP: O sistema pode operar com metadados incompletos.", e);
         }
     }
 }

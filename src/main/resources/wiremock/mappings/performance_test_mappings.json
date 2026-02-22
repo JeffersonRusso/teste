@@ -1,0 +1,48 @@
+{
+  "mappings": [
+    {
+      "request": { "method": "POST", "url": "/oauth/token" },
+      "response": { "status": 200, "jsonBody": { "access_token": "token-123" }, "headers": { "Content-Type": "application/json" }, "delayDistribution": { "type": "uniform", "lower": 100, "upper": 200 } }
+    },
+    {
+      "request": { "method": "GET", "urlPattern": "/v1/auth/.*" },
+      "response": { "status": 200, "jsonBody": { "token": "token-xyz" }, "headers": { "Content-Type": "application/json" }, "delayDistribution": { "type": "uniform", "lower": 100, "upper": 200 } }
+    },
+    {
+      "request": { "method": "GET", "urlPattern": "/v1/init/.*" },
+      "response": { "status": 200, "jsonBody": { "data": "init-ok" }, "headers": { "Content-Type": "application/json" }, "delayDistribution": { "type": "uniform", "lower": 100, "upper": 200 } }
+    },
+    {
+      "request": { "method": "GET", "urlPattern": "/v1/enrich/.*" },
+      "response": { "status": 200, "jsonBody": { "val": "enriched-val" }, "headers": { "Content-Type": "application/json" }, "delayDistribution": { "type": "uniform", "lower": 100, "upper": 200 } }
+    },
+    {
+      "request": { "method": "GET", "urlPattern": "/v1/bureau/.*" },
+      "response": { "status": 200, "jsonBody": { "score": 750 }, "headers": { "Content-Type": "application/json" }, "delayDistribution": { "type": "uniform", "lower": 100, "upper": 200 } }
+    },
+    {
+      "request": { "method": "POST", "urlPattern": "/v1/fraud/.*" },
+      "response": { "status": 200, "jsonBody": { "val": "clean" }, "headers": { "Content-Type": "application/json" }, "delayDistribution": { "type": "uniform", "lower": 100, "upper": 200 } }
+    },
+    {
+      "request": { "method": "POST", "urlPattern": "/v1/decision/.*" },
+      "response": { "status": 200, "jsonBody": { "res": "approved" }, "headers": { "Content-Type": "application/json" }, "delayDistribution": { "type": "uniform", "lower": 100, "upper": 200 } }
+    },
+    {
+      "request": { "method": "GET", "urlPattern": "/v1/finance/.*" },
+      "response": { "status": 200, "jsonBody": { "rate": 5.1 }, "headers": { "Content-Type": "application/json" }, "delayDistribution": { "type": "uniform", "lower": 100, "upper": 200 } }
+    },
+    {
+      "request": { "method": "GET", "urlPattern": "/v1/health" },
+      "response": { "status": 200, "jsonBody": { "status": "UP" }, "headers": { "Content-Type": "application/json" }, "delayDistribution": { "type": "uniform", "lower": 100, "upper": 200 } }
+    },
+    {
+      "request": { "method": "GET", "urlPattern": "/v1/cache/.*" },
+      "response": { "status": 200, "jsonBody": { "version": "1.0" }, "headers": { "Content-Type": "application/json" }, "delayDistribution": { "type": "uniform", "lower": 100, "upper": 200 } }
+    },
+    {
+      "request": { "method": "POST", "urlPattern": "/v1/audit/.*" },
+      "response": { "status": 200, "jsonBody": { "id": "audit-123" }, "headers": { "Content-Type": "application/json" }, "delayDistribution": { "type": "uniform", "lower": 100, "upper": 200 } }
+    }
+  ]
+}

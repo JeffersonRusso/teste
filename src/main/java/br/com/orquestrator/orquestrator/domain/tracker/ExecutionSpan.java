@@ -4,14 +4,12 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 /**
  * ExecutionSpan: Representa um intervalo de execução de uma tarefa.
- * Segue o padrão OpenTelemetry.
+ * Otimizado: Usa HashMap simples pois cada Span é manipulado por uma única Virtual Thread.
  */
 @Slf4j
 public class ExecutionSpan implements AutoCloseable {
@@ -21,10 +19,10 @@ public class ExecutionSpan implements AutoCloseable {
     private final String type;
     private final long startNano;
     
-    @Getter
-    private final Map<String, Object> metadata = new ConcurrentHashMap<>();
+    // Otimização: HashMap simples é muito mais rápido que ConcurrentHashMap para acesso single-thread
+    private final Map<String, Object> metadata = new HashMap<>(8);
     
-    private volatile boolean finished = false;
+    private boolean finished = false;
     @Setter
     private int status = 200;
     private String errorMessage = null;
@@ -40,20 +38,25 @@ public class ExecutionSpan implements AutoCloseable {
         if (value != null) metadata.put(key, value);
     }
 
+    public Map<String, Object> getMetadata() {
+        return metadata;
+    }
+
     public void fail(Throwable t) {
         this.status = 500;
         this.errorMessage = (t.getMessage() != null) ? t.getMessage() : t.getClass().getSimpleName();
     }
     
     public NodeMetrics toMetrics() {
-        long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNano);
+        // Conversão manual de nano para milli para evitar overhead de TimeUnit
+        long durationMs = (System.nanoTime() - startNano) / 1_000_000;
         return new NodeMetrics(
                 nodeId,
                 type,
                 durationMs,
                 status,
                 errorMessage,
-                Map.copyOf(metadata)
+                metadata.isEmpty() ? Map.of() : new HashMap<>(metadata)
         );
     }
 

@@ -12,16 +12,13 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-/**
- * TaskRegistry: O único ponto de criação e cache de instâncias de Task.
- */
 @Slf4j
 @Service
 public class TaskRegistry {
 
     private final Map<String, TaskProvider> providers;
     private final TaskDecorator decorator;
-    private final Map<String, Task> cache = new ConcurrentHashMap<>();
+    private final Map<String, Task> cache = new ConcurrentHashMap<>(1024);
 
     public TaskRegistry(List<TaskProvider> providerList, TaskDecorator decorator) {
         this.providers = providerList.stream()
@@ -30,26 +27,26 @@ public class TaskRegistry {
     }
 
     public Task getTask(TaskDefinition def) {
-        String key = STR."\{def.getNodeId().value()}:\{def.getVersion()}";
+        // Otimização: Concatenação simples é mais rápida que String Template em alta carga
+        String key = def.getNodeId().value() + ":" + def.getVersion();
+        
+        // Otimização: get() antes do computeIfAbsent evita contenção de lock no mapa
+        Task task = cache.get(key);
+        if (task != null) return task;
+
         return cache.computeIfAbsent(key, _ -> buildTask(def));
     }
 
     private Task buildTask(TaskDefinition def) {
         TaskProvider provider = providers.get(def.getType().toUpperCase());
         if (provider == null) {
-            throw new RuntimeException(STR."Provider não encontrado para o tipo: \{def.getType()}");
+            throw new RuntimeException("Provider não encontrado: " + def.getType());
         }
-        
-        // 1. Cria o núcleo técnico
-        Task core = provider.create(def);
-
-        // 2. Decora com interceptores (SOLID: SRP)
-        return decorator.decorate(core, def);
+        return decorator.decorate(provider.create(def), def);
     }
 
     public void refresh(Map<String, Task> newTasks) {
         cache.clear();
         cache.putAll(newTasks);
-        log.info("Registro de tasks atualizado: {} instâncias.", cache.size());
     }
 }

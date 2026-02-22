@@ -1,7 +1,6 @@
 package br.com.orquestrator.orquestrator.core.context;
 
 import br.com.orquestrator.orquestrator.domain.ApiConstants;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -11,16 +10,16 @@ import java.util.Optional;
 @Component
 public class OperationTypeResolver {
 
-    public String resolve(Map<String, String> headers, JsonNode body) {
+    public String resolve(Map<String, String> headers, Map<String, Object> body) {
         return extractFromBody(body)
                 .or(() -> extractFromHeaders(headers))
                 .orElse(ApiConstants.DEFAULT_OPERATION);
     }
 
-    private Optional<String> extractFromBody(JsonNode body) {
+    private Optional<String> extractFromBody(Map<String, Object> body) {
         return Optional.ofNullable(body)
-                .map(json -> json.get(ApiConstants.BODY_OPERATION_TYPE))
-                .map(JsonNode::asText)
+                .map(map -> map.get(ApiConstants.BODY_OPERATION_TYPE))
+                .map(Object::toString)
                 .filter(StringUtils::hasText);
     }
 

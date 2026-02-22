@@ -3,7 +3,6 @@ package br.com.orquestrator.orquestrator.domain.tracker;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,16 +10,16 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * TraceContext: Gerencia o rastro de execução da pipeline.
- * Segue o padrão OpenTelemetry de Spans.
+ * Otimizado para alta concorrência.
  */
 @Slf4j
 public class TraceContext {
 
-    @Getter
-    private final Instant startTime = Instant.now();
-    private volatile Instant endTime;
+    private final long startNano = System.nanoTime();
+    private final Instant startTime = Instant.now(); // Mantido para metadados de evento
+    private long endNano;
 
-    private final Map<String, ExecutionSpan> activeSpans = new ConcurrentHashMap<>();
+    private final Map<String, ExecutionSpan> activeSpans = new ConcurrentHashMap<>(64);
     private final Queue<NodeMetrics> history = new ConcurrentLinkedQueue<>();
 
     public ExecutionSpan startSpan(String nodeId, String type) {
@@ -39,19 +38,22 @@ public class TraceContext {
     }
 
     public void finish() {
-        this.endTime = Instant.now();
+        this.endNano = System.nanoTime();
         if (!activeSpans.isEmpty()) {
-            log.warn(STR."Trace finalizado com \{activeSpans.size()} spans órfãos.");
             activeSpans.clear();
         }
     }
 
     public List<NodeMetrics> getMetrics() {
-        return List.copyOf(history);
+        return new ArrayList<>(history);
+    }
+
+    public Instant getStartTime() {
+        return startTime;
     }
 
     public long getDurationMs() {
-        Instant end = (endTime != null) ? endTime : Instant.now();
-        return Duration.between(startTime, end).toMillis();
+        long end = (endNano != 0) ? endNano : System.nanoTime();
+        return (end - startNano) / 1_000_000;
     }
 }

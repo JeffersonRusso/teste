@@ -14,6 +14,7 @@ import org.springframework.core.task.TaskDecorator;
 import org.springframework.core.task.support.TaskExecutorAdapter;
 import org.springframework.scheduling.annotation.EnableAsync;
 
+import java.lang.ScopedValue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -52,12 +53,12 @@ public class AsyncConfig {
     }
 
     /**
-     * Decorator leve para propagar ScopedValues para threads assíncronas.
+     * Decorator para propagar apenas o Correlation ID. 
+     * O CURRENT_NODE é gerenciado pelo motor de orquestração.
      */
     private TaskDecorator scopedValueDecorator() {
         return runnable -> {
-            // Captura o ID atual (se houver)
-            String correlationId = ContextHolder.getCorrelationId().orElse("-");
+            String correlationId = ContextHolder.CORRELATION_ID.orElse("-");
             return () -> ScopedValue.where(ContextHolder.CORRELATION_ID, correlationId).run(runnable);
         };
     }

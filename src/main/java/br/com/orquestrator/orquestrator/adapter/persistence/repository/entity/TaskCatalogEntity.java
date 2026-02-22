@@ -1,23 +1,24 @@
 package br.com.orquestrator.orquestrator.adapter.persistence.repository.entity;
 
-import br.com.orquestrator.orquestrator.adapter.persistence.repository.converter.FeaturePhasesConverter;
-import br.com.orquestrator.orquestrator.adapter.persistence.repository.converter.JsonNodeConverter;
-import br.com.orquestrator.orquestrator.domain.model.FeaturePhases;
+import br.com.orquestrator.orquestrator.infra.repository.entity.json.DataMappingEntityRecord;
+import br.com.orquestrator.orquestrator.infra.repository.entity.json.FeaturePhasesEntityRecord;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
-import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 @Entity
 @Table(name = "tb_task_catalog")
 @IdClass(TaskCatalogId.class)
-public class TaskCatalogEntity {
+public class TaskCatalogEntity extends BaseEntity {
 
     @Id
     @EqualsAndHashCode.Include
@@ -26,8 +27,8 @@ public class TaskCatalogEntity {
 
     @Id
     @EqualsAndHashCode.Include
-    @Column(name = "version")
-    private Integer version = 1;
+    @Column(name = "version") // Mapeia para a coluna 'version' no banco
+    private Integer taskVersion = 1;
 
     @Column(name = "task_type")
     private String taskType;
@@ -45,23 +46,23 @@ public class TaskCatalogEntity {
     private Integer criticality = 100;
 
     @Column(name = "requires_json")
-    @Convert(converter = JsonNodeConverter.class)
-    private JsonNode requires;
+    @JdbcTypeCode(SqlTypes.JSON)
+    private List<DataMappingEntityRecord> requires;
 
     @Column(name = "produces_json")
-    @Convert(converter = JsonNodeConverter.class)
-    private JsonNode produces;
+    @JdbcTypeCode(SqlTypes.JSON)
+    private List<DataMappingEntityRecord> produces;
 
     @Column(name = "config_json")
-    @Convert(converter = JsonNodeConverter.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     private JsonNode config;
 
     @Column(name = "features_json")
-    @Convert(converter = FeaturePhasesConverter.class)
-    private FeaturePhases features;
+    @JdbcTypeCode(SqlTypes.JSON)
+    private FeaturePhasesEntityRecord features;
     
     @Column(name = "response_schema")
-    @Convert(converter = JsonNodeConverter.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     private JsonNode responseSchema;
     
     @Column(name = "infra_profile_id")
@@ -69,7 +70,4 @@ public class TaskCatalogEntity {
 
     @Column(name = "is_active")
     private boolean active;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
 }

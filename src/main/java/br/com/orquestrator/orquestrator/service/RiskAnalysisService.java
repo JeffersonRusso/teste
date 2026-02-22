@@ -15,6 +15,7 @@ import java.util.Map;
 
 /**
  * RiskAnalysisService: Orquestrador de alto nível.
+ * Java 21: Fluxo declarativo e limpo.
  */
 @Slf4j
 @Service
@@ -28,19 +29,19 @@ public class RiskAnalysisService {
 
     public Map<String, Object> analyze(AnalysisRequest request) {
         // 1. Criação do Contexto
-        ExecutionContext context = contextFactory.create(
+        ExecutionContext context = contextFactory.execute(
             request.operationType(), 
             request.headers(), 
             request.body()
         );
 
-        // 2. Criação do Pipeline (Via Fachada SOLID)
+        // 2. Montagem do Pipeline
         Pipeline pipeline = pipelineService.create(context, request.requiredOutputs());
         
-        // 3. Execução
+        // 3. Execução (A Engine agora cuida da inicialização e das tasks)
         engine.run(context, pipeline);
 
-        // 4. Extração
+        // 4. Extração do Resultado
         return resultExtractor.extract(context, pipeline);
     }
 }

@@ -8,11 +8,10 @@ import org.springframework.stereotype.Component;
 @Component
 @Order(0)
 @RequiredArgsConstructor
-public class TimeoutContextInitializer implements ContextInitializer {
+public class TimeoutContextInitializer implements ContextTaskInitializer {
 
     @Override
-    public void initialize(ExecutionContext context, String operationType) {
+    public void initialize(ExecutionContext context) {
         // Deadline removido do contexto minimalista. 
-        // O controle de tempo deve ser feito pelo motor de execução (StructuredTaskScope/Futures).
     }
 }

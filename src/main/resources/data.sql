@@ -1,330 +1,110 @@
 -- =================================================================================
--- 1. INFRAESTRUTURA: Perfis de Resiliência (Policies)
+-- 1. INFRAESTRUTURA: Perfis e Templates (LIMPOS PARA TESTE DE PERFORMANCE)
 -- =================================================================================
 
--- Perfil Padrão: Apenas Log
-INSERT INTO tb_infra_profiles (profile_id, description, default_controls) VALUES
-('HTTP_PADRAO', 'Configuração básica: Log e Validação 200', '{"postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}], "monitors": [{"type": "LOG_RESPONSE", "config": {"level": "INFO", "showBody": true}}]}');
+-- Deletamos as associações de features para o teste de performance pura
+-- Isso remove RETRY, LOG_RESPONSE e VALIDACAO do caminho crítico.
+DELETE FROM tb_profile_features;
+DELETE FROM tb_feature_templates;
 
--- Perfil Resiliente: Log + Validação + Retry (Para chamadas externas críticas)
-INSERT INTO tb_infra_profiles (profile_id, description, default_controls) VALUES
-('HTTP_RESILIENTE', 'Configuração robusta: Retry(3x), Log e Validação 200', '{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}], "monitors": [{"type": "LOG_RESPONSE", "config": {"level": "INFO", "showBody": true}}]}');
+INSERT INTO tb_infra_profiles (profile_id, description) VALUES
+('HTTP_PADRAO', 'Configuração básica (Sem Interceptores)'),
+('HTTP_RESILIENTE', 'Configuração robusta (Sem Interceptores)');
 
 -- =================================================================================
--- 2. ADAPTERS (Input Normalization)
+-- 2. CATÁLOGO DE TASKS (50 Tasks HTTP - Organizadas em 5 Camadas de Dependência)
 -- =================================================================================
+
+-- CAMADA 1: Tasks de Entrada (Dependem apenas do Contexto Inicial) - 10 Tasks
+INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json) VALUES
+('auth_01', 1, 'HTTP', 'true', '[{"name": "standard.documento"}]', '[{"name": "token_01", "path": "token"}]', 'HTTP_PADRAO', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/auth/1"}'),
+('auth_02', 1, 'HTTP', 'true', '[{"name": "standard.documento"}]', '[{"name": "token_02", "path": "token"}]', 'HTTP_PADRAO', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/auth/2"}'),
+('auth_03', 1, 'HTTP', 'true', '[{"name": "standard.documento"}]', '[{"name": "token_03", "path": "token"}]', 'HTTP_PADRAO', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/auth/3"}'),
+('auth_04', 1, 'HTTP', 'true', '[{"name": "standard.documento"}]', '[{"name": "token_04", "path": "token"}]', 'HTTP_PADRAO', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/auth/4"}'),
+('auth_05', 1, 'HTTP', 'true', '[{"name": "standard.documento"}]', '[{"name": "token_05", "path": "token"}]', 'HTTP_PADRAO', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/auth/5"}'),
+('init_01', 1, 'HTTP', 'true', '[{"name": "standard.documento"}]', '[{"name": "init_data_01", "path": "data"}]', 'HTTP_PADRAO', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/init/1"}'),
+('init_02', 1, 'HTTP', 'true', '[{"name": "standard.documento"}]', '[{"name": "init_data_02", "path": "data"}]', 'HTTP_PADRAO', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/init/2"}'),
+('init_03', 1, 'HTTP', 'true', '[{"name": "standard.documento"}]', '[{"name": "init_data_03", "path": "data"}]', 'HTTP_PADRAO', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/init/3"}'),
+('init_04', 1, 'HTTP', 'true', '[{"name": "standard.documento"}]', '[{"name": "init_data_04", "path": "data"}]', 'HTTP_PADRAO', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/init/4"}'),
+('init_05', 1, 'HTTP', 'true', '[{"name": "standard.documento"}]', '[{"name": "init_data_05", "path": "data"}]', 'HTTP_PADRAO', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/init/5"}');
+
+-- CAMADA 2: Enriquecimento (Dependem da Camada 1) - 10 Tasks
+INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json) VALUES
+('enrich_01', 1, 'HTTP', 'true', '[{"name": "token_01"}]', '[{"name": "ext_data_01", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/enrich/1"}'),
+('enrich_02', 1, 'HTTP', 'true', '[{"name": "token_02"}]', '[{"name": "ext_data_02", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/enrich/2"}'),
+('enrich_03', 1, 'HTTP', 'true', '[{"name": "token_03"}]', '[{"name": "ext_data_03", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/enrich/3"}'),
+('enrich_04', 1, 'HTTP', 'true', '[{"name": "token_04"}]', '[{"name": "ext_data_04", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/enrich/4"}'),
+('enrich_05', 1, 'HTTP', 'true', '[{"name": "token_05"}]', '[{"name": "ext_data_05", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/enrich/5"}'),
+('enrich_06', 1, 'HTTP', 'true', '[{"name": "init_data_01"}]', '[{"name": "ext_data_06", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/enrich/6"}'),
+('enrich_07', 1, 'HTTP', 'true', '[{"name": "init_data_02"}]', '[{"name": "ext_data_07", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/enrich/7"}'),
+('enrich_08', 1, 'HTTP', 'true', '[{"name": "init_data_03"}]', '[{"name": "ext_data_08", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/enrich/8"}'),
+('enrich_09', 1, 'HTTP', 'true', '[{"name": "init_data_04"}]', '[{"name": "ext_data_09", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/enrich/9"}'),
+('enrich_10', 1, 'HTTP', 'true', '[{"name": "init_data_05"}]', '[{"name": "ext_data_10", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/enrich/10"}');
+
+-- CAMADA 3: Bureaus e Validações (Dependem da Camada 2) - 10 Tasks
+INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json) VALUES
+('bureau_01', 1, 'HTTP', 'true', '[{"name": "ext_data_01"}]', '[{"name": "score_01", "path": "score"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/bureau/1"}'),
+('bureau_02', 1, 'HTTP', 'true', '[{"name": "ext_data_02"}]', '[{"name": "score_02", "path": "score"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/bureau/2"}'),
+('bureau_03', 1, 'HTTP', 'true', '[{"name": "ext_data_03"}]', '[{"name": "score_03", "path": "score"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/bureau/3"}'),
+('bureau_04', 1, 'HTTP', 'true', '[{"name": "ext_data_04"}]', '[{"name": "score_04", "path": "score"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/bureau/4"}'),
+('bureau_05', 1, 'HTTP', 'true', '[{"name": "ext_data_05"}]', '[{"name": "score_05", "path": "score"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/bureau/5"}'),
+('bureau_06', 1, 'HTTP', 'true', '[{"name": "ext_data_06"}]', '[{"name": "score_06", "path": "score"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/bureau/6"}'),
+('bureau_07', 1, 'HTTP', 'true', '[{"name": "ext_data_07"}]', '[{"name": "score_07", "path": "score"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/bureau/7"}'),
+('bureau_08', 1, 'HTTP', 'true', '[{"name": "ext_data_08"}]', '[{"name": "score_08", "path": "score"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/bureau/8"}'),
+('bureau_09', 1, 'HTTP', 'true', '[{"name": "ext_data_09"}]', '[{"name": "score_09", "path": "score"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/bureau/9"}'),
+('bureau_10', 1, 'HTTP', 'true', '[{"name": "ext_data_10"}]', '[{"name": "score_10", "path": "score"}]', 'HTTP_RESILIENTE', '{"method": "GET", "url": "http://127.0.0.1:9999/v1/bureau/10"}');
+
+-- CAMADA 4: Antifraude e Agregações (Dependem da Camada 3) - 10 Tasks
+INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json) VALUES
+('fraud_01', 1, 'HTTP', 'true', '[{"name": "score_01"}]', '[{"name": "fraud_val_01", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/fraud/1"}'),
+('fraud_02', 1, 'HTTP', 'true', '[{"name": "score_02"}]', '[{"name": "fraud_val_02", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/fraud/2"}'),
+('fraud_03', 1, 'HTTP', 'true', '[{"name": "score_03"}]', '[{"name": "fraud_val_03", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/fraud/3"}'),
+('fraud_04', 1, 'HTTP', 'true', '[{"name": "score_04"}]', '[{"name": "fraud_val_04", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/fraud/4"}'),
+('fraud_05', 1, 'HTTP', 'true', '[{"name": "score_05"}]', '[{"name": "fraud_val_05", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/fraud/5"}'),
+('fraud_06', 1, 'HTTP', 'true', '[{"name": "score_06"}]', '[{"name": "fraud_val_06", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/fraud/6"}'),
+('fraud_07', 1, 'HTTP', 'true', '[{"name": "score_07"}]', '[{"name": "fraud_val_07", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/fraud/7"}'),
+('fraud_08', 1, 'HTTP', 'true', '[{"name": "score_08"}]', '[{"name": "fraud_val_08", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/fraud/8"}'),
+('fraud_09', 1, 'HTTP', 'true', '[{"name": "score_09"}]', '[{"name": "fraud_val_09", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/fraud/9"}'),
+('fraud_10', 1, 'HTTP', 'true', '[{"name": "score_10"}]', '[{"name": "fraud_val_10", "path": "val"}]', 'HTTP_RESILIENTE', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/fraud/10"}');
+
+-- CAMADA 5: Decisão Final (Dependem da Camada 4) - 10 Tasks
+INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json) VALUES
+('decision_01', 1, 'HTTP', 'true', '[{"name": "fraud_val_01"}]', '[{"name": "res_01", "path": "res"}]', 'HTTP_PADRAO', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/decision/1"}'),
+('decision_02', 1, 'HTTP', 'true', '[{"name": "fraud_val_02"}]', '[{"name": "res_02", "path": "res"}]', 'HTTP_PADRAO', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/decision/2"}'),
+('decision_03', 1, 'HTTP', 'true', '[{"name": "fraud_val_03"}]', '[{"name": "res_03", "path": "res"}]', 'HTTP_PADRAO', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/decision/3"}'),
+('decision_04', 1, 'HTTP', 'true', '[{"name": "fraud_val_04"}]', '[{"name": "res_04", "path": "res"}]', 'HTTP_PADRAO', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/decision/4"}'),
+('decision_05', 1, 'HTTP', 'true', '[{"name": "fraud_val_05"}]', '[{"name": "res_05", "path": "res"}]', 'HTTP_PADRAO', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/decision/5"}'),
+('decision_06', 1, 'HTTP', 'true', '[{"name": "fraud_val_06"}]', '[{"name": "res_06", "path": "res"}]', 'HTTP_PADRAO', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/decision/6"}'),
+('decision_07', 1, 'HTTP', 'true', '[{"name": "fraud_val_07"}]', '[{"name": "res_07", "path": "res"}]', 'HTTP_PADRAO', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/decision/7"}'),
+('decision_08', 1, 'HTTP', 'true', '[{"name": "fraud_val_08"}]', '[{"name": "res_08", "path": "res"}]', 'HTTP_PADRAO', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/decision/8"}'),
+('decision_09', 1, 'HTTP', 'true', '[{"name": "fraud_val_09"}]', '[{"name": "res_09", "path": "res"}]', 'HTTP_PADRAO', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/decision/9"}'),
+('decision_10', 1, 'HTTP', 'true', '[{"name": "fraud_val_10"}]', '[{"name": "resultado_final", "path": "res"}]', 'HTTP_PADRAO', '{"method": "POST", "url": "http://127.0.0.1:9999/v1/decision/10"}');
+
+-- =================================================================================
+-- 3. DEFINIÇÃO DE FLUXOS
+-- =================================================================================
+
+INSERT INTO tb_flow_config (operation_type, version, required_outputs, description, is_active) VALUES
+('STANDARD_RISK', 1, '["resultado_final"]', 'Fluxo de Performance - 50 Tasks em 5 Camadas', true);
+
+-- Composição do Fluxo (Todas as 50 tasks vinculadas)
+INSERT INTO tb_flow_tasks (operation_type, flow_version, task_id, task_version)
+SELECT 'STANDARD_RISK', 1, task_id, version FROM tb_task_catalog WHERE is_active = true;
+
+-- =================================================================================
+-- 4. PLANO DE INICIALIZAÇÃO
+-- =================================================================================
+
+INSERT INTO tb_initialization_plan (operation_type, description) VALUES
+('STANDARD_RISK', 'Warmup de Conexões');
+
+-- =================================================================================
+-- 5. CONFIGURAÇÕES DE PIPELINE E OUTROS
+-- =================================================================================
+
+INSERT INTO tb_pipeline_config (operation_type, timeout_ms, description) VALUES
+('STANDARD_RISK', 30000, 'Timeout global de 30 segundos');
+
 INSERT INTO tb_input_normalization (operation_type, target_field, source_expression) VALUES
 ('STANDARD_RISK', 'valor', '#raw.transaction.amount'),
-('STANDARD_RISK', 'documento', '#raw.customer.document'),
-('STANDARD_RISK', 'device_id', '#raw.device.id'),
-('STANDARD_RISK', 'ip_address', '#raw.device.ip');
-
--- =================================================================================
--- 3. BANCO DE EXCEPTIONS (Custom Errors)
--- =================================================================================
-INSERT INTO tb_error_catalog (error_code, message_template) VALUES
-('HTTP_NOT_200', 'Erro na integração com #{#node_id}: Status #{#node_status} retornado.'),
-('CLIENT_NOT_FOUND', 'Cliente com documento #{#standard.documento} não foi encontrado na base legada.'),
-('COMPLIANCE_FAILED', 'Falha na validação de compliance: #{#compliance_info.message}');
-
--- =================================================================================
--- 4. TEMPLATES DE FEATURES (Reutilização de Interceptores)
--- =================================================================================
-INSERT INTO tb_feature_templates (template_id, feature_type, config_json, description) VALUES
-('VALIDACAO_HTTP_PADRAO', 'RESPONSE_VALIDATOR', '{"rules": [{"condition": "#node_status != 200", "errorCode": "HTTP_NOT_200"}]}', 'Validação padrão de status HTTP 200'),
-('RETRY_PADRAO', 'RETRY', '{"maxAttempts": 3, "waitDurationMs": 50}', 'Tenta 3 vezes com espera de 50ms (Rápido)');
-
--- =================================================================================
--- 5. REGRAS DE TAGS (Dinâmicas - Contexto da Transação)
--- =================================================================================
-INSERT INTO tb_tag_rules (tag_name, condition_expression, priority, description) VALUES
-('HIGH_VALUE', '#standard.valor > 50000', 1, 'Transações de alto valor'),
-('MOBILE', '#standard.device_id != null', 1, 'Transações via dispositivo móvel');
-
--- =================================================================================
--- 6. CONFIGURAÇÃO DE PIPELINE (Timeouts)
--- =================================================================================
-INSERT INTO tb_pipeline_config (operation_type, timeout_ms, description) VALUES
-('STANDARD_RISK', 5000, 'Timeout global de 5 segundos para análise de risco padrão');
-
--- =================================================================================
--- 7. DEFINIÇÃO DE FLUXOS (Flow Definition - Menu à La Carte)
--- =================================================================================
-INSERT INTO tb_flow_config (operation_type, version, required_outputs, allowed_tasks, description, is_active) VALUES
-(
-    'STANDARD_RISK',
-    1,
-    '["resultado_final"]',
-    '[{"id": "authGlobalTask", "version": 1}, {"id": "getClienteData", "version": 1}, {"id": "getDeviceData", "version": 1}, {"id": "checkCompliance", "version": 1}, {"id": "enrichCompliance", "version": 1}, {"id": "getSerasaData", "version": 1}, {"id": "getBacenData", "version": 1}, {"id": "getGeoData", "version": 1}, {"id": "getEstatisticas", "version": 1}, {"id": "analiseCliente", "version": 1}, {"id": "getHistoricoPagamentos", "version": 1}, {"id": "getScoreComportamental", "version": 1}, {"id": "getListaNegra", "version": 1}, {"id": "getDadosReceita", "version": 1}, {"id": "checkMatchCadastral", "version": 1}, {"id": "getOpenFinance", "version": 1}, {"id": "calcCapacidadePagamento", "version": 1}, {"id": "checkBiometria", "version": 1}, {"id": "getDeviceReputation", "version": 1}, {"id": "checkFraudeML", "version": 1}, {"id": "calcRendaGroovy", "version": 1}, {"id": "analiseFraudeGroovy", "version": 1}, {"id": "consolidarScoreGroovy", "version": 1}, {"id": "checkRiscoDmn", "version": 1}, {"id": "finalRiskEngine", "version": 1}]',
-    'Fluxo padrão com todas as tasks disponíveis',
-    true
-);
-
--- =================================================================================
--- 8. TASKS (Capabilities - Sem Tags, apenas IDs)
--- =================================================================================
-
--- TASK 0: Autenticação Global
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES (
-    'authGlobalTask',
-    1,
-    'HTTP',
-    'true',
-    null,
-    '[{"name": "global_token", "path": "access_token", "type": "STRING"}]',
-    'HTTP_PADRAO',
-    '{"method": "POST", "url": "#{ @environment.getProperty(''integration.api.url'') }/oauth/token", "body": "{\"grant_type\": \"client_credentials\", \"client_id\": \"orquestrador\", \"client_secret\": \"segredo\"}", "timeoutMs": 5000, "global": true, "refreshIntervalMs": 300000}',
-    '{"preExecution": [{"type": "CACHE", "config": {"key": "token_global", "ttlMs": 300000, "provider": "IN_MEMORY"}}, {"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-    true
-);
-
--- TASK 1: Obter Dados do Cliente
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES (
-    'getClienteData',
-    1,
-    'HTTP',
-    'true',
-    '[{"name": "standard.documento"}, {"name": "global_token"}]',
-    '[{"name": "cliente_info", "path": "$"}, {"name": "tipo_cliente", "path": "dados.tipo", "type": "STRING"}]',
-    'HTTP_PADRAO',
-        '{"method": "GET", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/clientes/#{ #standard.documento }", "headers": {"Authorization": "Bearer #{ #global_token }"}, "timeoutMs": 2000}',
-    '{"preExecution": [{"type": "CACHE", "config": {"key": "#{ #standard.documento }", "ttlMs": 60000, "provider": "IN_MEMORY"}}, {"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-    true
-);
-
--- TASK 2: Obter Dados do Dispositivo
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES (
-    'getDeviceData',
-    1,
-    'HTTP',
-    'true',
-    '[{"name": "standard.device_id"}]',
-    '[{"name": "device_info", "path": "$"}]',
-    'HTTP_PADRAO',
-    '{"method": "GET", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/devices/#{ #standard.device_id }", "timeoutMs": 2000}',
-    '{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-    true
-);
-
--- TASK 3: Validação de Compliance
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES (
-    'checkCompliance',
-    1,
-    'HTTP',
-    'true',
-    '[{"name": "cliente_info"}, {"name": "tipo_cliente"}]',
-    '[{"name": "compliance_info", "path": "$"}]',
-    'HTTP_PADRAO',
-    '{"method": "POST", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/compliance/validate", "body": "{\"documento\": \"#{ #cliente_info.dados.documento }\", \"tipo\": \"#{ #tipo_cliente }\"}", "timeoutMs": 2000}',
-    '{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"type": "RESPONSE_VALIDATOR", "config": {"rules": [{"condition": "#node_status != 200", "errorCode": "HTTP_NOT_200"}]}}]}',
-    true
-);
-
--- TASK 3.5: Enriquecimento de Compliance
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, is_active)
-VALUES (
-    'enrichCompliance',
-    1,
-    'SPEL',
-    'true',
-    '[{"name": "compliance_info"}]',
-    '[{"name": "compliance_enriched", "path": "$"}]',
-    'HTTP_PADRAO',
-    '{"expression": "#compliance_info", "timeoutMs": 100}',
-    true
-);
-
--- TASK 5: Serasa
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES (
-    'getSerasaData',
-    1,
-    'HTTP',
-    'true',
-    '[{"name": "standard.documento"}]',
-    '[{"name": "serasa_info", "path": "$"}]',
-    'HTTP_RESILIENTE',
-    '{"method": "GET", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/serasa/#{ #standard.documento }", "timeoutMs": 2000}',
-    '{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-    true
-);
-
--- TASK 6: Bacen
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES (
-    'getBacenData',
-    1,
-    'HTTP',
-    'true',
-    '[{"name": "standard.documento"}]',
-    '[{"name": "bacen_info", "path": "$"}]',
-    'HTTP_RESILIENTE',
-    '{"method": "GET", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/bacen/sanctions/#{ #standard.documento }", "timeoutMs": 2000}',
-    '{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-    true
-);
-
--- TASK 7: Geo IP (Com Fallback)
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES (
-    'getGeoData',
-    1,
-    'HTTP',
-    'true',
-    '[{"name": "standard.ip_address"}]',
-    '[{"name": "geo_info", "path": "$"}]',
-    'HTTP_RESILIENTE',
-    '{"method": "GET", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/geo/ip/#{ #standard.ip_address }", "timeoutMs": 2000}',
-    '{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}, {"type": "FALLBACK", "config": {"value": {"country": "BR", "city": "FALLBACK_CITY", "lat": 0.0, "lon": 0.0}}}]}',
-    true
-);
-
--- TASK 8: Estatísticas
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES (
-    'getEstatisticas',
-    1,
-    'HTTP',
-    'true',
-    '[{"name": "standard.documento"}]',
-    '[{"name": "media_gastos_mensal", "path": "gastos.mediaMensal"}, {"name": "frequencia_compras", "path": "comportamento.frequencia"}, {"name": "maior_compra_ano", "path": "gastos.maiorCompra"}, {"name": "dias_desde_ultima_compra", "path": "comportamento.diasUltimaCompra"}, {"name": "categoria_cliente", "path": "perfil.categoria"}, {"name": "score_interno", "path": "perfil.scoreInterno"}, {"name": "risco_churn", "path": "risco.churnProbability"}, {"name": "lifetime_value", "path": "valor.ltv"}, {"name": "canal_preferido", "path": "preferencias.canal"}, {"name": "regiao_principal", "path": "preferencias.regiao"}]',
-    'HTTP_RESILIENTE',
-    '{"method": "GET", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/estatisticas/#{ #standard.documento }", "timeoutMs": 2000}',
-    '{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-    true
-);
-
--- TASK 9: Análise Cliente
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES (
-    'analiseCliente',
-    1,
-    'HTTP',
-    'true',
-    '[{"name": "media_gastos_mensal"}, {"name": "categoria_cliente"}, {"name": "risco_churn"}]',
-    '[{"name": "analise_cliente_result", "path": "$"}]',
-    'HTTP_RESILIENTE',
-    '{"method": "POST", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/analise-cliente", "body": "{\"gastos\": \"#{ #media_gastos_mensal }\", \"categoria\": \"#{ #categoria_cliente }\", \"churn\": \"#{ #risco_churn }\"}", "timeoutMs": 2000}',
-    '{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-    true
-);
-
--- TASK 10: Histórico Pagamentos
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, is_active)
-VALUES ('getHistoricoPagamentos', 1, 'HTTP', 'true', '[{"name": "standard.documento"}]', '[{"name": "historico_pagamentos", "path": "$"}]', 'HTTP_RESILIENTE',
-'{"method": "GET", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/historico-pagamentos/#{ #standard.documento }", "timeoutMs": 2000}',
-true);
-
--- TASK 11: Score Comportamental
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, is_active)
-VALUES ('getScoreComportamental', 1, 'HTTP', 'true', '[{"name": "historico_pagamentos"}]', '[{"name": "score_comportamental", "path": "$"}]', 'HTTP_RESILIENTE',
-'{"method": "POST", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/score-comportamental", "body": "{\"historico\": \"#{ #historico_pagamentos }\"}", "timeoutMs": 2000}',
-true);
-
--- TASK 12: Lista Negra Fraude
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES ('getListaNegra', 1, 'HTTP', 'true', '[{"name": "standard.documento"}]', '[{"name": "lista_negra", "path": "$"}]', 'HTTP_RESILIENTE',
-'{"method": "GET", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/lista-negra-fraude/#{ #standard.documento }", "timeoutMs": 2000}',
-'{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-true);
-
--- TASK 13: Dados Cadastrais Receita
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES ('getDadosReceita', 1, 'HTTP', 'true', '[{"name": "standard.documento"}]', '[{"name": "dados_receita", "path": "$"}]', 'HTTP_RESILIENTE',
-'{"method": "GET", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/dados-cadastrais-receita/#{ #standard.documento }", "timeoutMs": 2000}',
-'{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-true);
-
--- TASK 14: Match Cadastral
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES ('checkMatchCadastral', 1, 'HTTP', 'true', '[{"name": "dados_receita"}, {"name": "cliente_info"}]', '[{"name": "match_cadastral", "path": "$"}]', 'HTTP_RESILIENTE',
-'{"method": "POST", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/match-cadastral", "body": "{\"receita\": \"#{ #dados_receita }\", \"banco\": \"#{ #cliente_info }\"}", "timeoutMs": 2000}',
-'{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-true);
-
--- TASK 15: Open Finance
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES ('getOpenFinance', 1, 'HTTP', 'true', '[{"name": "standard.documento"}]', '[{"name": "open_finance", "path": "$"}]', 'HTTP_RESILIENTE',
-'{"method": "GET", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/open-finance/contas/#{ #standard.documento }", "timeoutMs": 2000}',
-'{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-true);
-
--- TASK 16: Capacidade Pagamento
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES ('calcCapacidadePagamento', 1, 'HTTP', 'true', '[{"name": "open_finance"}]', '[{"name": "capacidade_pagamento", "path": "$"}]', 'HTTP_RESILIENTE',
-'{"method": "POST", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/capacidade-pagamento", "body": "{\"open_finance\": \"#{ #open_finance }\"}", "timeoutMs": 2000}',
-'{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-true);
-
--- TASK 17: Biometria Facial
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES ('checkBiometria', 1, 'HTTP', 'true', '[{"name": "standard.documento"}]', '[{"name": "biometria_info", "path": "$"}]', 'HTTP_RESILIENTE',
-'{"method": "GET", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/biometria-facial/#{ #standard.documento }", "timeoutMs": 2000}',
-'{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-true);
-
--- TASK 18: Device Reputation
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES ('getDeviceReputation', 1, 'HTTP', 'true', '[{"name": "standard.device_id"}]', '[{"name": "device_reputation", "path": "$"}]', 'HTTP_RESILIENTE',
-'{"method": "GET", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/device-reputation/#{ #standard.device_id }", "timeoutMs": 2000}',
-'{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-true);
-
--- TASK 19: Fraude ML V2
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES ('checkFraudeML', 1, 'HTTP', 'true', '[{"name": "lista_negra"}, {"name": "biometria_info"}, {"name": "device_reputation"}]', '[{"name": "fraude_ml", "path": "$"}]', 'HTTP_RESILIENTE',
-'{"method": "POST", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/fraude-ml-v2", "body": "{\"lista\": \"#{ #lista_negra }\", \"bio\": \"#{ #biometria_info }\", \"device\": \"#{ #device_reputation }\"}", "timeoutMs": 2000}',
-'{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-true);
-
--- TASK 20: Calcular Renda Presumida (Groovy)
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, is_active)
-VALUES ('calcRendaGroovy', 1, 'GROOVY_SCRIPT', 'true', '[{"name": "historico_pagamentos"}]', '[{"name": "renda_calculada", "path": "$"}]', 'HTTP_PADRAO',
-'{"scriptName": "CalcularRenda.groovy", "timeoutMs": 500}',
-true);
-
--- TASK 21: Analisar Fraude Device (Groovy)
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, is_active)
-VALUES ('analiseFraudeGroovy', 1, 'GROOVY_SCRIPT', 'true', '[{"name": "device_reputation"}, {"name": "geo_info"}]', '[{"name": "sinal_fraude_device", "path": "$"}]', 'HTTP_PADRAO',
-'{"scriptName": "AnalisarFraudeDevice.groovy", "timeoutMs": 500}',
-true);
-
--- TASK 22: Consolidar Score (Groovy)
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, is_active)
-VALUES ('consolidarScoreGroovy', 1, 'GROOVY_SCRIPT', 'true', '[{"name": "score_comportamental"}, {"name": "serasa_info"}, {"name": "analise_cliente_result"}]', '[{"name": "score_consolidado", "path": "$"}]', 'HTTP_PADRAO',
-'{"scriptName": "ConsolidarScore.groovy", "timeoutMs": 500}',
-true);
-
--- TASK 23: Regras de Risco DMN
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, is_active)
-VALUES (
-    'checkRiscoDmn',
-    1,
-    'DMN',
-    'true',
-    '[{"name": "serasa_info.score"}, {"name": "standard.valor"}]',
-    '[{"name": "resultado_dmn", "path": "resultado"}, {"name": "motivo_dmn", "path": "motivo"}]',
-    'HTTP_PADRAO',
-    '{"dmnFile": "risco_teste.dmn", "decisionKey": "decisao_risco_simples", "timeoutMs": 200}',
-    true
-);
-
--- TASK 4: Motor de Risco Final
-
-INSERT INTO tb_task_catalog (task_id, version, task_type, selector_expression, requires_json, produces_json, infra_profile_id, config_json, features_json, is_active)
-VALUES (
-    'finalRiskEngine',
-    1,
-    'HTTP',
-    'true',
-    '[{"name": "cliente_info"}, {"name": "device_info"}, {"name": "compliance_enriched"}, {"name": "standard.valor"}, {"name": "serasa_info"}, {"name": "bacen_info"}, {"name": "geo_info"}, {"name": "analise_cliente_result"}, {"name": "score_comportamental"}, {"name": "match_cadastral"}, {"name": "capacidade_pagamento"}, {"name": "fraude_ml"}, {"name": "renda_calculada"}, {"name": "sinal_fraude_device"}, {"name": "score_consolidado"}, {"name": "resultado_dmn"}]',
-    '[{"name": "resultado_final", "path": "$"}]',
-    'HTTP_RESILIENTE',
-    '{"method": "POST", "url": "#{ @environment.getProperty(''integration.api.url'') }/v1/risk/analyze", "body": "{\"cliente\": \"#{ #cliente_info }\", \"device\": \"#{ #device_info }\", \"compliance\": \"#{ #compliance_enriched }\", \"serasa\": \"#{ #serasa_info }\", \"bacen\": \"#{ #bacen_info }\", \"geo\": \"#{ #geo_info }\", \"analise_cliente\": \"#{ #analise_cliente_result }\", \"score_comp\": \"#{ #score_comportamental }\", \"match_cad\": \"#{ #match_cadastral }\", \"cap_pag\": \"#{ #capacidade_pagamento }\", \"fraude\": \"#{ #fraude_ml }\", \"renda_groovy\": \"#{ #renda_calculada }\", \"fraude_groovy\": \"#{ #sinal_fraude_device }\", \"score_groovy\": \"#{ #score_consolidado }\", \"valor_transacao\": \"#{ #standard.valor }\", \"decisao_dmn\": \"#{ #resultado_dmn }\"}", "timeoutMs": 2000}',
-    '{"preExecution": [{"templateRef": "RETRY_PADRAO"}], "postExecution": [{"templateRef": "VALIDACAO_HTTP_PADRAO"}]}',
-    true
-);
+('STANDARD_RISK', 'documento', '#raw.customer.document');

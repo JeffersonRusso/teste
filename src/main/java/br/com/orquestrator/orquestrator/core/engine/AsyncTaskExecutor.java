@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.concurrent.StructuredTaskScope;
 
 /**
- * AsyncTaskExecutor: Especialista em Concorrência Estruturada.
- * Sem travas artificiais, permitindo que o Java 21 gerencie as Virtual Threads.
+ * AsyncTaskExecutor: Paralelismo Máximo com Virtual Threads.
+ * Sem limites artificiais de concorrência.
  */
 @Component
 public class AsyncTaskExecutor {

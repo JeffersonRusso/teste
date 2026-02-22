@@ -9,6 +9,7 @@ import org.apache.logging.log4j.core.lookup.StrLookup;
 /**
  * Plugin de Lookup para Log4j2 que extrai dados do ContextHolder (ScopedValues).
  * Permite usar ${ctx_val:correlation_id} ou ${ctx_val:node_id} no log4j2.xml.
+ * Otimizado para Java 21+: ScopedValue tem acesso O(1) e é imutável.
  */
 @Plugin(name = "ctx_val", category = StrLookup.CATEGORY)
 public class ContextLookup extends AbstractLookup {

@@ -1,23 +1,20 @@
 package br.com.orquestrator.orquestrator.domain.factory;
 
-import br.com.orquestrator.orquestrator.domain.model.FeaturePhases;
+import br.com.orquestrator.orquestrator.domain.FeatureDefinition;
+import br.com.orquestrator.orquestrator.domain.model.DataMapping;
+import br.com.orquestrator.orquestrator.domain.model.DataSpec;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.NodeId;
 import br.com.orquestrator.orquestrator.infra.config.ConfigVariableResolver;
-import br.com.orquestrator.orquestrator.tasks.registry.factory.FeatureManager;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
-/**
- * TaskDefinitionFactory: Orquestra a montagem da definição da tarefa.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -25,40 +22,34 @@ public class TaskDefinitionFactory {
 
     private final ObjectMapper objectMapper;
     private final ConfigVariableResolver variableResolver;
-    private final FeatureManager featureManager;
+
+    private static final long DEFAULT_TIMEOUT = 2000L;
 
     public TaskDefinition create(TaskRawData raw) {
-        // 1. Resolve variáveis de ambiente
-        JsonNode resolvedConfig = variableResolver.resolve(raw.configJson());
+        // 1. Resolve variáveis de ambiente no Map de configuração
+        Map<String, Object> resolvedConfig = variableResolver.resolve(raw.config());
         
-        // 2. Extrai configuração técnica
+        // 2. Extrai configuração técnica básica usando o ObjectMapper para converter o Map
         TaskConfigRecord config = parseConfig(resolvedConfig, raw.taskId());
         
-        // 3. Gerencia features
-        FeaturePhases finalFeatures = featureManager.mergeAndResolve(
-            raw.taskFeatures(), 
-            raw.profileFeaturesJson(), 
-            raw.taskId()
-        );
-
-        // 4. Montagem final
-        return buildDefinition(raw, resolvedConfig, config, finalFeatures);
+        // 3. Montagem final
+        return buildDefinition(raw, resolvedConfig, config, raw.features());
     }
 
-    private TaskDefinition buildDefinition(TaskRawData raw, JsonNode resolvedConfig, TaskConfigRecord config, FeaturePhases finalFeatures) {
+    private TaskDefinition buildDefinition(TaskRawData raw, Map<String, Object> resolvedConfig, TaskConfigRecord config, List<FeatureDefinition> features) {
         return TaskDefinition.builder()
                 .nodeId(new NodeId(raw.taskId()))
                 .version(raw.version())
                 .name(raw.taskId())
                 .type(raw.taskType())
-                .timeoutMs(config.timeoutMs())
+                .timeoutMs(Objects.requireNonNullElse(config.timeoutMs(), DEFAULT_TIMEOUT))
                 .config(resolvedConfig)
-                .features(finalFeatures)
+                .features(features)
                 .ref(raw.taskId())
                 .selectorExpression(raw.selectorExpression())
                 .criticality(Objects.requireNonNullElse(raw.criticality(), 100))
-                .requires(DataSpecParser.parse(raw.requiresJson()))
-                .produces(DataSpecParser.parse(raw.producesJson()))
+                .requires(mapToSpecs(raw.requires()))
+                .produces(mapToSpecs(raw.produces()))
                 .responseSchema(raw.responseSchema())
                 .failFast(Objects.requireNonNullElse(config.failFast(), true))
                 .global(Objects.requireNonNullElse(config.global(), false))
@@ -67,20 +58,25 @@ public class TaskDefinitionFactory {
                 .build();
     }
 
-    private TaskConfigRecord parseConfig(JsonNode json, String taskId) {
-        return Optional.ofNullable(json)
-                .filter(n -> !n.isMissingNode())
-                .map(n -> objectMapper.convertValue(n, TaskConfigRecord.class))
-                .map(record -> {
-                    if (record.timeoutMs() == null) {
-                        throw new IllegalArgumentException(STR."Timeout obrigatório ausente para a task: \{taskId}");
-                    }
-                    return record;
-                })
-                .orElse(new TaskConfigRecord(null, null, null, null, null));
+    private List<DataSpec> mapToSpecs(List<DataMapping> mappings) {
+        if (mappings == null) return List.of();
+        return mappings.stream()
+                .map(DataSpec::fromMapping)
+                .toList();
     }
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
+    private TaskConfigRecord parseConfig(Map<String, Object> configMap, String taskId) {
+        if (configMap == null || configMap.isEmpty()) {
+            return new TaskConfigRecord(DEFAULT_TIMEOUT, true, false, 0L, 0L);
+        }
+        try {
+            return objectMapper.convertValue(configMap, TaskConfigRecord.class);
+        } catch (Exception e) {
+            log.warn("Falha ao converter configuração para a task '{}'. Usando defaults.", taskId);
+            return new TaskConfigRecord(DEFAULT_TIMEOUT, true, false, 0L, 0L);
+        }
+    }
+
     record TaskConfigRecord(
         Long timeoutMs,
         Boolean failFast,

@@ -15,7 +15,7 @@ public class JpaNormalizationRuleProvider implements NormalizationRuleProvider {
     private final InputNormalizationRepository repository;
 
     @Override
-    @Cacheable(value = "normalization_rules", key = "#operationType", unless = "#result.isEmpty()")
+    @Cacheable(value = "normalization_rules", key = "#operationType")
     public List<InputNormalizationEntity> getRules(String operationType) {
         return repository.findByOperationType(operationType);
     }

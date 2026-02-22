@@ -6,5 +6,14 @@ public enum DataType {
     DECIMAL,
     BOOLEAN,
     JSON,
-    ANY
+    ANY;
+
+    public static DataType from(String value) {
+        if (value == null) return ANY;
+        try {
+            return valueOf(value.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ANY;
+        }
+    }
 }

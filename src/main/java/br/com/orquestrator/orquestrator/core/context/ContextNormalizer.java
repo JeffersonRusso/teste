@@ -5,7 +5,7 @@ import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.infra.el.EvaluationContext;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionService;
 import br.com.orquestrator.orquestrator.adapter.persistence.repository.entity.InputNormalizationEntity;
-import br.com.orquestrator.orquestrator.core.context.init.ContextInitializer;
+import br.com.orquestrator.orquestrator.core.context.init.ContextTaskInitializer;
 import br.com.orquestrator.orquestrator.core.context.normalization.NormalizationRuleProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,22 +16,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Orquestrador de normalização de contexto.
- * Refatorado para operar diretamente no ExecutionContext (JSON Vivo).
- */
 @Slf4j
 @Service
 @Order(1)
 @RequiredArgsConstructor
-public class ContextNormalizer implements ContextInitializer {
+public class ContextNormalizer implements ContextTaskInitializer {
 
     private final NormalizationRuleProvider ruleProvider;
     private final ExpressionService expressionService;
 
     @Override
-    public void initialize(ExecutionContext context, String operationType) {
-        normalize(context, operationType);
+    public void initialize(ExecutionContext context) {
+        normalize(context, context.getOperationType());
     }
 
     public void normalize(ExecutionContext context, String operationType) {
@@ -49,7 +45,7 @@ public class ContextNormalizer implements ContextInitializer {
         try {
             extractValue(rule, evalContext)
                 .map(val -> transformValue(rule, val, context))
-                .ifPresent(val -> context.put(STR."\{ContextKey.STANDARD}.\{rule.getTargetField()}", val));
+                .ifPresent(val -> context.put(ContextKey.STANDARD + "." + rule.getTargetField(), val));
         } catch (Exception e) {
             log.warn("Falha ao processar regra de normalização [{}]: {}", rule.getTargetField(), e.getMessage());
         }

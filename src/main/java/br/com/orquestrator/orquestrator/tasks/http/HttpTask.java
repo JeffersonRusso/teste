@@ -1,6 +1,5 @@
 package br.com.orquestrator.orquestrator.tasks.http;
 
-import br.com.orquestrator.orquestrator.core.context.ContextHolder;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.infra.el.EvaluationContext;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionService;
@@ -12,15 +11,17 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * HttpTask: Agora estende BaseTask para ganhar resolução de templates automática.
+ * HttpTask: Executa chamadas HTTP baseadas em templates SpEL.
  */
 public class HttpTask extends BaseTask<HttpTaskConfiguration> {
 
     private final HttpExecutor executor;
+    private final String nodeId;
 
-    public HttpTask(ExpressionService expressionService, HttpTaskConfiguration config, HttpExecutor executor) {
+    public HttpTask(ExpressionService expressionService, HttpTaskConfiguration config, HttpExecutor executor, String nodeId) {
         super(expressionService, config);
         this.executor = executor;
+        this.nodeId = nodeId;
     }
 
     @Override
@@ -33,9 +34,8 @@ public class HttpTask extends BaseTask<HttpTaskConfiguration> {
             config.headersTemplates().forEach((k, v) -> headers.put(k, eval.resolve(v, String.class)));
         }
 
-        return executor.execute(
-            new OrchestratorRequest(config.method(), URI.create(url), headers, body, 0), 
-            ContextHolder.CURRENT_NODE.get()
-        );
+        long timeout = config.timeout() != null ? config.timeout().longValue() : 0L;
+
+        return executor.execute(new OrchestratorRequest(config.method(), URI.create(url), headers, body, timeout), nodeId);
     }
 }

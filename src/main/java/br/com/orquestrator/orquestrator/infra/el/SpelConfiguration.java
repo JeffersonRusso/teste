@@ -14,6 +14,7 @@ import org.springframework.expression.spel.standard.SpelExpressionParser;
 
 /**
  * Centraliza a infraestrutura do SpEL para trabalhar com Maps.
+ * Otimizado para IMMEDIATE compilation para performance máxima.
  */
 @Configuration
 public class SpelConfiguration {
@@ -21,7 +22,9 @@ public class SpelConfiguration {
     @Bean
     @Primary
     public ExpressionParser orchestratorExpressionParser() {
-        var config = new SpelParserConfiguration(SpelCompilerMode.MIXED, this.getClass().getClassLoader());
+        // IMMEDIATE: Compila para bytecode na primeira oportunidade.
+        // Essencial para atingir 5000+ TPS.
+        var config = new SpelParserConfiguration(SpelCompilerMode.IMMEDIATE, this.getClass().getClassLoader());
         return new SpelExpressionParser(config);
     }
 

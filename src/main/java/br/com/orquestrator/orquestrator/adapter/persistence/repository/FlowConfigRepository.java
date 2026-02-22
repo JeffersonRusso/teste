@@ -17,4 +17,7 @@ public interface FlowConfigRepository extends JpaRepository<FlowConfigEntity, Fl
     
     @Query("SELECT f FROM FlowConfigEntity f WHERE f.operationType = :operationType AND f.version = :version AND f.active = true")
     Optional<FlowConfigEntity> findSpecificVersion(String operationType, Integer version);
+
+    @Query("SELECT DISTINCT f.operationType FROM FlowConfigEntity f WHERE f.active = true")
+    List<String> findAllActiveOperations();
 }

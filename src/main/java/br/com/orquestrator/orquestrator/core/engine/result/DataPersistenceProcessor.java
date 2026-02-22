@@ -8,11 +8,11 @@ import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 
 /**
- * DataPersistenceProcessor: Especialista em salvar resultados no contexto.
- * Agora padronizado para usar caminhos (paths) em todas as extrações.
+ * DataPersistenceProcessor: Otimizado para Alocação Zero.
  */
 @Component
 @Order(2)
@@ -20,18 +20,15 @@ public class DataPersistenceProcessor implements TaskResultProcessor {
 
     @Override
     public void process(TaskResult result, TaskDefinition definition, ExecutionContext context) {
-        if (result.body() == null) return;
+        final Object body = result.body();
+        if (body == null) return;
 
-        String nodeId = definition.getNodeId().value();
-        
-        // 1. Salva o resultado bruto da task em um local temporário de sistema
-        String internalKey = STR."sys.tasks.\{nodeId}.raw";
-        context.put(internalKey, result.body());
-
-        // 2. Processa as saídas declaradas (produces)
-        if (definition.getProduces() != null) {
-            for (DataSpec spec : definition.getProduces()) {
-                Object value = extractValue(result.body(), spec.path());
+        // Otimização: Processa as saídas declaradas (produces) sem criar chaves de sistema temporárias
+        final List<DataSpec> produces = definition.getProduces();
+        if (produces != null && !produces.isEmpty()) {
+            for (int i = 0; i < produces.size(); i++) {
+                DataSpec spec = produces.get(i);
+                Object value = extractValue(body, spec.path());
                 if (value != null) {
                     context.put(spec.name(), value);
                 }
@@ -39,12 +36,12 @@ public class DataPersistenceProcessor implements TaskResultProcessor {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private Object extractValue(Object body, String path) {
-        if (path == null || path.equals("$") || path.equals("root")) {
+        if (path == null || path.isEmpty() || path.equals("$") || path.equals("root")) {
             return body;
         }
         
-        // Se o body for um Map, usamos o PathNavigator para extrair o campo
         if (body instanceof Map<?, ?> map) {
             return PathNavigator.read((Map<String, Object>) map, path);
         }

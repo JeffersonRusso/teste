@@ -1,46 +1,52 @@
 package br.com.orquestrator.orquestrator.core.context;
 
+import br.com.orquestrator.orquestrator.domain.port.in.PrepareContextUseCase;
 import br.com.orquestrator.orquestrator.domain.ContextKey;
 import br.com.orquestrator.orquestrator.domain.vo.ContextBuilder;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
-import br.com.orquestrator.orquestrator.core.context.init.ContextInitializer;
-import br.com.orquestrator.orquestrator.infra.cache.GlobalDataCache;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import br.com.orquestrator.orquestrator.infra.IdGenerator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Map;
 
 /**
- * RiskContextFactory: Orquestra a criação do contexto usando SOLID.
+ * RiskContextFactory: Fábrica de contexto otimizada.
+ * Otimizado para evitar o lock do SecureRandom (UUID.randomUUID).
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
-public class RiskContextFactory {
+public class RiskContextFactory implements PrepareContextUseCase {
 
-    private final List<ContextInitializer> initializers;
-    private final ObjectMapper objectMapper;
-    private final GlobalDataCache globalCache;
+    private final ContextNormalizer contextNormalizer;
+    private final IdGenerator idGenerator;
 
-    public ExecutionContext create(String operationType, Map<String, String> headers, JsonNode rawBody) {
-        // 1. Montagem inicial via Builder
+    @Override
+    public ExecutionContext execute(String operationType, Map<String, String> headers, Map<String, Object> rawBody) {
+        // 1. Criação base do contexto
         ExecutionContext context = ContextBuilder.init(operationType)
-                .withCorrelationId(ContextHolder.getCorrelationId().orElse(null))
-                .withAllData(globalCache.getAll())
+                .withCorrelationId(extractCorrelationId(headers))
                 .withData(ContextKey.HEADER, headers)
-                .withData(ContextKey.RAW, parseBody(rawBody))
+                .withData(ContextKey.RAW, rawBody) 
                 .build();
-        
-        // 2. Inicialização via Pipeline (OCP)
-        initializers.forEach(i -> i.initialize(context, operationType));
+
+        // 2. Normalização estática
+        contextNormalizer.normalize(context, operationType);
 
         return context;
     }
 
-    private Map<String, Object> parseBody(JsonNode body) {
-        if (body == null || body.isMissingNode()) return Map.of();
-        return objectMapper.convertValue(body, Map.class);
+    private String extractCorrelationId(Map<String, String> headers) {
+        if (headers == null) return idGenerator.generateFastId();
+        
+        String correlationId = headers.get("x-correlation-id");
+        if (correlationId == null) {
+            correlationId = headers.get("correlation-id");
+        }
+        
+        // Se não houver ID no header, gera um ID rápido (Lock-free)
+        return (correlationId != null && !correlationId.isBlank()) ? correlationId : idGenerator.generateFastId();
     }
 }

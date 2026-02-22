@@ -11,5 +11,5 @@ import java.io.Serializable;
 @AllArgsConstructor
 public class TaskCatalogId implements Serializable {
     private String taskId;
-    private Integer version;
+    private Integer taskVersion; // Renomeado para evitar conflito com @Version do JPA
 }

@@ -15,8 +15,7 @@ import java.util.List;
 
 /**
  * TaskRunner: Orquestrador de execução de unidade de trabalho.
- * Segue o princípio de Open/Closed: novos comportamentos de resultado 
- * são adicionados via TaskResultProcessor.
+ * Otimizado para evitar alocações de iteradores no caminho crítico.
  */
 @Slf4j
 @Component
@@ -27,15 +26,25 @@ public class TaskRunner {
     private final List<TaskResultProcessor> processors;
 
     public void run(TaskDefinition definition, ExecutionContext context) {
-        String nodeId = definition.getNodeId().value();
+        Task task = taskRegistry.getTask(definition);
+        run(task, definition, context);
+    }
+
+    /**
+     * Versão otimizada para o motor DAG: Recebe a task e definição já resolvidas.
+     */
+    public void run(Task task, TaskDefinition definition, ExecutionContext context) {
+        final String nodeId = definition.getNodeId().value();
 
         ScopedValue.where(ContextHolder.CURRENT_NODE, nodeId).run(() -> {
             try {
-                Task task = taskRegistry.getTask(definition);
                 TaskResult result = task.execute(context);
                 
                 if (result != null) {
-                    processors.forEach(p -> p.process(result, definition, context));
+                    // Otimização: Loop for tradicional evita a criação de Iterator 40.000 vezes/seg
+                    for (int i = 0; i < processors.size(); i++) {
+                        processors.get(i).process(result, definition, context);
+                    }
                 }
             } catch (Exception e) {
                 log.error("Falha no nó [{}]: {}", nodeId, e.getMessage());

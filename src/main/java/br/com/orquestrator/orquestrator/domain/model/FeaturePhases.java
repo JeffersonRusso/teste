@@ -1,12 +1,9 @@
 package br.com.orquestrator.orquestrator.domain.model;
 
 import br.com.orquestrator.orquestrator.domain.FeatureDefinition;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import java.util.Collections;
 import java.util.List;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 public record FeaturePhases(
     List<FeatureDefinition> monitors,
     List<FeatureDefinition> preExecution,
