@@ -7,23 +7,27 @@ import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.NodeId;
 import br.com.orquestrator.orquestrator.infra.config.ConfigVariableResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 
-@Slf4j
 @Component
-@RequiredArgsConstructor
 public class TaskDefinitionFactory {
 
+    private static final Logger LOGGER = System.getLogger(TaskDefinitionFactory.class.getName());
     private final ObjectMapper objectMapper;
     private final ConfigVariableResolver variableResolver;
 
     private static final long DEFAULT_TIMEOUT = 2000L;
+
+    public TaskDefinitionFactory(ObjectMapper objectMapper, ConfigVariableResolver variableResolver) {
+        this.objectMapper = objectMapper;
+        this.variableResolver = variableResolver;
+    }
 
     public TaskDefinition create(TaskRawData raw) {
         // 1. Resolve variáveis de ambiente no Map de configuração
@@ -37,25 +41,25 @@ public class TaskDefinitionFactory {
     }
 
     private TaskDefinition buildDefinition(TaskRawData raw, Map<String, Object> resolvedConfig, TaskConfigRecord config, List<FeatureDefinition> features) {
-        return TaskDefinition.builder()
-                .nodeId(new NodeId(raw.taskId()))
-                .version(raw.version())
-                .name(raw.taskId())
-                .type(raw.taskType())
-                .timeoutMs(Objects.requireNonNullElse(config.timeoutMs(), DEFAULT_TIMEOUT))
-                .config(resolvedConfig)
-                .features(features)
-                .ref(raw.taskId())
-                .selectorExpression(raw.selectorExpression())
-                .criticality(Objects.requireNonNullElse(raw.criticality(), 100))
-                .requires(mapToSpecs(raw.requires()))
-                .produces(mapToSpecs(raw.produces()))
-                .responseSchema(raw.responseSchema())
-                .failFast(Objects.requireNonNullElse(config.failFast(), true))
-                .global(Objects.requireNonNullElse(config.global(), false))
-                .refreshIntervalMs(Objects.requireNonNullElse(config.refreshIntervalMs(), 0L))
-                .ttlMs(Objects.requireNonNullElse(config.ttlMs(), 0L))
-                .build();
+        return new TaskDefinition(
+                new NodeId(raw.taskId()),
+                raw.version(),
+                raw.taskId(),
+                raw.taskType(),
+                Objects.requireNonNullElse(config.timeoutMs(), DEFAULT_TIMEOUT),
+                resolvedConfig,
+                features,
+                raw.taskId(),
+                Objects.requireNonNullElse(config.failFast(), true),
+                raw.selectorExpression(),
+                Objects.requireNonNullElse(raw.criticality(), 100),
+                Objects.requireNonNullElse(config.global(), false),
+                Objects.requireNonNullElse(config.refreshIntervalMs(), 0L),
+                Objects.requireNonNullElse(config.ttlMs(), 0L),
+                raw.responseSchema(),
+                mapToSpecs(raw.requires()),
+                mapToSpecs(raw.produces())
+        );
     }
 
     private List<DataSpec> mapToSpecs(List<DataMapping> mappings) {
@@ -72,7 +76,7 @@ public class TaskDefinitionFactory {
         try {
             return objectMapper.convertValue(configMap, TaskConfigRecord.class);
         } catch (Exception e) {
-            log.warn("Falha ao converter configuração para a task '{}'. Usando defaults.", taskId);
+            LOGGER.log(Level.WARNING, "Falha ao converter configuração para a task {0}. Usando defaults.", taskId);
             return new TaskConfigRecord(DEFAULT_TIMEOUT, true, false, 0L, 0L);
         }
     }

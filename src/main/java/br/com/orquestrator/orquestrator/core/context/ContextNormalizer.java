@@ -1,20 +1,18 @@
 package br.com.orquestrator.orquestrator.core.context;
 
+import br.com.orquestrator.orquestrator.adapter.persistence.repository.entity.InputNormalizationEntity;
+import br.com.orquestrator.orquestrator.core.context.init.ContextTaskInitializer;
+import br.com.orquestrator.orquestrator.core.context.normalization.NormalizationRuleProvider;
 import br.com.orquestrator.orquestrator.domain.ContextKey;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.infra.el.EvaluationContext;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionService;
-import br.com.orquestrator.orquestrator.adapter.persistence.repository.entity.InputNormalizationEntity;
-import br.com.orquestrator.orquestrator.core.context.init.ContextTaskInitializer;
-import br.com.orquestrator.orquestrator.core.context.normalization.NormalizationRuleProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -31,38 +29,39 @@ public class ContextNormalizer implements ContextTaskInitializer {
     }
 
     public void normalize(ExecutionContext context, String operationType) {
-        log.debug("Iniciando normalização: {}", operationType);
-
         List<InputNormalizationEntity> rules = ruleProvider.getRules(operationType);
-        EvaluationContext evalContext = expressionService.create(context);
+        if (rules == null || rules.isEmpty()) return;
 
-        rules.forEach(rule -> applyRule(rule, evalContext, context));
-        
-        log.debug("Normalização concluída para {}", operationType);
-    }
+        // OTIMIZAÇÃO: Cria um único EvaluationContext para TODAS as regras da requisição
+        // Evita N criações de contexto por request.
+        final EvaluationContext evalContext = expressionService.create(context);
 
-    private void applyRule(InputNormalizationEntity rule, EvaluationContext evalContext, ExecutionContext context) {
-        try {
-            extractValue(rule, evalContext)
-                .map(val -> transformValue(rule, val, context))
-                .ifPresent(val -> context.put(ContextKey.STANDARD + "." + rule.getTargetField(), val));
-        } catch (Exception e) {
-            log.warn("Falha ao processar regra de normalização [{}]: {}", rule.getTargetField(), e.getMessage());
+        for (InputNormalizationEntity rule : rules) {
+            try {
+                Object value = evalContext.evaluate(rule.getSourceExpression(), Object.class);
+                if (value != null) {
+                    Object transformed = transformValue(rule, value, evalContext);
+                    context.put(ContextKey.STANDARD + "." + rule.getTargetField(), transformed);
+                }
+            } catch (Exception e) {
+                log.warn("Falha ao normalizar [{}]: {}", rule.getTargetField(), e.getMessage());
+            }
         }
     }
 
-    private Optional<Object> extractValue(InputNormalizationEntity rule, EvaluationContext evalContext) {
-        return Optional.ofNullable(evalContext.evaluate(rule.getSourceExpression(), Object.class));
-    }
-
-    private Object transformValue(InputNormalizationEntity rule, Object value, ExecutionContext context) {
+    private Object transformValue(InputNormalizationEntity rule, Object value, EvaluationContext evalContext) {
         String transformExp = rule.getTransformationExpression();
-        
         if (transformExp == null || transformExp.isBlank()) {
             return value;
         }
 
-        EvaluationContext transContext = expressionService.create(context, Map.of("value", value));
-        return transContext.evaluate(transformExp, Object.class);
+        // OTIMIZAÇÃO: Injeta o 'value' no contexto principal temporariamente
+        // Evita a criação de um novo EvaluationContext e Map.of() para cada transformação.
+        try {
+            evalContext.setVariable("value", value);
+            return evalContext.evaluate(transformExp, Object.class);
+        } finally {
+            evalContext.setVariable("value", null); // Limpa para não vazar
+        }
     }
 }

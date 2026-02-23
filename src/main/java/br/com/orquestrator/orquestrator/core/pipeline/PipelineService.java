@@ -12,7 +12,7 @@ import java.util.Set;
 
 /**
  * PipelineService: Fachada única que gerencia o ciclo de vida do pipeline.
- * Focada em roteamento, cache e montagem.
+ * Otimizado para Zero-Allocation de Strings no Hot Path.
  */
 @Slf4j
 @Service
@@ -29,25 +29,21 @@ public class PipelineService {
         
         // 2. Tenta buscar do Cache (Se não houver customização de outputs)
         boolean isCustom = requiredOutputs != null && !requiredOutputs.isEmpty();
-        String cacheKey = pipelineCache.generateKey(context.getOperationType(), flowDef.version());
         
         if (!isCustom) {
+            // OTIMIZAÇÃO: Usar CacheKey (Record) em vez de String
+            PipelineCache.CacheKey cacheKey = pipelineCache.generateKey(context.getOperationType(), flowDef.version());
             Pipeline cached = pipelineCache.get(cacheKey);
             if (cached != null) return cached;
-        }
 
-        // 3. Montagem
-        FlowDefinition finalFlow = isCustom
-                ? new FlowDefinition(flowDef.operationType(), flowDef.version(), requiredOutputs, flowDef.allowedTasks())
-                : flowDef;
-
-        Pipeline pipeline = pipelineAssembler.assemble(context, finalFlow);
-
-        // 4. Salva no Cache se não for customizado
-        if (!isCustom) {
+            // 3. Montagem (Se não estiver no cache)
+            Pipeline pipeline = pipelineAssembler.assemble(context, flowDef);
             pipelineCache.put(cacheKey, pipeline);
+            return pipeline;
         }
 
-        return pipeline;
+        // 4. Montagem Customizada (Sem cache)
+        FlowDefinition finalFlow = new FlowDefinition(flowDef.operationType(), flowDef.version(), requiredOutputs, flowDef.allowedTasks());
+        return pipelineAssembler.assemble(context, finalFlow);
     }
 }

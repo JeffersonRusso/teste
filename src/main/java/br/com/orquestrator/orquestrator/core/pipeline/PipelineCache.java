@@ -10,24 +10,29 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * PipelineCache: Gerencia o armazenamento de pipelines montados.
+ * Otimizado para evitar alocação de Strings no Hot Path.
  */
 @Component
 @RequiredArgsConstructor
 public class PipelineCache {
 
     private final SystemHealthMonitor healthMonitor;
-    private final Map<String, Pipeline> cache = new ConcurrentHashMap<>();
+    private final Map<CacheKey, Pipeline> cache = new ConcurrentHashMap<>();
 
-    public String generateKey(String operationType, Integer flowVersion) {
+    // OTIMIZAÇÃO: Usar um record como chave de cache em vez de String
+    // Records implementam equals/hashCode automaticamente e são muito rápidos.
+    public record CacheKey(String operationType, int flowVersion, int healthScore) {}
+
+    public CacheKey generateKey(String operationType, Integer flowVersion) {
         int healthScore = healthMonitor.getCutoffScore(operationType);
-        return STR."\{operationType}:\{flowVersion != null ? flowVersion : 0}:\{healthScore}";
+        return new CacheKey(operationType, flowVersion != null ? flowVersion : 0, healthScore);
     }
 
-    public Pipeline get(String key) {
+    public Pipeline get(CacheKey key) {
         return cache.get(key);
     }
 
-    public void put(String key, Pipeline pipeline) {
+    public void put(CacheKey key, Pipeline pipeline) {
         cache.put(key, pipeline);
     }
 

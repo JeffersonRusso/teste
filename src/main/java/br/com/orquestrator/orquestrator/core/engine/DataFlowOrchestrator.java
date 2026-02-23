@@ -3,94 +3,83 @@ package br.com.orquestrator.orquestrator.core.engine;
 import br.com.orquestrator.orquestrator.core.context.ContextHolder;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
+import br.com.orquestrator.orquestrator.domain.vo.NodeId;
 import br.com.orquestrator.orquestrator.domain.vo.Pipeline;
 import br.com.orquestrator.orquestrator.exception.PipelineException;
 import br.com.orquestrator.orquestrator.service.PipelineEventPublisher;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.lang.ScopedValue;
-import java.util.List;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicIntegerArray;
+import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.StructuredTaskScope;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.ExecutionException;
 
 /**
- * DataFlowOrchestrator: Motor DAG Iterativo de Ultra-Performance.
- * Elimina a recursão para reduzir drasticamente o uso de StackChunk e Thread Churn.
+ * DataFlowOrchestrator: Motor DAG purista usando Java 21.
+ * Orquestração baseada em sinais de dados (Data-Driven) com Virtual Threads.
  */
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class DataFlowOrchestrator implements PipelineEngine {
 
     private final TaskRunner taskRunner;
     private final PipelineEventPublisher eventPublisher;
-    private final ExecutorService virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
+
+    public DataFlowOrchestrator(TaskRunner taskRunner, PipelineEventPublisher eventPublisher) {
+        this.taskRunner = taskRunner;
+        this.eventPublisher = eventPublisher;
+    }
 
     @Override
     public void run(ExecutionContext context, Pipeline pipeline) {
-        final String correlationId = context.getCorrelationId();
-
-        ScopedValue.where(ContextHolder.CORRELATION_ID, correlationId).run(() -> {
-            boolean success = false;
-            try {
-                runInitializers(context, pipeline);
-
-                final List<Task> tasks = pipeline.executableTasks();
-                final List<TaskDefinition> defs = pipeline.taskDefinitions();
-                final int taskCount = tasks.size();
-                final int[][] adj = pipeline.adjacencyMatrix();
-                final int[] depCounts = pipeline.dependencyCounts();
-
-                final AtomicIntegerArray counters = new AtomicIntegerArray(depCounts);
-                final CountDownLatch latch = new CountDownLatch(taskCount);
-
-                // Dispara tasks iniciais
-                for (int i = 0; i < taskCount; i++) {
-                    if (depCounts[i] == 0) {
-                        enqueue(i, tasks, defs, adj, counters, latch, correlationId, context);
-                    }
+        ScopedValue.where(ContextHolder.CORRELATION_ID, context.getCorrelationId())
+            .run(() -> {
+                var success = false;
+                try {
+                    runInitializers(context, pipeline);
+                    executeDag(context, pipeline);
+                    success = true;
+                } catch (Exception e) {
+                    throw translate(e);
+                } finally {
+                    finalizeExecution(context, success);
                 }
-
-                if (!latch.await(pipeline.timeout().toMillis(), TimeUnit.MILLISECONDS)) {
-                    throw new TimeoutException("Pipeline Timeout");
-                }
-                success = true;
-            } catch (Exception e) {
-                throw translate(e);
-            } finally {
-                finalizeExecution(context, success);
-            }
-        });
+            });
     }
 
-    private void enqueue(int taskIdx, List<Task> tasks, List<TaskDefinition> defs, int[][] adj,
-                         AtomicIntegerArray counters, CountDownLatch latch, String correlationId, ExecutionContext context) {
-        virtualExecutor.execute(() -> {
-            try {
-                // Execução da Task via TaskRunner para garantir processamento de resultados
-                taskRunner.run(tasks.get(taskIdx), defs.get(taskIdx), context);
+    private void executeDag(ExecutionContext context, Pipeline pipeline) throws Exception {
+        try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+            // Sinais de conclusão baseados na identidade do nó (NodeId)
+            var taskSignals = new ConcurrentHashMap<NodeId, CompletableFuture<Void>>();
+            pipeline.tasks().forEach(n -> taskSignals.put(n.definition().getNodeId(), new CompletableFuture<>()));
 
-                // Notificação de sucessores (Iterativa, não recursiva)
-                final int[] nextTasks = adj[taskIdx];
-                for (int nextIdx : nextTasks) {
-                    if (counters.decrementAndGet(nextIdx) == 0) {
-                        // Dispara o próximo nível em uma nova Virtual Thread para manter a stack rasa
-                        enqueue(nextIdx, tasks, defs, adj, counters, latch, correlationId, context);
+            for (var node : pipeline.tasks()) {
+                scope.fork(() -> {
+                    // 1. Aguarda as tarefas das quais eu dependo
+                    for (var depId : node.dependencies()) {
+                        taskSignals.get(depId).join();
                     }
-                }
-            } finally {
-                latch.countDown();
+
+                    // 2. Executa e sinaliza conclusão
+                    taskRunner.run(node.executable(), node.definition(), context);
+                    taskSignals.get(node.definition().getNodeId()).complete(null);
+                    return null;
+                });
             }
-        });
+
+            scope.joinUntil(Instant.now().plus(pipeline.timeout()));
+            scope.throwIfFailed();
+        }
     }
 
     private void runInitializers(ExecutionContext context, Pipeline pipeline) {
-        if (pipeline.initializers() == null) return;
-        for (var initializer : pipeline.initializers()) {
-            try { initializer.initialize(context); } catch (Exception e) {}
+        if (pipeline.initializers() != null) {
+            pipeline.initializers().forEach(init -> {
+                try { init.initialize(context); } catch (Exception _) {}
+            });
         }
     }
 
@@ -100,7 +89,16 @@ public class DataFlowOrchestrator implements PipelineEngine {
     }
 
     private RuntimeException translate(Exception e) {
-        if (e instanceof TimeoutException) return new PipelineException("Pipeline Timeout");
-        return (e instanceof RuntimeException re) ? re : new PipelineException(e.getMessage(), e);
+        return switch (e) {
+            case TimeoutException _ -> new PipelineException("Pipeline Timeout: " + e.getMessage());
+            case InterruptedException _ -> {
+                Thread.currentThread().interrupt();
+                yield new PipelineException("Pipeline Interrupted");
+            }
+            case ExecutionException ex when ex.getCause() instanceof RuntimeException re -> re;
+            case ExecutionException ex -> new PipelineException(ex.getCause().getMessage(), ex.getCause());
+            case RuntimeException re -> re;
+            default -> new PipelineException(e.getMessage(), e);
+        };
     }
 }

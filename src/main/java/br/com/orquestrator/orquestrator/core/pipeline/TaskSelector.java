@@ -12,6 +12,7 @@ import java.util.List;
 
 /**
  * TaskSelector: Especialista em filtrar quais tasks devem compor o pipeline.
+ * Otimizado para lookup O(1) no hot path.
  */
 @Component
 @RequiredArgsConstructor
@@ -32,9 +33,10 @@ public class TaskSelector {
     }
 
     private boolean isAllowedInFlow(TaskDefinition def, FlowDefinition flowDef) {
-        if (flowDef == null || flowDef.allowedTasks() == null) return true;
-        return flowDef.allowedTasks().stream()
-                .anyMatch(ref -> ref.id().equals(def.getNodeId().value()) && 
-                                 ref.version().equals(def.getVersion()));
+        if (flowDef == null || flowDef.allowedTaskKeys() == null) return true;
+        
+        // O(1) Lookup usando a chave composta cacheada
+        String key = def.getNodeId().value() + ":" + def.getVersion();
+        return flowDef.allowedTaskKeys().contains(key);
     }
 }

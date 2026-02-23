@@ -2,14 +2,10 @@ package br.com.orquestrator.orquestrator.domain.model;
 
 import br.com.orquestrator.orquestrator.domain.FeatureDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.NodeId;
-import lombok.Builder;
-import lombok.Getter;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
-@Getter
 public class TaskDefinition {
     
     private final NodeId nodeId;
@@ -31,8 +27,7 @@ public class TaskDefinition {
 
     private final List<DataSpec> requires;
     private final List<DataSpec> produces;
-
-    @Builder
+    
     public TaskDefinition(NodeId nodeId, Integer version, String name, String type, long timeoutMs,
                           Map<String, Object> config, List<FeatureDefinition> features, String ref, 
                           boolean failFast, String selectorExpression, int criticality,
@@ -57,6 +52,24 @@ public class TaskDefinition {
         this.requires = requires != null ? List.copyOf(requires) : List.of();
         this.produces = produces != null ? List.copyOf(produces) : List.of();
     }
+
+    public NodeId getNodeId() { return nodeId; }
+    public Integer getVersion() { return version; }
+    public String getName() { return name; }
+    public String getType() { return type; }
+    public long getTimeoutMs() { return timeoutMs; }
+    public Map<String, Object> getConfig() { return config; }
+    public List<FeatureDefinition> getFeatures() { return features; }
+    public String getRef() { return ref; }
+    public boolean isFailFast() { return failFast; }
+    public String getSelectorExpression() { return selectorExpression; }
+    public int getCriticality() { return criticality; }
+    public boolean isGlobal() { return global; }
+    public long getRefreshIntervalMs() { return refreshIntervalMs; }
+    public long getTtlMs() { return ttlMs; }
+    public Map<String, Object> getResponseSchema() { return responseSchema; }
+    public List<DataSpec> getRequires() { return requires; }
+    public List<DataSpec> getProduces() { return produces; }
 
     public List<FeatureDefinition> getAllFeaturesOrdered() {
         return features != null ? features : List.of();

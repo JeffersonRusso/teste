@@ -8,14 +8,14 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Pipeline: O Plano de Voo imutável e pré-otimizado.
+ * Pipeline: Definição imutável do fluxo de execução.
+ * Otimizado para acesso direto por índice (O(1)).
  */
 public record Pipeline(
-    List<Task> executableTasks,
-    List<TaskDefinition> taskDefinitions,
+    List<TaskNode> tasks,
     Duration timeout,
     Set<String> requiredOutputs,
-    List<ContextTaskInitializer> initializers,
-    int[][] adjacencyMatrix,
-    int[] dependencyCounts
-) {}
+    List<ContextTaskInitializer> initializers
+) {
+    public record TaskNode(Task executable, TaskDefinition definition, Set<NodeId> dependencies) {}
+}

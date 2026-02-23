@@ -26,7 +26,9 @@ public class SpelTaskSelectorStrategy implements TaskSelectorStrategy {
         }
 
         try {
-            EvaluationContext evalContext = expressionService.create(context);
+            // OTIMIZAÇÃO: Reutiliza o EvaluationContext já presente no ExecutionContext
+            // Evita criar um novo contexto SpEL para cada task durante a seleção.
+            EvaluationContext evalContext = context.computeAttachmentIfAbsent(EvaluationContext.class, expressionService::create);
             return Boolean.TRUE.equals(evalContext.evaluate(selector, Boolean.class));
         } catch (Exception e) {
             log.error("Erro ao avaliar seletor da task {}: {}", task.getNodeId(), e.getMessage());
