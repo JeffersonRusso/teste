@@ -30,13 +30,13 @@ public class GroovyScriptCache {
 
     public GroovyScriptCache() {
         CompilerConfiguration config = new CompilerConfiguration();
-        
+
         // 1. Define a classe base para todos os scripts (DSL)
         config.setScriptBaseClass(OrchestratorScript.class.getName());
-        
+
         // 2. Força compilação estática para performance máxima (Type Safety)
         // config.addCompilationCustomizers(new ASTTransformationCustomizer(CompileStatic.class));
-        
+
         // 3. Define encoding explícito para evitar lookup de System.getProperty("file.encoding")
         config.setSourceEncoding("UTF-8");
 
@@ -70,7 +70,7 @@ public class GroovyScriptCache {
             }
         });
     }
-    
+
     public void clear() {
         scriptCache.clear();
         loader.clearCache();

@@ -15,7 +15,7 @@ import java.util.List;
 
 /**
  * TaskRunner: Orquestrador de execução de unidade de trabalho.
- * Otimizado para evitar alocações de iteradores no caminho crítico.
+ * Otimizado para reduzir contenção de logs e alocações em cenários de alta carga.
  */
 @Slf4j
 @Component
@@ -41,14 +41,20 @@ public class TaskRunner {
                 TaskResult result = task.execute(context);
                 
                 if (result != null) {
-                    // Otimização: Loop for tradicional evita a criação de Iterator 40.000 vezes/seg
+                    // Otimização: Loop for tradicional evita a criação de Iterator
                     for (int i = 0; i < processors.size(); i++) {
                         processors.get(i).process(result, definition, context);
                     }
                 }
             } catch (Exception e) {
-                log.error("Falha no nó [{}]: {}", nodeId, e.getMessage());
+                // REDUÇÃO DE CONTENÇÃO: Só logamos o erro se o nível de log permitir, 
+                // e evitamos concatenar strings se não for necessário.
+                if (log.isErrorEnabled()) {
+                    log.error("Falha no nó [{}]: {}", nodeId, e.getMessage());
+                }
+                
                 context.setError(nodeId, e.getMessage());
+
                 if (definition.isFailFast()) {
                     throw (e instanceof RuntimeException re) ? re : new RuntimeException(e);
                 }

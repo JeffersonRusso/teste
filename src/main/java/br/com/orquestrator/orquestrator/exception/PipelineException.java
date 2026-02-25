@@ -4,6 +4,10 @@ import lombok.Getter;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * PipelineException: Otimizada para alta performance.
+ * Sobrescreve fillInStackTrace para evitar o custo de gerar stack traces em massa.
+ */
 @Getter
 public class PipelineException extends RuntimeException {
 
@@ -11,11 +15,18 @@ public class PipelineException extends RuntimeException {
     private final Map<String, Object> metadata = new HashMap<>();
 
     public PipelineException(String message) {
-        super(message);
+        super(message, null, true, false);
     }
 
     public PipelineException(String message, Throwable cause) {
-        super(message, cause);
+        super(message, cause, true, false);
+    }
+
+    /**
+     * Construtor protegido para permitir stacktrace se necessário.
+     */
+    protected PipelineException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
     }
 
     /**
@@ -33,6 +44,15 @@ public class PipelineException extends RuntimeException {
         if (key != null && value != null) {
             this.metadata.put(key, value);
         }
+        return this;
+    }
+
+    /**
+     * Otimização crítica: Evita a criação da stack trace, que é extremamente cara.
+     * Como o JMC mostrou alta alocação nesta classe, isso reduzirá a pressão no GC.
+     */
+    @Override
+    public synchronized Throwable fillInStackTrace() {
         return this;
     }
 }
