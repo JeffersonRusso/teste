@@ -10,45 +10,52 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.expression.spel.support.StandardTypeConverter;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Fábrica de contexto SpEL otimizada.
- * Otimizado para evitar alocações repetitivas de Accessors e Converters.
  */
 @Component
 @RequiredArgsConstructor
 public class SpelContextFactory {
 
     private final MapAccessor mapAccessor;
+    private final ExecutionContextAccessor executionContextAccessor;
     private final DefaultConversionService spelConversionService;
+    private final ExpressionEngine expressionEngine;
     
-    // OTIMIZAÇÃO: Cache de componentes imutáveis do contexto
     private List<PropertyAccessor> cachedAccessors;
     private TypeConverter cachedConverter;
 
-    public StandardEvaluationContext create(Object root, Map<String, Object> variables) {
-        var context = new StandardEvaluationContext(root);
-        
-        // OTIMIZAÇÃO: Evita criar List.of e StandardTypeConverter em cada chamada
-        context.setPropertyAccessors(getAccessors());
-        context.setTypeConverter(getConverter());
-        
-        if (root instanceof ExecutionContext ctx) {
-            context.setRootObject(ctx.getRoot());
-        }
+    public EvaluationContext create(ExecutionContext context) {
+        return create((Object) context, null);
+    }
 
+    public EvaluationContext create(Object root) {
+        return create(root, null);
+    }
+
+    public EvaluationContext create(Object root, Map<String, Object> variables) {
+        var nativeContext = new StandardEvaluationContext(root);
+        
+        nativeContext.setPropertyAccessors(getAccessors());
+        nativeContext.setTypeConverter(getConverter());
+        
         if (variables != null && !variables.isEmpty()) {
-            variables.forEach(context::setVariable);
+            variables.forEach(nativeContext::setVariable);
         }
         
-        return context;
+        return new EvaluationContext(nativeContext, expressionEngine);
     }
 
     private List<PropertyAccessor> getAccessors() {
         if (cachedAccessors == null) {
-            cachedAccessors = List.of(mapAccessor);
+            var accessors = new ArrayList<PropertyAccessor>();
+            accessors.add(executionContextAccessor);
+            accessors.add(mapAccessor);
+            cachedAccessors = List.copyOf(accessors);
         }
         return cachedAccessors;
     }

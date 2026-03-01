@@ -1,14 +1,10 @@
 package br.com.orquestrator.orquestrator.tasks.base;
 
-import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
-
 /**
- * Unidade de trabalho funcional com contrato de saída definido.
+ * Task: Contrato fundamental de execução.
+ * O contexto é acessado via ScopedValue (ContextHolder.CONTEXT).
  */
 @FunctionalInterface
 public interface Task {
-    /**
-     * Executa a lógica e retorna um resultado padronizado.
-     */
-    TaskResult execute(ExecutionContext context);
+    TaskResult execute();
 }

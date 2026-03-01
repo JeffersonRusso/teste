@@ -1,13 +1,14 @@
 package br.com.orquestrator.orquestrator.tasks.script.groovy;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.Map;
 
 /**
- * Configuração imutável e tipada para a GroovyTask.
+ * GroovyTaskConfiguration: Configuração pura e imutável.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record GroovyTaskConfiguration(
-    @JsonProperty("scriptName") String scriptName,
-    @JsonProperty("scriptBody") String scriptBody,
-    @JsonProperty("params") Map<String, Object> additionalParams
+    String scriptName,
+    String scriptBody,
+    Map<String, Object> params
 ) {}

@@ -1,83 +1,86 @@
 package br.com.orquestrator.orquestrator.domain.vo;
 
-import br.com.orquestrator.orquestrator.domain.ExecutionTracker;
-import br.com.orquestrator.orquestrator.domain.tracker.TraceContext;
-import br.com.orquestrator.orquestrator.infra.json.PathNavigator;
+import br.com.orquestrator.orquestrator.domain.ContextKey;
+import br.com.orquestrator.orquestrator.exception.PipelineException;
+import br.com.orquestrator.orquestrator.infra.util.PathNavigator;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * ExecutionContext: Otimizado para criação ultra-rápida (40k+/s).
+ * ExecutionContext: O Banco de Dados em Memória do Request.
+ * Gerencia o estado com proteção de chaves e constraints de integridade.
  */
+@Slf4j
 @Getter
-public class ExecutionContext implements DataStore, ExecutionMonitor {
+public final class ExecutionContext {
 
     private final String correlationId;
     private final String operationType;
-    private final TraceContext trace;
+    private final Map<String, Object> data = new ConcurrentHashMap<>(64);
+    private final Set<String> tags = ConcurrentHashMap.newKeySet();
     
-    // OTIMIZAÇÃO: Tamanho inicial reduzido (16) e concurrencyLevel ajustado para o número real 
-    // de threads paralelas em um DAG típico (8), economizando memória e tempo de inicialização.
-    private final Map<String, Object> root = new ConcurrentHashMap<>(16, 0.75f, 8);
-    private final Map<Class<?>, Object> attachments = new ConcurrentHashMap<>(4, 0.75f, 4);
+    // Módulo de Constraints (Lista de guardiões)
+    private final List<Constraint> constraints = new CopyOnWriteArrayList<>();
 
-    public ExecutionContext(String correlationId, String operationType, TraceContext trace, Map<String, Object> initialData) {
+    public ExecutionContext(String correlationId, String operationType, Map<String, Object> initialData) {
         this.correlationId = correlationId;
         this.operationType = operationType;
-        this.trace = trace;
-        if (initialData != null && !initialData.isEmpty()) this.root.putAll(initialData);
+        this.tags.add("default");
+        
+        // Inicializa as chaves soberanas
+        if (initialData != null) this.data.putAll(initialData);
+        this.data.put(ContextKey.OPERATION_TYPE, operationType);
+
+        // Adiciona Constraints Padrão (Soberania)
+        addDefaultConstraints();
     }
 
-    @SuppressWarnings("unchecked")
-    public <T> T computeAttachmentIfAbsent(Class<T> type, Function<ExecutionContext, T> factory) {
-        T cached = (T) attachments.get(type);
-        if (cached != null) return cached;
-        return (T) attachments.computeIfAbsent(type, _ -> factory.apply(this));
+    private void addDefaultConstraints() {
+        // 1. Constraint de Somente-Leitura para chaves do sistema
+        this.constraints.add((key, value, current) -> {
+            if (current.containsKey(key) && (ContextKey.RAW.equals(key) || ContextKey.OPERATION_TYPE.equals(key))) {
+                throw new PipelineException("Violação de Integridade: A chave '" + key + "' é protegida.");
+            }
+        });
     }
 
-    @Override
-    public void put(String path, Object value) {
-        PathNavigator.write(root, path, value);
+    /**
+     * Adiciona uma nova regra de integridade ao contexto.
+     */
+    public void addConstraint(Constraint constraint) {
+        this.constraints.add(constraint);
     }
 
-    @Override
-    public Object get(String path) {
-        return PathNavigator.read(root, path);
+    /**
+     * PUT: Grava dados aplicando todas as constraints.
+     */
+    public void put(String key, Object value) {
+        if (key == null || value == null) return;
+
+        // Executa todas as constraints antes de gravar
+        for (Constraint constraint : constraints) {
+            constraint.validate(key, value, data);
+        }
+
+        this.data.put(key, value);
     }
 
-    @Override
-    public <T> Optional<T> get(String path, Class<T> type) {
-        Object value = get(path);
-        if (value == null || !type.isInstance(value)) return Optional.empty();
-        return Optional.of(type.cast(value));
+    /**
+     * GET: Recupera dados com Fast-Path e Navegação Inteligente.
+     */
+    public Object get(String key) {
+        if (key == null) return null;
+        Object value = this.data.get(key);
+        if (value != null) return value;
+        if (key.indexOf('.') != -1) return PathNavigator.find(this.data, key);
+        return null;
     }
 
-    @Override
-    public void track(String nodeId, String key, Object value) {
-        var span = trace.getSpan(nodeId).orElse(null);
-        if (span != null) span.addMetadata(key, value);
-    }
-
-    @Override
-    public void setStatus(String nodeId, int code) {
-        track(nodeId, "status", code);
-    }
-
-    @Override
-    public void setError(String nodeId, Object error) {
-        track(nodeId, "error", error);
-        put(STR."errors.\{nodeId}", error);
-    }
-
-    @Override
-    public Object getMeta(String nodeId, String key) {
-        var span = trace.getSpan(nodeId).orElse(null);
-        return span != null ? span.getMetadata().get(key) : null;
-    }
-
-    @Deprecated public ExecutionTracker getTracker() { return null; }
+    public void addTag(String tag) { if (tag != null) this.tags.add(tag); }
+    public Set<String> getTags() { return Collections.unmodifiableSet(tags); }
+    public Map<String, Object> getRoot() { return data; }
 }

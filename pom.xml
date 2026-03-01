@@ -56,7 +56,11 @@
                 </exclusion>
             </exclusions>
 		</dependency>
-
+		<dependency>
+			<groupId>org.jgrapht</groupId>
+			<artifactId>jgrapht-core</artifactId>
+			<version>1.5.2</version>
+		</dependency>
         <!-- Log4j2 Starter -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -113,8 +117,19 @@
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-starter-logging</artifactId>
                 </exclusion>
+                <!-- REMOVIDO TOMCAT PARA USAR UNDERTOW -->
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-tomcat</artifactId>
+                </exclusion>
             </exclusions>
 		</dependency>
+
+        <!-- UNDERTOW: Servidor Web de Alta Performance (Non-Blocking) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-undertow</artifactId>
+        </dependency>
 
 		<!-- Actuator (Métricas/Micrometer) -->
 		<dependency>

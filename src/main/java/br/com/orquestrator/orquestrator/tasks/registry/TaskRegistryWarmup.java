@@ -1,59 +1,57 @@
 package br.com.orquestrator.orquestrator.tasks.registry;
 
-import br.com.orquestrator.orquestrator.adapter.persistence.repository.TaskCatalogProvider;
-import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
-import br.com.orquestrator.orquestrator.tasks.base.Task;
+import br.com.orquestrator.orquestrator.adapter.persistence.repository.PipelineVersionRepository;
+import br.com.orquestrator.orquestrator.core.pipeline.PipelineService;
+import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
- * Responsável pelo aquecimento do cache de instâncias de Task.
+ * TaskRegistryWarmup: Aquece o cache de pipelines e instâncias de tasks no startup.
+ * Evita latência no primeiro request (Cold Start).
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class TaskRegistryWarmup {
 
-    private final TaskCatalogProvider taskProvider;
-    private final TaskRegistry taskRegistry;
+    private final PipelineVersionRepository versionRepository;
+    private final PipelineService pipelineService;
 
+    @EventListener(ApplicationReadyEvent.class)
     public void warmup() {
-        log.info("Aquecendo catálogo de instâncias de Task...");
-        refreshTasks();
-    }
+        log.info("Iniciando Warm-up de Pipelines...");
+        
+        // 1. Busca todos os tipos de operação que possuem versões ativas
+        List<String> activeOperations = versionRepository.findAllActiveOperations();
 
-    @Scheduled(fixedRateString = "${app.tasks.refresh-rate:300000}")
-    public void onSchedule() {
-        refreshTasks();
-    }
-
-    private void refreshTasks() {
-        List<TaskDefinition> definitions;
-        try {
-            definitions = taskProvider.findAllActive();
-        } catch (Exception e) {
-            log.error("Falha ao buscar tasks no banco.", e);
-            return;
-        }
-
-        Map<String, Task> newCache = new HashMap<>();
-        for (TaskDefinition def : definitions) {
+        for (String operation : activeOperations) {
             try {
-                Task task = taskRegistry.getTask(def);
-                newCache.put(STR."\{def.getNodeId().value()}:\{def.getVersion()}", task);
+                log.debug("Aquecendo pipeline para operação: {}", operation);
+                
+                // 2. Cria um contexto fake apenas para disparar a compilação e cache
+                ExecutionContext dummyContext = new ExecutionContext(
+                    "WARMUP", 
+                    operation, 
+                    Map.of()
+                );
+
+                // 3. Chama o service. O @Cacheable fará o trabalho de guardar o resultado.
+                pipelineService.create(dummyContext);
+                
+                log.info("Pipeline [{}] aquecido com sucesso.", operation);
             } catch (Exception e) {
-                log.error(STR."FALHA ao carregar task [\{def.getNodeId()}]: \{e.getMessage()}");
+                log.error("Falha ao aquecer pipeline [{}]: {}", operation, e.getMessage());
             }
         }
-
-        if (!newCache.isEmpty()) {
-            taskRegistry.refresh(newCache);
-        }
+        
+        log.info("Warm-up concluído. Sistema pronto para receber tráfego.");
     }
 }

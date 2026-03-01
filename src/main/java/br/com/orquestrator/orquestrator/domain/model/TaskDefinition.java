@@ -5,73 +5,52 @@ import br.com.orquestrator.orquestrator.domain.vo.NodeId;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-public class TaskDefinition {
+/**
+ * TaskDefinition: Definição imutável de uma tarefa.
+ * Refatorado para refletir o novo schema Data-Driven (Rede de Petri).
+ */
+public record TaskDefinition(
+    NodeId nodeId,
+    Integer version,
+    String name,
+    String type,
+    long timeoutMs,
+    Map<String, Object> config,
+    List<FeatureDefinition> features,
+    boolean failFast,
     
-    private final NodeId nodeId;
-    private final Integer version;
-    private final String name;
-    private final String type;
-    private final long timeoutMs;
-    private final Map<String, Object> config; // Expurgado JsonNode
-    private final List<FeatureDefinition> features;
-    private final String ref;
-    private final boolean failFast;
-    private final String selectorExpression;
-    private final int criticality;
-    private final boolean global;
-    private final long refreshIntervalMs;
-    private final long ttlMs;
+    // Data-Driven: Inputs e Outputs como Mapas
+    // Inputs: { "param_name": "context_key" }
+    Map<String, String> inputs,
+    // Outputs: { "result_name": "context_key" }
+    Map<String, String> outputs,
     
-    private final Map<String, Object> responseSchema; // Expurgado JsonNode
-
-    private final List<DataSpec> requires;
-    private final List<DataSpec> produces;
+    // Controle de Fluxo
+    Set<String> activationTags,
+    String guardCondition,
     
-    public TaskDefinition(NodeId nodeId, Integer version, String name, String type, long timeoutMs,
-                          Map<String, Object> config, List<FeatureDefinition> features, String ref, 
-                          boolean failFast, String selectorExpression, int criticality,
-                          boolean global, long refreshIntervalMs, long ttlMs,
-                          Map<String, Object> responseSchema,
-                          List<DataSpec> requires, List<DataSpec> produces) {
-        this.nodeId = nodeId;
-        this.version = version != null ? version : 1;
-        this.name = name;
-        this.type = type;
-        this.timeoutMs = timeoutMs;
-        this.config = config;
-        this.features = features;
-        this.ref = ref;
-        this.failFast = failFast;
-        this.selectorExpression = selectorExpression;
-        this.criticality = criticality;
-        this.global = global;
-        this.refreshIntervalMs = refreshIntervalMs;
-        this.ttlMs = ttlMs;
-        this.responseSchema = responseSchema;
-        this.requires = requires != null ? List.copyOf(requires) : List.of();
-        this.produces = produces != null ? List.copyOf(produces) : List.of();
+    // Legado (para compatibilidade se necessário, mas idealmente removido)
+    boolean global,
+    long refreshIntervalMs
+) {
+    public TaskDefinition {
+        version = version != null ? version : 1;
+        features = features != null ? List.copyOf(features) : List.of();
+        inputs = inputs != null ? Map.copyOf(inputs) : Map.of();
+        outputs = outputs != null ? Map.copyOf(outputs) : Map.of();
+        config = config != null ? Map.copyOf(config) : Map.of();
+        activationTags = activationTags != null ? Set.copyOf(activationTags) : Set.of("default");
     }
-
-    public NodeId getNodeId() { return nodeId; }
-    public Integer getVersion() { return version; }
-    public String getName() { return name; }
-    public String getType() { return type; }
-    public long getTimeoutMs() { return timeoutMs; }
-    public Map<String, Object> getConfig() { return config; }
-    public List<FeatureDefinition> getFeatures() { return features; }
-    public String getRef() { return ref; }
-    public boolean isFailFast() { return failFast; }
-    public String getSelectorExpression() { return selectorExpression; }
-    public int getCriticality() { return criticality; }
-    public boolean isGlobal() { return global; }
-    public long getRefreshIntervalMs() { return refreshIntervalMs; }
-    public long getTtlMs() { return ttlMs; }
-    public Map<String, Object> getResponseSchema() { return responseSchema; }
-    public List<DataSpec> getRequires() { return requires; }
-    public List<DataSpec> getProduces() { return produces; }
 
     public List<FeatureDefinition> getAllFeaturesOrdered() {
-        return features != null ? features : List.of();
+        return features;
     }
+    
+    // Métodos de conveniência
+    public NodeId getNodeId() { return nodeId; }
+    public String getName() { return name; }
+    public String getType() { return type; }
+    public boolean isFailFast() { return failFast; }
 }

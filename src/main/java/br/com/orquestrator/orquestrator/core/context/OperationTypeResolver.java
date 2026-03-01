@@ -7,6 +7,10 @@ import org.springframework.util.StringUtils;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * OperationTypeResolver: Especialista em identificar a intenção do request.
+ * Segue o contrato único definido em ApiConstants.
+ */
 @Component
 public class OperationTypeResolver {
 

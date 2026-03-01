@@ -1,14 +1,11 @@
 package br.com.orquestrator.orquestrator.core.context.tag;
 
 import br.com.orquestrator.orquestrator.adapter.persistence.repository.TagRuleRepository;
-import br.com.orquestrator.orquestrator.adapter.persistence.repository.entity.TagRuleEntity;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
-import br.com.orquestrator.orquestrator.infra.el.EvaluationContext;
-import br.com.orquestrator.orquestrator.infra.el.ExpressionService;
+import br.com.orquestrator.orquestrator.infra.el.SpelContextFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -17,17 +14,18 @@ import java.util.stream.Collectors;
 public class RuleBasedTagProvider implements TagProvider {
 
     private final TagRuleRepository repository;
-    private final ExpressionService expressionService;
+    private final SpelContextFactory contextFactory;
 
     @Override
     public Set<String> resolveTags(ExecutionContext context) {
-        // O repositório já gerencia o cache das regras ativas
-        List<TagRuleEntity> rules = repository.findByActiveTrueOrderByPriorityDesc();
-        EvaluationContext evalContext = expressionService.create(context);
-
-        return rules.stream()
+        var activeRules = repository.findAllActive();
+        
+        // O contexto de avaliação agora enxerga 'raw' automaticamente via ExecutionContextAccessor
+        var evalContext = contextFactory.create(context);
+        
+        return activeRules.stream()
                 .filter(rule -> Boolean.TRUE.equals(evalContext.evaluate(rule.getConditionExpression(), Boolean.class)))
-                .map(TagRuleEntity::getTagName)
+                .map(rule -> rule.getTagName())
                 .collect(Collectors.toSet());
     }
 }

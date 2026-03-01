@@ -4,10 +4,8 @@ import br.com.orquestrator.orquestrator.exception.PipelineException;
 import br.com.orquestrator.orquestrator.infra.groovy.OrchestratorScript;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.Script;
-import groovy.transform.CompileStatic;
 import lombok.extern.slf4j.Slf4j;
 import org.codehaus.groovy.control.CompilerConfiguration;
-import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -17,10 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Cache global de scripts Groovy compilados.
- * Garante que o mesmo script seja compilado apenas uma vez, economizando Metaspace e JIT.
- */
 @Slf4j
 @Component
 public class GroovyScriptCache {
@@ -30,16 +24,8 @@ public class GroovyScriptCache {
 
     public GroovyScriptCache() {
         CompilerConfiguration config = new CompilerConfiguration();
-
-        // 1. Define a classe base para todos os scripts (DSL)
         config.setScriptBaseClass(OrchestratorScript.class.getName());
-
-        // 2. Força compilação estática para performance máxima (Type Safety)
-        // config.addCompilationCustomizers(new ASTTransformationCustomizer(CompileStatic.class));
-
-        // 3. Define encoding explícito para evitar lookup de System.getProperty("file.encoding")
         config.setSourceEncoding("UTF-8");
-
         this.loader = new GroovyClassLoader(getClass().getClassLoader(), config);
     }
 

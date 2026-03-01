@@ -1,23 +1,31 @@
 package br.com.orquestrator.orquestrator.infra.el;
 
-import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import java.util.Map;
 
 /**
- * Ponto de entrada para criação de contextos de avaliação.
+ * ExpressionService: Serviço puro de avaliação de expressões.
+ * Esconde a complexidade de criação de contextos e foca na entrega de resultados.
  */
 public interface ExpressionService {
 
-    EvaluationContext create(Object root);
+    /**
+     * Avalia uma expressão contra o contexto soberano (global).
+     */
+    <T> T evaluate(String expression, Class<T> type);
 
-    EvaluationContext create(Object root, Map<String, Object> variables);
+    /**
+     * Avalia uma expressão contra um objeto raiz específico.
+     * Útil para navegar em resultados de tasks sem poluir o contexto global.
+     */
+    <T> T evaluate(Object root, String expression, Class<T> type);
 
-    default EvaluationContext create(ExecutionContext context) {
-        // Usa o ObjectNode root do contexto diretamente para evitar conversões
-        return create(context.getRoot());
-    }
+    /**
+     * Resolve um template (interpolação) contra o contexto soberano.
+     */
+    <T> T resolve(String template, Class<T> type);
 
-    default EvaluationContext create(ExecutionContext context, Map<String, Object> variables) {
-        return create(context.getRoot(), variables);
-    }
+    /**
+     * Resolve recursivamente todas as expressões em um mapa contra o contexto soberano.
+     */
+    Map<String, Object> resolveMap(Map<String, Object> source);
 }

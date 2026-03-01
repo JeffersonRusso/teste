@@ -6,13 +6,14 @@ Content-Type: application/json
 X-Correlation-ID: teste-manual-01
 
 {
-  "operationType": "STANDARD_RISK",
+  "operationType": "CREDIT_ANALYSIS",
   "transaction": {
     "amount": 2500.00,
     "currency": "BRL"
   },
   "customer": {
-    "document": "12345678900"
+    "document": "12345678900",
+    "name": "Jefferson Teste"
   },
   "device": {
     "id": "android_v14_secure_xyz",

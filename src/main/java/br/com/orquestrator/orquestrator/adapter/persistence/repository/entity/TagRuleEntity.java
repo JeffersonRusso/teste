@@ -1,32 +1,27 @@
 package br.com.orquestrator.orquestrator.adapter.persistence.repository.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 
+@Entity
+@Table(name = "tb_tag_rule")
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@Entity
-@Table(name = "tb_tag_rules")
-@IdClass(TagRuleId.class)
 public class TagRuleEntity {
 
     @Id
-    @EqualsAndHashCode.Include
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     @Column(name = "tag_name")
     private String tagName;
 
-    @Id
-    @EqualsAndHashCode.Include
     @Column(name = "condition_expression")
     private String conditionExpression;
 
-    private String description;
+    private Integer priority;
 
     @Column(name = "is_active")
-    private boolean active;
-
-    private Integer priority;
+    private Boolean isActive;
 }

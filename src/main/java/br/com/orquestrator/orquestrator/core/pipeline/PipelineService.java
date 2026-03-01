@@ -1,49 +1,43 @@
 package br.com.orquestrator.orquestrator.core.pipeline;
 
-import br.com.orquestrator.orquestrator.core.context.FlowRouter;
-import br.com.orquestrator.orquestrator.domain.model.FlowDefinition;
+import br.com.orquestrator.orquestrator.domain.model.PipelineDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.domain.vo.Pipeline;
+import br.com.orquestrator.orquestrator.exception.PipelineException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
-import java.util.Set;
-
 /**
- * PipelineService: Fachada única que gerencia o ciclo de vida do pipeline.
- * Otimizado para Zero-Allocation de Strings no Hot Path.
+ * PipelineService: Ponto de entrada para obtenção de pipelines executáveis.
+ * Gerencia o ciclo de vida: Carga -> Compilação -> Cache.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PipelineService {
 
-    private final FlowRouter flowRouter;
-    private final PipelineAssembler pipelineAssembler;
-    private final PipelineCache pipelineCache;
+    private final PipelineRepository pipelineRepository;
+    private final PipelineCompiler pipelineCompiler;
 
-    public Pipeline create(ExecutionContext context, Set<String> requiredOutputs) {
-        // 1. Roteamento
-        FlowDefinition flowDef = flowRouter.route(context.getOperationType());
-        
-        // 2. Tenta buscar do Cache (Se não houver customização de outputs)
-        boolean isCustom = requiredOutputs != null && !requiredOutputs.isEmpty();
-        
-        if (!isCustom) {
-            // OTIMIZAÇÃO: Usar CacheKey (Record) em vez de String
-            PipelineCache.CacheKey cacheKey = pipelineCache.generateKey(context.getOperationType(), flowDef.version());
-            Pipeline cached = pipelineCache.get(cacheKey);
-            if (cached != null) return cached;
+    /**
+     * Obtém um pipeline pronto para execução.
+     * Otimizado com cache baseado no tipo de operação e cenário (tags).
+     */
+    @Cacheable(value = "compiled_pipelines", key = "#context.operationType + ':' + #context.tags")
+    public Pipeline create(ExecutionContext context) {
+        log.info("Solicitando pipeline para: {} | Tags: {}", context.getOperationType(), context.getTags());
 
-            // 3. Montagem (Se não estiver no cache)
-            Pipeline pipeline = pipelineAssembler.assemble(context, flowDef);
-            pipelineCache.put(cacheKey, pipeline);
-            return pipeline;
-        }
+        // 1. Carrega a definição (Snapshot do Banco)
+        PipelineDefinition definition = loadDefinition(context.getOperationType());
 
-        // 4. Montagem Customizada (Sem cache)
-        FlowDefinition finalFlow = new FlowDefinition(flowDef.operationType(), flowDef.version(), requiredOutputs, flowDef.allowedTasks());
-        return pipelineAssembler.assemble(context, finalFlow);
+        // 2. Compila e Otimiza para o cenário atual
+        return pipelineCompiler.compile(definition, context.getTags());
+    }
+
+    private PipelineDefinition loadDefinition(String operationType) {
+        return pipelineRepository.findActive(operationType)
+                .orElseThrow(() -> new PipelineException("Nenhum pipeline ativo encontrado para: " + operationType));
     }
 }

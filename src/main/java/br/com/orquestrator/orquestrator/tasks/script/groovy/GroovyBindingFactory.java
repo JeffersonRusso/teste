@@ -1,33 +1,32 @@
 package br.com.orquestrator.orquestrator.tasks.script.groovy;
 
-import br.com.orquestrator.orquestrator.domain.model.DataSpec;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import groovy.lang.Binding;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-
 /**
- * Fábrica de Binding para Groovy: Expõe apenas o necessário.
+ * Fábrica de Binding Groovy: Otimizada para Zero-Cópia e Performance.
  */
 @Component
-@RequiredArgsConstructor
 public class GroovyBindingFactory {
 
+    /**
+     * Cria um binding que expõe o contexto de execução de forma nativa para o script.
+     * 
+     * @param context O contexto de execução atual.
+     * @param definition A definição da task (para metadados se necessário).
+     * @return Binding configurado com o LazyBindingMap.
+     */
     public Binding createBinding(ExecutionContext context, TaskDefinition definition) {
         Binding binding = new Binding();
-
-        // 1. Expõe apenas as variáveis declaradas no 'requires'
-        List<DataSpec> requires = definition.getRequires();
-        if (requires != null) {
-            for (DataSpec spec : requires) {
-                binding.setVariable(spec.name(), context.get(spec.name()));
-            }
-        }
-
-        // 2. Metadados úteis (sem expor o contexto inteiro)
+        
+        // 'ctx' é a porta de entrada universal para o script externo.
+        // O LazyBindingMap evita a cópia de dados e permite navegação direta.
+        binding.setVariable("ctx", new LazyBindingMap(context));
+        
+        // Atalhos úteis para o desenvolvedor de script
+        binding.setVariable("correlationId", context.getCorrelationId());
         binding.setVariable("nodeId", definition.getNodeId().value());
 
         return binding;

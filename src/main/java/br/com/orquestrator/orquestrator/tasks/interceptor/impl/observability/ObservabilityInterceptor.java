@@ -1,30 +1,27 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.impl.observability;
 
-import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
+import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
+import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
+import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
-/**
- * Interceptor de Observabilidade: Único dono do rastro de sistema.
- */
 @Slf4j
-@Component("OBSERVABILITY_INTERCEPTOR")
-public class ObservabilityInterceptor {
+@RequiredArgsConstructor
+public class ObservabilityInterceptor implements TaskDecorator {
 
-    public TaskInterceptor create(String nodeId) {
-        return next -> context -> {
-            // Inicia o rastro técnico (Span)
-            try (var span = context.getTrace().startSpan(nodeId, "TASK")) {
-                try {
-                    var result = next.proceed(context);
-                    span.setStatus(result.status());
-                    return result;
-                } catch (Exception e) {
-                    span.fail(e);
-                    // CORREÇÃO: Relança como RuntimeException para satisfazer a interface funcional
-                    throw e instanceof RuntimeException re ? re : new RuntimeException(e);
-                }
-            }
-        };
+    private final String nodeId;
+
+    @Override
+    public TaskResult apply(TaskChain next) {
+        long start = System.currentTimeMillis();
+        try {
+            TaskResult result = next.proceed();
+            log.debug("Nó [{}] executado em {}ms", nodeId, System.currentTimeMillis() - start);
+            return result;
+        } catch (Exception e) {
+            log.error("Nó [{}] falhou após {}ms", nodeId, System.currentTimeMillis() - start);
+            throw e;
+        }
     }
 }

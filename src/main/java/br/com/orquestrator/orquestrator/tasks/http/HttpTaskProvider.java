@@ -1,35 +1,31 @@
 package br.com.orquestrator.orquestrator.tasks.http;
 
+import br.com.orquestrator.orquestrator.core.engine.binding.TaskBindingResolver;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
-import br.com.orquestrator.orquestrator.infra.el.ExpressionService;
+import br.com.orquestrator.orquestrator.tasks.TaskProvider;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
-import br.com.orquestrator.orquestrator.tasks.base.TypedTaskProvider;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
 
-/**
- * Provedor para tarefas HTTP.
- */
-@Component("HTTP")
-public class HttpTaskProvider extends TypedTaskProvider<HttpTaskConfiguration> {
+@Component
+@RequiredArgsConstructor
+public class HttpTaskProvider implements TaskProvider {
 
-    private final ExpressionService expressionService;
-    private final HttpExecutor executor;
+    private final RestClient restClient;
+    private final TaskBindingResolver taskBindingResolver;
 
-    public HttpTaskProvider(ObjectMapper objectMapper, ExpressionService expressionService, HttpExecutor executor) {
-        super(objectMapper, HttpTaskConfiguration.class, "HTTP");
-        this.expressionService = expressionService;
-        this.executor = executor;
+    @Override
+    public String getType() {
+        return "HTTP";
     }
 
     @Override
-    protected Task createInternal(TaskDefinition def, HttpTaskConfiguration config) {
-        // Chamada explícita ao construtor de 4 argumentos de HttpTask
-        return new HttpTask(
-            this.expressionService, 
-            config, 
-            this.executor, 
-            def.getNodeId().value()
-        );
+    public Task create(TaskDefinition def) {
+        return () -> {
+            // Resolve a configuração diretamente contra o contexto soberano
+            var resolvedConfig = taskBindingResolver.resolve(def.config(), HttpTaskConfiguration.class);
+            return new HttpTask(restClient, resolvedConfig).execute();
+        };
     }
 }

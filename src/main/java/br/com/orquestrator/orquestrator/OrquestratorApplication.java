@@ -18,7 +18,17 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class OrquestratorApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(OrquestratorApplication.class, args);
+		// Configura o Log4j2 para modo Assíncrono antes do Spring iniciar
+		// Essencial para manter a performance de 1k TPS sem bloquear Virtual Threads
+		System.setProperty("log4j2.contextSelector", "org.apache.logging.log4j.core.async.AsyncLoggerContextSelector");
+
+		try {
+			SpringApplication.run(OrquestratorApplication.class, args);
+		} catch (Throwable e) {
+			e.printStackTrace();
+			System.err.println("!!! ERRO CRÍTICO NO STARTUP: " + e.getMessage());
+			System.exit(1);
+		}
 	}
 
 }

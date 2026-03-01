@@ -2,20 +2,23 @@
 <Configuration status="WARN">
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT">
-            <!-- Usamos o lookup customizado que lê do ScopedValue via ContextHolder -->
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] [%ctx_val:correlation_id:-] [%ctx_val:node_id:-] %-5level %logger{36} - %msg%n"/>
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
         </Console>
-
-        <!-- Appender Assíncrono: O segredo da performance com Virtual Threads -->
-        <Async name="AsyncConsole">
-            <AppenderRef ref="Console"/>
-            <ArrayBlockingQueue/>
-        </Async>
     </Appenders>
 
     <Loggers>
-        <Root level="ERROR">
-            <AppenderRef ref="AsyncConsole"/>
+        <!-- Log do Spring em INFO para ver o startup -->
+        <Logger name="org.springframework" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Log do Orquestrador em DEBUG para ver a execução das tasks -->
+        <Logger name="br.com.orquestrator" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
         </Root>
     </Loggers>
 </Configuration>

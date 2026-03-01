@@ -1,6 +1,7 @@
 package br.com.orquestrator.orquestrator.config;
 
 import br.com.orquestrator.orquestrator.core.context.ContextHolder;
+import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
@@ -14,7 +15,6 @@ import org.springframework.core.task.TaskDecorator;
 import org.springframework.core.task.support.TaskExecutorAdapter;
 import org.springframework.scheduling.annotation.EnableAsync;
 
-import java.lang.ScopedValue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -53,13 +53,16 @@ public class AsyncConfig {
     }
 
     /**
-     * Decorator para propagar apenas o Correlation ID. 
-     * O CURRENT_NODE é gerenciado pelo motor de orquestração.
+     * Decorator para propagar o Contexto Soberano (ExecutionContext) entre threads.
      */
     private TaskDecorator scopedValueDecorator() {
         return runnable -> {
-            String correlationId = ContextHolder.CORRELATION_ID.orElse("-");
-            return () -> ScopedValue.where(ContextHolder.CORRELATION_ID, correlationId).run(runnable);
+            // Recupera o contexto da thread pai
+            ExecutionContext context = ContextHolder.getContext().orElse(null);
+            if (context == null) return runnable;
+            
+            // Propaga para a nova thread (Virtual Thread)
+            return () -> ScopedValue.where(ContextHolder.CONTEXT, context).run(runnable);
         };
     }
 }

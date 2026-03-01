@@ -1,21 +1,17 @@
 package br.com.orquestrator.orquestrator.adapter.persistence.repository.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "tb_input_normalization")
+@Getter
+@Setter
 public class InputNormalizationEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @EqualsAndHashCode.Include
-    @Column(name = "id")
     private Long id;
 
     @Column(name = "operation_type")

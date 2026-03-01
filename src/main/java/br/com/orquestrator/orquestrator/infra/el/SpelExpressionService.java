@@ -1,58 +1,59 @@
 package br.com.orquestrator.orquestrator.infra.el;
 
+import br.com.orquestrator.orquestrator.core.context.ContextHolder;
 import lombok.RequiredArgsConstructor;
-import org.springframework.expression.Expression;
-import org.springframework.expression.ExpressionParser;
-import org.springframework.expression.common.TemplateParserContext;
-import org.springframework.expression.spel.SpelEvaluationException;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Motor de Expressão: Focado em performance e separação de intenção.
- */
 @Service
 @RequiredArgsConstructor
-public class SpelExpressionService implements ExpressionService, ExpressionEngine {
+public class SpelExpressionService implements ExpressionService {
 
-    private final ExpressionParser orchestratorExpressionParser;
-    private final TemplateParserContext templateParserContext;
     private final SpelContextFactory contextFactory;
-    
-    private final Map<String, Expression> logicCache = new ConcurrentHashMap<>();
-    private final Map<String, Expression> templateCache = new ConcurrentHashMap<>();
 
     @Override
-    public EvaluationContext create(Object root) {
-        return create(root, Map.of());
+    public <T> T evaluate(String expression, Class<T> type) {
+        return getSovereignContext().evaluate(expression, type);
     }
 
     @Override
-    public EvaluationContext create(Object root, Map<String, Object> variables) {
-        var nativeContext = contextFactory.create(root, variables);
-        return new EvaluationContext(nativeContext, this);
+    public <T> T evaluate(Object root, String expression, Class<T> type) {
+        // Cria um contexto temporário para o objeto raiz fornecido
+        return contextFactory.create(root).evaluate(expression, type);
     }
 
     @Override
-    public <T> T evaluate(String expression, Object nativeContext, Class<T> targetType) {
-        try {
-            Expression exp = logicCache.computeIfAbsent(expression, orchestratorExpressionParser::parseExpression);
-            return exp.getValue((StandardEvaluationContext) nativeContext, targetType);
-        } catch (SpelEvaluationException e) {
-            throw new IllegalArgumentException(STR."Erro na lógica SpEL '\{expression}': \{e.getMessage()}", e);
+    public <T> T resolve(String template, Class<T> type) {
+        return getSovereignContext().resolve(template, type);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> resolveMap(Map<String, Object> source) {
+        if (source == null) return Map.of();
+        Map<String, Object> resolved = new HashMap<>();
+        var eval = getSovereignContext();
+
+        source.forEach((key, value) -> {
+            if (value instanceof String str && (str.contains("#") || str.contains("${"))) {
+                resolved.put(key, eval.resolve(str, Object.class));
+            } else if (value instanceof Map) {
+                resolved.put(key, resolveMap((Map<String, Object>) value));
+            } else {
+                resolved.put(key, value);
+            }
+        });
+
+        return resolved;
+    }
+
+    private EvaluationContext getSovereignContext() {
+        if (!ContextHolder.EVAL_CONTEXT.isBound()) {
+            // Fallback: Se não houver contexto no escopo, cria um a partir do contexto global
+            return contextFactory.create(ContextHolder.CONTEXT.get());
         }
-    }
-
-    @Override
-    public <T> T resolve(String template, Object nativeContext, Class<T> targetType) {
-        try {
-            Expression exp = templateCache.computeIfAbsent(template, k -> orchestratorExpressionParser.parseExpression(k, templateParserContext));
-            return exp.getValue((StandardEvaluationContext) nativeContext, targetType);
-        } catch (SpelEvaluationException e) {
-            throw new IllegalArgumentException(STR."Erro no template SpEL '\{template}': \{e.getMessage()}", e);
-        }
+        return ContextHolder.EVAL_CONTEXT.get();
     }
 }

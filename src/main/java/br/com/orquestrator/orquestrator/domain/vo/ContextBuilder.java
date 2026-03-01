@@ -1,23 +1,19 @@
 package br.com.orquestrator.orquestrator.domain.vo;
 
-import br.com.orquestrator.orquestrator.domain.ContextKey;
-import br.com.orquestrator.orquestrator.domain.tracker.TraceContext;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Builder fluído para ExecutionContext.
- * Otimizado para evitar bloqueios (Lock-free).
  */
 public class ContextBuilder {
     private String correlationId;
     private String operationType;
-    private final Map<String, Object> data = new ConcurrentHashMap<>();
+    private final Map<String, Object> data = new HashMap<>();
 
     public static ContextBuilder init(String operationType) {
         ContextBuilder builder = new ContextBuilder();
         builder.operationType = operationType;
-        builder.data.put(ContextKey.OPERATION_TYPE, operationType);
         return builder;
     }
 
@@ -32,6 +28,6 @@ public class ContextBuilder {
     }
 
     public ExecutionContext build() {
-        return new ExecutionContext(correlationId, operationType, new TraceContext(), data);
+        return new ExecutionContext(correlationId, operationType, data);
     }
 }

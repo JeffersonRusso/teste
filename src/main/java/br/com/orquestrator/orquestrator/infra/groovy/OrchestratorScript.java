@@ -1,31 +1,35 @@
 package br.com.orquestrator.orquestrator.infra.groovy;
 
-import groovy.lang.Binding;
+import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import groovy.lang.Script;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.Map;
 
 /**
- * Classe base para todos os scripts Groovy do orquestrador.
+ * OrchestratorScript: Classe base para todos os scripts Groovy do sistema.
+ * Fornece métodos utilitários para facilitar a escrita de lógica de negócio.
  */
+@Slf4j
 public abstract class OrchestratorScript extends Script {
-    private static final Logger log = LoggerFactory.getLogger(OrchestratorScript.class);
 
-    public OrchestratorScript() {
-        super();
+    public ExecutionContext getContext() {
+        return (ExecutionContext) getBinding().getVariable("context");
     }
 
-    public OrchestratorScript(Binding binding) {
-        super(binding);
+    public Map<String, Object> getData() {
+        return getContext().getRoot();
     }
 
-    @SuppressWarnings("unchecked")
-    public <T> T input(String name) {
-        return (T) getBinding().getVariable(name);
+    public void log(String message) {
+        log.info("[Groovy] {}", message);
     }
 
-    public void log(String msg) {
-        String nodeId = (String) getBinding().getVariable("nodeId");
-        log.info("[SCRIPT:{}] {}", nodeId, msg);
+    public Object get(String key) {
+        return getContext().get(key);
+    }
+
+    public void put(String key, Object value) {
+        getContext().put(key, value);
     }
 }

@@ -6,10 +6,6 @@ import br.com.orquestrator.orquestrator.tasks.TaskProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 
-/**
- * Base para provedores de task que utilizam configurações tipadas (Records/POJOs).
- * Agora operando sobre Mapas Java puros para performance máxima.
- */
 @RequiredArgsConstructor
 public abstract class TypedTaskProvider<C> implements TaskProvider {
 
@@ -25,14 +21,10 @@ public abstract class TypedTaskProvider<C> implements TaskProvider {
     @Override
     public Task create(TaskDefinition def) {
         try {
-            // CORREÇÃO: convertValue é o método correto para converter Map -> Record
-            C config = objectMapper.convertValue(def.getConfig(), configClass);
-            if (config == null) {
-                throw new TaskConfigurationException("Configuração ausente ou inválida para task " + def.getNodeId().value());
-            }
+            C config = objectMapper.convertValue(def.config(), configClass);
             return createInternal(def, config);
         } catch (Exception e) {
-            throw new TaskConfigurationException("Erro ao processar configuração da task " + def.getNodeId().value() + ": " + e.getMessage(), e);
+            throw new TaskConfigurationException("Erro na config da task " + def.nodeId().value(), e);
         }
     }
 
