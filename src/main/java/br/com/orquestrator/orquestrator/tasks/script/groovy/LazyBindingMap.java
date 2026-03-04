@@ -1,39 +1,61 @@
 package br.com.orquestrator.orquestrator.tasks.script.groovy;
 
-import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
-import java.util.AbstractMap;
+import br.com.orquestrator.orquestrator.core.context.ReadableContext;
+import br.com.orquestrator.orquestrator.core.context.WriteableContext;
+import lombok.RequiredArgsConstructor;
+
+import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 
 /**
- * Uma "View" viva e de zero-cópia do ExecutionContext para scripts Groovy.
- * Permite que o script navegue e modifique o contexto como se fosse um Map nativo.
+ * LazyBindingMap: Ponte entre o script Groovy e o Banco de Dados de Contexto.
+ * Usa interfaces de fronteira para isolar o script da implementação real.
  */
-public class LazyBindingMap extends AbstractMap<String, Object> {
-    private final ExecutionContext context;
+@RequiredArgsConstructor
+public class LazyBindingMap implements Map<String, Object> {
 
-    public LazyBindingMap(ExecutionContext context) {
-        this.context = context;
-    }
+    private final ReadableContext reader;
+    private final WriteableContext writer;
 
     @Override
     public Object get(Object key) {
-        if (key == null) return null;
-        return context.get(key.toString());
+        return reader.get((String) key);
     }
 
     @Override
     public Object put(String key, Object value) {
-        context.put(key, value);
+        writer.put(key, value);
         return value;
     }
 
     @Override
-    public boolean containsKey(Object key) {
-        return get(key) != null;
-    }
+    public int size() { return reader.getRoot().size(); }
 
     @Override
-    public Set<Entry<String, Object>> entrySet() {
-        return context.getRoot().entrySet();
-    }
+    public boolean isEmpty() { return reader.getRoot().isEmpty(); }
+
+    @Override
+    public boolean containsKey(Object key) { return reader.getRoot().containsKey(key); }
+
+    @Override
+    public boolean containsValue(Object value) { return reader.getRoot().containsValue(value); }
+
+    @Override
+    public Object remove(Object key) { return null; }
+
+    @Override
+    public void putAll(Map<? extends String, ?> m) { m.forEach(writer::put); }
+
+    @Override
+    public void clear() {}
+
+    @Override
+    public Set<String> keySet() { return reader.getRoot().keySet(); }
+
+    @Override
+    public Collection<Object> values() { return reader.getRoot().values(); }
+
+    @Override
+    public Set<Entry<String, Object>> entrySet() { return reader.getRoot().entrySet(); }
 }

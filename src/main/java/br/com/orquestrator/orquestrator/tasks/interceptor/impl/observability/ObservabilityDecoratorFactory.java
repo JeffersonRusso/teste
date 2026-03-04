@@ -9,7 +9,7 @@ import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
-public class ObservabilityDecoratorFactory implements DecoratorFactory<Map<String, Object>> {
+public class                                                                                                                       ObservabilityDecoratorFactory implements DecoratorFactory<Map<String, Object>> {
 
     @Override
     public String getType() {

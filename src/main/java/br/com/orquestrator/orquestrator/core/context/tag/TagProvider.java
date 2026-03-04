@@ -1,11 +1,19 @@
 package br.com.orquestrator.orquestrator.core.context.tag;
 
-import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
+import br.com.orquestrator.orquestrator.core.context.ReadableContext;
 import java.util.Set;
 
 /**
- * TagProvider: Contrato para componentes que identificam cenários (tags) no contexto.
+ * TagProvider: Contrato para resolvedores de cenários dinâmicos.
  */
 public interface TagProvider {
-    Set<String> resolveTags(ExecutionContext context);
+    /**
+     * Resolve tags baseadas na visão de leitura do contexto.
+     */
+    Set<String> resolveTags(ReadableContext context);
+
+    /**
+     * Define a ordem de execução (Menor valor = maior prioridade).
+     */
+    default int getPriority() { return 100; }
 }

@@ -1,6 +1,6 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.impl.validation;
 
-import br.com.orquestrator.orquestrator.infra.el.SpelContextFactory;
+import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.DecoratorFactory;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
 import br.com.orquestrator.orquestrator.tasks.interceptor.config.ResponseValidatorConfig;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ResponseValidatorDecoratorFactory implements DecoratorFactory<ResponseValidatorConfig> {
 
-    private final SpelContextFactory contextFactory;
+    private final ExpressionEngine expressionEngine; // <--- Injeta a abstração soberana
 
     @Override
     public String getType() {
@@ -25,6 +25,6 @@ public class ResponseValidatorDecoratorFactory implements DecoratorFactory<Respo
 
     @Override
     public TaskDecorator create(ResponseValidatorConfig config, String nodeId) {
-        return new ResponseValidatorDecorator(config, nodeId, contextFactory);
+        return new ResponseValidatorDecorator(config, nodeId, expressionEngine);
     }
 }

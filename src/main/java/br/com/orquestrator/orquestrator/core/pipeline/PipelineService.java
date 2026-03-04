@@ -1,43 +1,33 @@
 package br.com.orquestrator.orquestrator.core.pipeline;
 
+import br.com.orquestrator.orquestrator.core.context.ContextMetadata;
 import br.com.orquestrator.orquestrator.domain.model.PipelineDefinition;
-import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
 import br.com.orquestrator.orquestrator.domain.vo.Pipeline;
 import br.com.orquestrator.orquestrator.exception.PipelineException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 /**
- * PipelineService: Ponto de entrada para obtenção de pipelines executáveis.
- * Gerencia o ciclo de vida: Carga -> Compilação -> Cache.
+ * PipelineService: Orquestra a obtenção de pipelines.
+ * Delega a compilação e o cache para o PipelineRegistry.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PipelineService {
 
-    private final PipelineRepository pipelineRepository;
-    private final PipelineCompiler pipelineCompiler;
+    private final PipelineRepository repository;
+    private final PipelineRegistry registry;
 
-    /**
-     * Obtém um pipeline pronto para execução.
-     * Otimizado com cache baseado no tipo de operação e cenário (tags).
-     */
-    @Cacheable(value = "compiled_pipelines", key = "#context.operationType + ':' + #context.tags")
-    public Pipeline create(ExecutionContext context) {
-        log.info("Solicitando pipeline para: {} | Tags: {}", context.getOperationType(), context.getTags());
+    public Pipeline create(ContextMetadata metadata) {
+        String operationType = metadata.getOperationType();
 
-        // 1. Carrega a definição (Snapshot do Banco)
-        PipelineDefinition definition = loadDefinition(context.getOperationType());
-
-        // 2. Compila e Otimiza para o cenário atual
-        return pipelineCompiler.compile(definition, context.getTags());
-    }
-
-    private PipelineDefinition loadDefinition(String operationType) {
-        return pipelineRepository.findActive(operationType)
+        // 1. Busca a definição ativa no banco (ou cache de definição)
+        PipelineDefinition def = repository.findActive(operationType)
                 .orElseThrow(() -> new PipelineException("Nenhum pipeline ativo encontrado para: " + operationType));
+
+        // 2. Solicita o executável ao registro (que gerencia o cache de compilação)
+        return registry.get(def, metadata.getTags());
     }
 }

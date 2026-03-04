@@ -1,35 +1,29 @@
 package br.com.orquestrator.orquestrator.infra.groovy;
 
-import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
+import br.com.orquestrator.orquestrator.core.context.ContextHolder;
 import groovy.lang.Script;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Map;
-
 /**
- * OrchestratorScript: Classe base para todos os scripts Groovy do sistema.
- * Fornece métodos utilitários para facilitar a escrita de lógica de negócio.
+ * OrchestratorScript: Classe base para scripts Groovy.
+ * Fornece acesso seguro ao banco de contexto via ContextHolder.
  */
 @Slf4j
 public abstract class OrchestratorScript extends Script {
 
-    public ExecutionContext getContext() {
-        return (ExecutionContext) getBinding().getVariable("context");
+    public Object get(String key) {
+        return ContextHolder.reader().get(key);
     }
 
-    public Map<String, Object> getData() {
-        return getContext().getRoot();
+    public void put(String key, Object value) {
+        ContextHolder.writer().put(key, value);
     }
 
     public void log(String message) {
         log.info("[Groovy] {}", message);
     }
 
-    public Object get(String key) {
-        return getContext().get(key);
-    }
-
-    public void put(String key, Object value) {
-        getContext().put(key, value);
+    public boolean hasTag(String tag) {
+        return ContextHolder.metadata().getTags().contains(tag);
     }
 }

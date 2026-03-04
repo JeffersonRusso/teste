@@ -1,27 +1,25 @@
 package br.com.orquestrator.orquestrator.tasks.script.spel;
 
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
-import br.com.orquestrator.orquestrator.infra.el.ExpressionService;
+import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
+import br.com.orquestrator.orquestrator.tasks.TaskProvider;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
-import br.com.orquestrator.orquestrator.tasks.base.TypedTaskProvider;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Provedor de SpelTask: Simples e padronizado.
- */
 @Component
-public class SpelTaskProvider extends TypedTaskProvider<SpelTaskConfiguration> {
+@RequiredArgsConstructor
+public class SpelTaskProvider implements TaskProvider {
 
-    private final ExpressionService expressionService;
+    private final ExpressionEngine expressionEngine;
 
-    public SpelTaskProvider(ObjectMapper objectMapper, ExpressionService expressionService) {
-        super(objectMapper, SpelTaskConfiguration.class, "SPEL");
-        this.expressionService = expressionService;
+    @Override
+    public String getType() {
+        return "SPEL";
     }
 
     @Override
-    protected Task createInternal(TaskDefinition def, SpelTaskConfiguration config) {
-        return new SpelTask(def, expressionService, config);
+    public Task create(TaskDefinition definition) {
+        return new SpelTask(expressionEngine, definition);
     }
 }

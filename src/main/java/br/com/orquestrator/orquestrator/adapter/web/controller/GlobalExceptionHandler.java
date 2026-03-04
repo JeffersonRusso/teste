@@ -1,5 +1,6 @@
 package br.com.orquestrator.orquestrator.adapter.web.controller;
 
+import br.com.orquestrator.orquestrator.core.context.ContextHolder;
 import br.com.orquestrator.orquestrator.exception.PipelineException;
 import br.com.orquestrator.orquestrator.exception.PipelineValidationException;
 import br.com.orquestrator.orquestrator.exception.TaskConfigurationException;
@@ -12,50 +13,61 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
+import java.util.Optional;
 
+/**
+ * GlobalExceptionHandler: Centraliza o tratamento de erros da API.
+ * Segue o padrão RFC 7807 (Problem Details for HTTP APIs).
+ */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final String URN_PREFIX = "urn:problem:";
+    private static final String TYPE_BASE = "https://api.orquestrator.com.br/errors/";
 
     @ExceptionHandler(PipelineValidationException.class)
-    public ResponseEntity<ProblemDetail> handleValidation(PipelineValidationException e) {
-        log.warn("Erro de validação de pipeline: {}", e.getMessage());
-        return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, e, "pipeline-validation", "Pipeline Validation Error");
+    public ResponseEntity<ProblemDetail> handle(PipelineValidationException e) {
+        return createResponse(HttpStatus.UNPROCESSABLE_ENTITY, "validation-error", "Erro de Validação", e);
     }
 
     @ExceptionHandler(TaskExecutionException.class)
-    public ResponseEntity<ProblemDetail> handleExecution(TaskExecutionException e) {
-        log.error("Erro de execução de task: {}", e.getMessage(), e);
-        return buildResponse(HttpStatus.BAD_GATEWAY, e, "task-execution", "Task Execution Error");
+    public ResponseEntity<ProblemDetail> handle(TaskExecutionException e) {
+        log.error("Falha na execução da task [{}]: {}", e.getNodeId(), e.getMessage());
+        return createResponse(HttpStatus.BAD_GATEWAY, "execution-error", "Erro de Execução", e);
     }
 
     @ExceptionHandler(TaskConfigurationException.class)
-    public ResponseEntity<ProblemDetail> handleConfiguration(TaskConfigurationException e) {
-        log.error("Erro de configuração de task: {}", e.getMessage(), e);
-        // Expondo mensagem para facilitar debug de configuração
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, e, "task-configuration", "Configuration Error");
+    public ResponseEntity<ProblemDetail> handle(TaskConfigurationException e) {
+        log.error("Falha de configuração: {}", e.getMessage());
+        return createResponse(HttpStatus.INTERNAL_SERVER_ERROR, "config-error", "Erro de Configuração", e);
+    }
+
+    @ExceptionHandler(PipelineException.class)
+    public ResponseEntity<ProblemDetail> handle(PipelineException e) {
+        log.error("Erro no pipeline: {}", e.getMessage());
+        return createResponse(HttpStatus.INTERNAL_SERVER_ERROR, "pipeline-error", "Erro de Fluxo", e);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGeneric(Exception e) {
-        log.error("Erro inesperado: {}", e.getMessage(), e);
-
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Ocorreu um erro inesperado.");
-        problem.setType(URI.create(URN_PREFIX + "internal-error"));
-        problem.setTitle("Internal Server Error");
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problem);
+        log.error("Erro não mapeado: {}", e.getMessage(), e);
+        return createResponse(HttpStatus.INTERNAL_SERVER_ERROR, "internal-error", "Erro Interno do Servidor", e);
     }
 
-    private ResponseEntity<ProblemDetail> buildResponse(HttpStatus status, Exception e, String typeSuffix, String title) {
+    private ResponseEntity<ProblemDetail> createResponse(HttpStatus status, String code, String title, Exception e) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, e.getMessage());
-        problem.setType(URI.create(URN_PREFIX + typeSuffix));
+        problem.setType(URI.create(TYPE_BASE + code));
         problem.setTitle(title);
+        
+        // Injeta metadados de rastreabilidade se o contexto estiver disponível
+        ContextHolder.getContext().ifPresent(ctx -> {
+            problem.setProperty("correlationId", ctx.metadata().getCorrelationId());
+            problem.setProperty("operation", ctx.metadata().getOperationType());
+        });
 
-        if (e instanceof PipelineException pe && pe.getNodeId() != null) {
-            problem.setProperty("nodeId", pe.getNodeId());
+        // Injeta metadados da exceção
+        if (e instanceof PipelineException pe) {
+            Optional.ofNullable(pe.getNodeId()).ifPresent(id -> problem.setProperty("nodeId", id));
         }
 
         return ResponseEntity.status(status).body(problem);

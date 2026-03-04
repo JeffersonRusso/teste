@@ -35,14 +35,13 @@ VALUES (
 -- =================================================================================
 
 -- Task 1: Autenticação (Gera token_sessao)
--- CORREÇÃO: is_global e refresh_interval_ms movidos para o JSON de configuration
 INSERT INTO tb_pipeline_node (node_id, pipeline_id, name, type, configuration, inputs, outputs)
 VALUES (
     'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b01',
     'a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
     'auth_task',
     'HTTP',
-    '{"url": "http://mock-api/auth", "method": "POST", "body": {"doc": "SISTEMA_ORQUESTRADOR"}, "global": true, "cron": "0 */30 * * * *"}',
+    '{"url": "http://127.0.0.1:9999/v1/auth/SISTEMA_ORQUESTRADOR", "method": "GET", "global": true, "cron": "0 */30 * * * *"}',
     '{}',
     '{"token": "token_sessao"}'
 );
@@ -54,9 +53,9 @@ VALUES (
     'a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
     'enrich_task',
     'HTTP',
-    '{"url": "http://mock-api/customer/details", "method": "POST", "headers": {"Authorization": "Bearer ${token_sessao}"}, "body": {"documento": "${standard.documento}"}}',
-    '{"token": "token_sessao", "doc": "standard.documento"}',
-    '{"customer_profile": "dados_cliente"}'
+    '{"url": "http://127.0.0.1:9999/v1/enrich/${standard.documento}", "method": "GET", "headers": {"Authorization": "Bearer ${token_sessao}"}}',
+    '{"token_sessao": "token_sessao", "standard.documento": "standard.documento"}',
+    '{"val": "dados_cliente"}'
 );
 
 -- Task 3: Bureau de Crédito
@@ -66,8 +65,8 @@ VALUES (
     'a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
     'bureau_task',
     'HTTP',
-    '{"url": "http://mock-api/score/${dados_cliente.categoria}", "method": "GET"}',
-    '{"perfil": "dados_cliente"}',
+    '{"url": "http://127.0.0.1:9999/v1/bureau/${standard.documento}", "method": "GET"}',
+    '{"standard.documento": "standard.documento"}',
     '{"score": "score_credito"}'
 );
 
@@ -79,7 +78,7 @@ VALUES (
     'decision_task',
     'SPEL',
     '{"expression": "#score_credito > 700 and #standard.valor_solicitado < 5000 ? ''APROVADO'' : ''REVISAO_MANUAL''"}',
-    '{"score": "score_credito", "valor": "standard.valor_solicitado"}',
+    '{"score_credito": "score_credito", "standard.valor_solicitado": "standard.valor_solicitado"}',
     '{"result": "decisao_final"}'
 );
 

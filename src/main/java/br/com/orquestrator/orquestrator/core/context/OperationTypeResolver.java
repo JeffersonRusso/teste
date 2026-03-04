@@ -1,35 +1,35 @@
 package br.com.orquestrator.orquestrator.core.context;
 
+import br.com.orquestrator.orquestrator.core.context.identity.OperationTypeProvider;
 import br.com.orquestrator.orquestrator.domain.ApiConstants;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 /**
- * OperationTypeResolver: Especialista em identificar a intenção do request.
- * Segue o contrato único definido em ApiConstants.
+ * OperationTypeResolver: Coordenador da identificação da intenção do request.
+ * Utiliza uma cadeia de provedores para resolver o tipo de operação.
  */
 @Component
 public class OperationTypeResolver {
 
+    private final List<OperationTypeProvider> providers;
+
+    public OperationTypeResolver(List<OperationTypeProvider> providers) {
+        this.providers = providers.stream()
+                .sorted(Comparator.comparingInt(OperationTypeProvider::getPriority))
+                .toList();
+    }
+
     public String resolve(Map<String, String> headers, Map<String, Object> body) {
-        return extractFromBody(body)
-                .or(() -> extractFromHeaders(headers))
-                .orElse(ApiConstants.DEFAULT_OPERATION);
-    }
-
-    private Optional<String> extractFromBody(Map<String, Object> body) {
-        return Optional.ofNullable(body)
-                .map(map -> map.get(ApiConstants.BODY_OPERATION_TYPE))
-                .map(Object::toString)
-                .filter(StringUtils::hasText);
-    }
-
-    private Optional<String> extractFromHeaders(Map<String, String> headers) {
-        return Optional.ofNullable(headers)
-                .map(map -> map.get(ApiConstants.HEADER_OPERATION_TYPE))
-                .filter(StringUtils::hasText);
+        for (var provider : providers) {
+            Optional<String> type = provider.provide(headers, body);
+            if (type.isPresent()) return type.get();
+        }
+        return ApiConstants.DEFAULT_OPERATION;
     }
 }

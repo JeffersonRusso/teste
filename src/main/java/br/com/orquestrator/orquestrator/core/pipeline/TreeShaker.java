@@ -11,30 +11,40 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * TreeShaker: Especialista em otimização de alcance.
- * Encapsula toda a inteligência de identificar o que é necessário para o objetivo.
+ * TreeShaker: Remove tarefas que não contribuem para os resultados finais solicitados.
+ * Otimiza o pipeline para execução mínima necessária.
  */
 @Component
 public class TreeShaker {
 
-    /**
-     * Filtra o grafo mantendo apenas os vértices necessários para produzir os outputs requeridos.
-     */
     public Set<TaskDefinition> optimize(DirectedAcyclicGraph<TaskDefinition, DefaultEdge> graph, Set<String> requiredOutputs) {
-        var targets = identifyTargets(graph, requiredOutputs);
-        if (targets.isEmpty()) return graph.vertexSet();
-
-        Set<TaskDefinition> necessary = new HashSet<>(targets);
-        for (TaskDefinition target : targets) {
-            necessary.addAll(graph.getAncestors(target));
+        var targets = identifyTargetTasks(graph, requiredOutputs);
+        
+        // Se não houver outputs requeridos específicos, assume que todas as tasks são necessárias
+        if (targets.isEmpty()) {
+            return graph.vertexSet();
         }
-        return necessary;
+
+        Set<TaskDefinition> necessaryTasks = new HashSet<>(targets);
+        for (TaskDefinition target : targets) {
+            necessaryTasks.addAll(graph.getAncestors(target));
+        }
+        
+        return necessaryTasks;
     }
 
-    private Set<TaskDefinition> identifyTargets(DirectedAcyclicGraph<TaskDefinition, DefaultEdge> graph, Set<String> requiredOutputs) {
-        if (requiredOutputs == null || requiredOutputs.isEmpty()) return Set.of();
+    private Set<TaskDefinition> identifyTargetTasks(DirectedAcyclicGraph<TaskDefinition, DefaultEdge> graph, Set<String> requiredOutputs) {
+        if (requiredOutputs == null || requiredOutputs.isEmpty()) {
+            return Collections.emptySet();
+        }
+
         return graph.vertexSet().stream()
-                .filter(t -> !Collections.disjoint(t.outputs().values(), requiredOutputs))
+                .filter(task -> hasRequiredOutput(task, requiredOutputs))
                 .collect(Collectors.toSet());
+    }
+
+    private boolean hasRequiredOutput(TaskDefinition task, Set<String> requiredOutputs) {
+        if (task.outputs() == null) return false;
+        return !Collections.disjoint(task.outputs().values(), requiredOutputs);
     }
 }

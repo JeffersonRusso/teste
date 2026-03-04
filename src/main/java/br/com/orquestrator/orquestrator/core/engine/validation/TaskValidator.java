@@ -1,21 +1,25 @@
 package br.com.orquestrator.orquestrator.core.engine.validation;
 
-import br.com.orquestrator.orquestrator.domain.vo.ExecutionContext;
-import br.com.orquestrator.orquestrator.domain.vo.Pipeline;
+import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.exception.PipelineException;
 import org.springframework.stereotype.Component;
 
-/**
- * TaskValidator: Garante que o contrato de dados da tarefa seja respeitado.
- */
+import java.util.Map;
+
 @Component
 public class TaskValidator {
 
-    public void validate(Pipeline.TaskNode node, ExecutionContext context) {
-        for (var input : node.inputs()) {
-            if (input.required() && context.get(input.contextKey()) == null) {
-                throw new PipelineException("Dado obrigatório '" + input.contextKey() + "' ausente no nó [" + node.nodeId() + "]");
+    public void validate(TaskDefinition def, Map<String, Object> resolvedInputs) {
+        if (def.inputs() == null) return;
+
+        def.inputs().forEach((localKey, globalKey) -> {
+            // Verifica se o dado obrigatório está presente no mapa resolvido
+            if (resolvedInputs.get(localKey) == null) {
+                throw new PipelineException(
+                    String.format("Erro de Contrato: A task [%s] requer o dado '%s' (mapeado de '%s'), mas ele está nulo.", 
+                    def.nodeId().value(), localKey, globalKey)
+                );
             }
-        }
+        });
     }
 }

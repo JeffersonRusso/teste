@@ -1,6 +1,6 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.impl.cache;
 
-import br.com.orquestrator.orquestrator.infra.el.ExpressionService;
+import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.DecoratorFactory;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
 import br.com.orquestrator.orquestrator.tasks.interceptor.cache.CacheProvider;
@@ -14,7 +14,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CacheDecoratorFactory implements DecoratorFactory<CacheConfig> {
 
-    private final ExpressionService expressionService;
+    private final ExpressionEngine expressionEngine;
     private final List<CacheProvider> cacheProviders;
 
     @Override
@@ -34,6 +34,6 @@ public class CacheDecoratorFactory implements DecoratorFactory<CacheConfig> {
                 .findFirst()
                 .orElse(cacheProviders.get(0));
 
-        return new CacheInterceptor(expressionService, provider, config, nodeId);
+        return new CacheInterceptor(expressionEngine, provider, config, nodeId);
     }
 }

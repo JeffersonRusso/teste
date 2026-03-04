@@ -3,59 +3,54 @@ package br.com.orquestrator.orquestrator.core.engine.runtime;
 import br.com.orquestrator.orquestrator.domain.vo.Pipeline;
 import br.com.orquestrator.orquestrator.exception.PipelineException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.StructuredTaskScope;
 
 /**
- * ReactiveExecutionEngine: Otimizado para 1k TPS.
- * Usa CompletableFuture como sinalizadores leves e StructuredTaskScope para controle.
+ * ReactiveExecutionEngine: Motor de execução puro.
+ * Não contém lógica de negócio ou política de erro; apenas orquestra threads e sinais.
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class ReactiveExecutionEngine {
 
-    private final TaskRunner taskRunner;
-
     public void execute(Pipeline pipeline) {
-        // 1. Mapa de Sinais: Pré-dimensionado para evitar redimensionamento (Hot Path)
-        // 50 tasks * 2 outputs = 100. 128 é a potência de 2 ideal.
-        var signals = new ConcurrentHashMap<String, CompletableFuture<Void>>(128);
+        Instant deadline = ExecutionClock.calculateDeadline(pipeline.timeout());
 
-        // 2. Registro de intenção (Zero alocação de lógica, apenas placeholders)
-        for (var node : pipeline.getNodes()) {
-            for (var output : node.outputs()) {
-                signals.put(output.targetKey(), new CompletableFuture<>());
-            }
-        }
-
-        // 3. Execução Concorrente Estruturada
         try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
-            for (var node : pipeline.getNodes()) {
-                scope.fork(() -> {
-                    try {
-                        // ESPERA: Bloqueio ultra-rápido em Virtual Thread
-                        for (var input : node.inputs()) {
-                            var s = signals.get(input.contextKey());
-                            if (s != null) s.join();
-                        }
-                        taskRunner.run(node);
-                    } finally {
-                        // SINALIZA: Libera dependentes
-                        for (var output : node.outputs()) {
-                            signals.get(output.targetKey()).complete(null);
-                        }
-                    }
-                    return null;
-                });
-            }
-            // Aguarda o pipeline inteiro respeitando o timeout global
-            scope.joinUntil(Instant.now().plus(pipeline.timeout())).throwIfFailed();
+            
+            pipeline.getNodes().forEach(node -> scope.fork(() -> {
+                executeNode(node);
+                return null;
+            }));
+
+            scope.joinUntil(deadline);
+            scope.throwIfFailed();
+            
         } catch (Exception e) {
-            throw (e instanceof PipelineException pe) ? pe : new PipelineException("Falha no pipeline", e);
+            throw handleException(e);
         }
+    }
+
+    private void executeNode(Pipeline.TaskNode node) {
+        try {
+            node.dependencies().forEach(java.util.concurrent.CompletableFuture::join);
+            node.executable().execute();
+        } finally {
+            node.signalsToEmit().forEach(s -> s.complete(null));
+        }
+    }
+
+    private RuntimeException handleException(Exception e) {
+        if (e instanceof PipelineException pe) return pe;
+        if (e instanceof java.util.concurrent.TimeoutException) {
+            return new PipelineException("Timeout atingido durante a execução do pipeline");
+        }
+        log.error("Falha crítica no motor reativo: {}", e.getMessage());
+        return new PipelineException("Erro interno na execução do pipeline", e);
     }
 }

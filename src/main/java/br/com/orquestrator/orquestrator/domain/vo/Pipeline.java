@@ -1,27 +1,31 @@
 package br.com.orquestrator.orquestrator.domain.vo;
 
+import br.com.orquestrator.orquestrator.core.engine.binding.DataMarshaller;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 /**
- * Pipeline: O executável final.
+ * Pipeline: O plano de execução final e otimizado.
  */
 public record Pipeline(
-    Map<String, TaskNode> tasks,
+    Map<String, TaskNode> nodes,
     Duration timeout,
     Set<String> requiredOutputs,
-    Map<String, String> inputMapping
+    List<DataMarshaller.NormalizationStep> normalizationPlan // PLANO PRÉ-COMPILADO
 ) {
+    public Collection<TaskNode> getNodes() { return nodes.values(); }
+
     public record TaskNode(
         Task executable,
         String nodeId,
         String type,
-        List<InputInstruction> inputs,
-        List<OutputInstruction> outputs,
+        List<CompletableFuture<Void>> dependencies,
+        List<CompletableFuture<Void>> signalsToEmit,
         boolean failFast,
         String guardCondition,
         Set<String> activationTags,
@@ -29,13 +33,5 @@ public record Pipeline(
     ) {}
 
     public record InputInstruction(String contextKey, boolean required) {}
-    
-    /**
-     * OutputInstruction: Apenas a chave onde o resultado da task será gravado.
-     */
     public record OutputInstruction(String targetKey) {}
-    
-    public Collection<TaskNode> getNodes() {
-        return tasks.values();
-    }
 }

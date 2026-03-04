@@ -14,13 +14,18 @@ public class HttpTask implements Task {
 
     @Override
     public TaskResult execute() {
-        return restClient.method(HttpMethod.valueOf(config.method().toUpperCase()))
+        var request = restClient.method(HttpMethod.valueOf(config.method().toUpperCase()))
                 .uri(config.url())
-                .headers(h -> { if (config.headers() != null) config.headers().forEach(h::add); })
-                .body(config.body())
-                .exchange((req, res) -> {
-                    Object body = res.getStatusCode().is2xxSuccessful() ? res.bodyTo(Object.class) : null;
-                    return TaskResult.success(body, java.util.Map.of("status", res.getStatusCode().value()));
-                });
+                .headers(h -> { if (config.headers() != null) config.headers().forEach(h::add); });
+
+        // Proteção contra body nulo: O RestClient falha se passarmos null para o body()
+        if (config.body() != null) {
+            request.body(config.body());
+        }
+
+        return request.exchange((req, res) -> {
+            Object body = res.getStatusCode().is2xxSuccessful() ? res.bodyTo(Object.class) : null;
+            return TaskResult.success(body, java.util.Map.of("status", res.getStatusCode().value()));
+        });
     }
 }

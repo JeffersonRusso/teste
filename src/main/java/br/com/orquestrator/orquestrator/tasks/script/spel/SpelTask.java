@@ -1,35 +1,33 @@
 package br.com.orquestrator.orquestrator.tasks.script.spel;
 
+import br.com.orquestrator.orquestrator.core.context.ContextHolder;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
-import br.com.orquestrator.orquestrator.exception.PipelineException;
-import br.com.orquestrator.orquestrator.infra.el.ExpressionService;
+import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import lombok.RequiredArgsConstructor;
 
 /**
- * SpelTask: Executa avaliações SpEL puras.
+ * SpelTask: Executa uma expressão SpEL como uma tarefa core.
  */
 @RequiredArgsConstructor
 public class SpelTask implements Task {
 
+    private final ExpressionEngine expressionEngine;
     private final TaskDefinition definition;
-    private final ExpressionService expressionService;
-    private final SpelTaskConfiguration config;
 
     @Override
     public TaskResult execute() {
-        try {
-            // Usa o serviço de expressão soberano
-            Object result = expressionService.evaluate(config.expression(), Object.class);
-
-            if (result == null && config.required()) {
-                throw new PipelineException("Resultado da expressão SpEL é nulo, mas era obrigatório: " + config.expression());
-            }
-            return TaskResult.success(result);
-        } catch (Exception e) {
-            throw new PipelineException("Erro ao avaliar expressão SpEL: " + config.expression(), e)
-                    .withNodeId(definition.getNodeId().value());
+        // Pega a expressão do mapa de configuração
+        String expression = (String) definition.config().get("expression");
+        
+        if (expression == null || expression.isBlank()) {
+            return TaskResult.success(null);
         }
+
+        // Avalia a expressão usando o motor unificado e o contexto do escopo
+        Object result = expressionEngine.evaluate(expression, ContextHolder.reader(), Object.class);
+        
+        return TaskResult.success(result);
     }
 }
