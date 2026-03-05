@@ -8,6 +8,7 @@ import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import lombok.RequiredArgsConstructor;
+import org.springframework.expression.Expression;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -20,28 +21,32 @@ public class DataMarshaller {
 
     private final ExpressionEngine expressionEngine;
 
+    /** BUILD-TIME: Cria o plano de normalização com expressões pré-compiladas. */
+    public List<NormalizationStep> createNormalizationPlan(Map<String, String> mapping) {
+        if (mapping == null) return List.of();
+        return mapping.entrySet().stream()
+                .map(e -> new NormalizationStep(e.getKey(), expressionEngine.parse(e.getValue())))
+                .toList();
+    }
+
+    /** RUN-TIME: Executa a normalização usando Bytecode nativo. */
+    public void executeNormalization(List<NormalizationStep> plan, WriteableContext writer) {
+        ReadableContext reader = ContextHolder.reader();
+        for (var step : plan) {
+            // Avaliação direta da expressão pré-compilada
+            Object value = expressionEngine.execute(step.expression(), reader, Object.class);
+            if (value != null) {
+                writer.put(ContextSchema.toStandardPath(step.target()), value);
+            }
+        }
+    }
+
     public MarshallingPlan createPlan(TaskDefinition def) {
         return new MarshallingPlan(
             def.inputs() != null ? Map.copyOf(def.inputs()) : Map.of(),
             def.outputs() != null ? Map.copyOf(def.outputs()) : Map.of(),
             def.nodeId().value()
         );
-    }
-
-    public List<NormalizationStep> createNormalizationPlan(Map<String, String> mapping) {
-        if (mapping == null) return List.of();
-        return mapping.entrySet().stream()
-                .map(e -> new NormalizationStep(e.getKey(), e.getValue()))
-                .toList();
-    }
-
-    public void executeNormalization(List<NormalizationStep> plan, WriteableContext writer) {
-        for (var step : plan) {
-            Object value = expressionEngine.evaluate(step.expression(), ContextHolder.reader(), Object.class);
-            if (value != null) {
-                writer.put(ContextSchema.toStandardPath(step.target()), value);
-            }
-        }
     }
 
     public Map<String, Object> resolveInputs(MarshallingPlan plan, ReadableContext reader) {
@@ -52,18 +57,13 @@ public class DataMarshaller {
     }
 
     public void mapOutputs(MarshallingPlan plan, TaskResult result, WriteableContext writer) {
-        // Usa o SCHEMA para status
         writer.put(ContextSchema.toNodeStatusPath(plan.nodeId()), result.status());
-
         if (result.isSuccess() && result.body() != null) {
             Object rawBody = result.body().raw();
-            
-            // Usa o SCHEMA para o resultado bruto do nó
             writer.put(ContextSchema.toNodeResultPath(plan.nodeId()), rawBody);
-
             plan.outputMap().forEach((local, global) -> writer.put(global, rawBody));
         }
     }
 
-    public record NormalizationStep(String target, String expression) {}
+    public record NormalizationStep(String target, Expression expression) {}
 }

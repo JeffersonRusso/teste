@@ -1,7 +1,7 @@
 package br.com.orquestrator.orquestrator.core;
 
 import br.com.orquestrator.orquestrator.core.context.*;
-import br.com.orquestrator.orquestrator.core.context.identity.CorrelationIdResolver;
+import br.com.orquestrator.orquestrator.core.context.identity.RequestIdentity;
 import br.com.orquestrator.orquestrator.core.context.tag.TagManager;
 import br.com.orquestrator.orquestrator.core.engine.PipelineEngine;
 import br.com.orquestrator.orquestrator.core.engine.binding.ResultExtractor;
@@ -18,30 +18,24 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class RiskAnalysisService {
 
-    private final OperationTypeResolver operationTypeResolver;
-    private final CorrelationIdResolver correlationIdResolver; // <--- Novo Especialista
     private final ContextFactory contextFactory;
     private final TagManager tagManager;
     private final PipelineService pipelineService;
     private final PipelineEngine engine;
     private final ResultExtractor resultExtractor;
 
-    public Map<String, Object> analyze(Map<String, String> headers, Map<String, Object> body) {
-        // 1. Identificação (Fronteira)
-        String operationType = operationTypeResolver.resolve(headers, body);
-        String correlationId = correlationIdResolver.resolve(headers);
+    public Map<String, Object> analyze(RequestIdentity identity, Map<String, String> headers, Map<String, Object> body) {
+        // 1. Criação do Contexto com a Identidade já resolvida
+        ExecutionContext context = contextFactory.create(identity, headers, body);
 
-        // 2. Criação do Contexto
-        ExecutionContext context = contextFactory.create(correlationId, operationType, headers, body);
-
-        // 3. Preparação
+        // 2. Preparação
         tagManager.resolveAndApply(context.reader(), context.writer());
         Pipeline pipeline = pipelineService.create(context.metadata());
         
-        // 4. Execução
+        // 3. Execução
         engine.run(context, pipeline);
 
-        // 5. Extração
+        // 4. Extração
         return resultExtractor.extract(context.reader(), pipeline);
     }
 }

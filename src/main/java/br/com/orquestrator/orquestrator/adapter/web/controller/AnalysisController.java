@@ -1,33 +1,34 @@
 package br.com.orquestrator.orquestrator.adapter.web.controller;
 
 import br.com.orquestrator.orquestrator.core.RiskAnalysisService;
+import br.com.orquestrator.orquestrator.core.context.identity.IdentityResolver;
+import br.com.orquestrator.orquestrator.core.context.identity.RequestIdentity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-/**
- * AnalysisController: Ponto de entrada da API de Análise de Risco.
- */
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/analise")
+@RequestMapping("/v1/analysis")
 @RequiredArgsConstructor
 public class AnalysisController {
 
     private final RiskAnalysisService riskAnalysisService;
+    private final IdentityResolver identityResolver;
 
     @PostMapping
-    public ResponseEntity<Map<String, Object>> analyze(
-            @RequestHeader Map<String, String> headers,
-            @RequestBody Map<String, Object> rawBody) {
+    public Map<String, Object> analyze(@RequestHeader Map<String, String> headers, 
+                                       @RequestBody Map<String, Object> body) {
+        
+        // 1. Define a identidade soberana logo na entrada
+        RequestIdentity identity = identityResolver.resolve(headers, body);
+        
+        log.info("Iniciando análise. CorrelationId: {} | ExecutionId: {} | Operation: {}", 
+                identity.correlationId(), identity.executionId(), identity.operationType());
 
-        log.info("Recebendo requisição de análise. CorrelationId: {}", headers.get("x-correlation-id"));
-
-        Map<String, Object> response = riskAnalysisService.analyze(headers, rawBody);
-
-        return ResponseEntity.ok(response);
+        // 2. Passa a identidade completa para o serviço
+        return riskAnalysisService.analyze(identity, headers, body);
     }
 }

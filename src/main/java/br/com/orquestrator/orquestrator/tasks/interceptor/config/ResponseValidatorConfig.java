@@ -1,18 +1,16 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.config;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.JsonNode;
-
 import java.util.List;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-public record ResponseValidatorConfig(List<Rule> rules) {
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Rule(
-            String condition,
-            String message,
-            String errorCode,
-            JsonNode metadata
+/**
+ * Configuração para validação de resposta de tarefas.
+ */
+public record ResponseValidatorConfig(
+    List<ValidationRule> rules
+) {
+    public record ValidationRule(
+        String condition, // Expressão SpEL (ex: #result.body.id != null)
+        String message,   // Mensagem de erro se a condição for FALSA
+        String errorCode  // Código de erro para o cliente
     ) {}
 }

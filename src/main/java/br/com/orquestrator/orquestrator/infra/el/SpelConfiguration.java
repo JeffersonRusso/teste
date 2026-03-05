@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.expression.MapAccessor;
 import org.springframework.core.convert.support.DefaultConversionService;
+import org.springframework.expression.spel.SpelCompilerMode;
 import org.springframework.expression.spel.SpelParserConfiguration;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 
@@ -12,9 +13,12 @@ public class SpelConfiguration {
 
     @Bean
     public SpelExpressionParser spelExpressionParser() {
-        // CONFIGURAÇÃO MÁGICA: autoGrowNestedPaths = true
-        // Isso faz o SpEL criar os Maps intermediários automaticamente no put!
-        SpelParserConfiguration config = new SpelParserConfiguration(true, true);
+        // CONFIGURAÇÃO DE ELITE: Compilação imediata para Bytecode
+        // Isso transforma a expressão SpEL em código Java nativo após algumas execuções.
+        SpelParserConfiguration config = new SpelParserConfiguration(
+            SpelCompilerMode.IMMEDIATE, 
+            this.getClass().getClassLoader()
+        );
         return new SpelExpressionParser(config);
     }
 

@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ResponseValidatorDecoratorFactory implements DecoratorFactory<ResponseValidatorConfig> {
 
-    private final ExpressionEngine expressionEngine; // <--- Injeta a abstração soberana
+    private final ExpressionEngine expressionEngine;
 
     @Override
     public String getType() {

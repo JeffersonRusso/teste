@@ -1,7 +1,5 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.impl.validation;
 
-import br.com.orquestrator.orquestrator.core.context.ContextHolder;
-import br.com.orquestrator.orquestrator.core.context.ReadableContext;
 import br.com.orquestrator.orquestrator.exception.PipelineException;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
 import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
@@ -14,8 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Map;
 
 /**
- * ResponseValidatorDecorator: Valida o resultado de uma task contra regras SpEL.
- * Utiliza o motor de expressões unificado.
+ * ResponseValidatorDecorator: Valida o corpo da resposta da task core.
+ * Garante que campos obrigatórios estejam presentes antes do mapeamento.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -23,32 +21,35 @@ public class ResponseValidatorDecorator implements TaskDecorator {
 
     private final ResponseValidatorConfig config;
     private final String nodeId;
-    private final ExpressionEngine expressionEngine; // <--- Injeta a abstração
+    private final ExpressionEngine expressionEngine;
 
     @Override
     public TaskResult apply(TaskChain next) {
+        // 1. Executa a task core (ex: HttpTask)
         TaskResult result = next.proceed();
-        ReadableContext context = ContextHolder.reader();
-        validate(result, context);
+
+        // 2. Valida o resultado
+        if (result != null && result.isSuccess()) {
+            validate(result);
+        }
+
         return result;
     }
 
-    private void validate(TaskResult result, ReadableContext context) {
+    private void validate(TaskResult result) {
         if (config == null || config.rules() == null) return;
-        
-        // Injeta o resultado da task como variável local para a avaliação
-        // Nota: Como o root é o context, o motor injetará automaticamente #raw, #standard, etc.
+
+        // Cria um contexto temporário com o resultado para avaliação
+        Map<String, Object> evalRoot = Map.of("result", result);
+
         for (var rule : config.rules()) {
-            try {
-                // Aqui poderíamos injetar o #result via variáveis locais se o motor suportasse, 
-                // mas para manter o Clean Code, vamos usar o root como um mapa temporário se necessário.
-                // Por enquanto, avaliamos contra o context.
-                if (Boolean.TRUE.equals(expressionEngine.evaluate(rule.condition(), context, Boolean.class))) {
-                    throw new PipelineException(rule.message()).withNodeId(nodeId);
-                }
-            } catch (Exception e) {
-                if (e instanceof PipelineException) throw e;
-                log.warn("Falha ao avaliar regra de validação no nó [{}]: {}", nodeId, e.getMessage());
+            // A condição deve ser VERDADEIRA para passar. Se for FALSA, lança erro.
+            Boolean isValid = expressionEngine.evaluate(rule.condition(), evalRoot, Boolean.class);
+            
+            if (Boolean.FALSE.equals(isValid)) {
+                log.error("Falha na validação de resposta do nó [{}]: {}", nodeId, rule.message());
+                throw new PipelineException(rule.message())
+                        .withNodeId(nodeId);
             }
         }
     }

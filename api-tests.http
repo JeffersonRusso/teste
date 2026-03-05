@@ -7,17 +7,11 @@ X-Correlation-ID: teste-manual-01
 
 {
   "operationType": "CREDIT_ANALYSIS",
-  "transaction": {
-    "amount": 2500.00,
-    "currency": "BRL"
-  },
-  "customer": {
-    "document": "12345678900",
-    "name": "Jefferson Teste"
-  },
-  "device": {
-    "id": "android_v14_secure_xyz",
-    "ip": "192.168.0.1"
+  "orderId": "ORD-12345",
+  "operation": {
+    "transaction": { "amount": 2500.00, "currency": "BRL" },
+    "customer": { "document": "12345678900", "name": "Jefferson Teste" },
+    "device": { "id": "android_v14", "ip": "192.168.0.1" }
   }
 }
 
