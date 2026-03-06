@@ -9,10 +9,6 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.concurrent.StructuredTaskScope;
 
-/**
- * ReactiveExecutionEngine: Motor de execução puro.
- * Não contém lógica de negócio ou política de erro; apenas orquestra threads e sinais.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -20,11 +16,14 @@ public class ReactiveExecutionEngine {
 
     public void execute(Pipeline pipeline) {
         Instant deadline = ExecutionClock.calculateDeadline(pipeline.timeout());
+        
+        // Cria a malha de sinais efêmera para esta execução
+        SignalRegistry signals = new SignalRegistry();
 
         try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
             
             pipeline.getNodes().forEach(node -> scope.fork(() -> {
-                executeNode(node);
+                node.run(signals);
                 return null;
             }));
 
@@ -33,15 +32,6 @@ public class ReactiveExecutionEngine {
             
         } catch (Exception e) {
             throw handleException(e);
-        }
-    }
-
-    private void executeNode(Pipeline.TaskNode node) {
-        try {
-            node.dependencies().forEach(java.util.concurrent.CompletableFuture::join);
-            node.executable().execute();
-        } finally {
-            node.signalsToEmit().forEach(s -> s.complete(null));
         }
     }
 

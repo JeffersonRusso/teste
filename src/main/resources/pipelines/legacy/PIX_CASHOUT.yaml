@@ -1,0 +1,32 @@
+pipeline:
+  tipoOperacao: PIX
+  alias: PIX_CASHOUT
+  timeOut: 1500
+  enriquecimentos:
+    - nome: buscaCliente
+      alias: buscaCliente_devedor
+      timeout: 200
+      order: 1
+        - de: $payload.id_cliente
+          para: id_cliente
+    - nome: buscaDivida
+      alias: buscaDividaCliente
+      timeout: 250
+      order: 2
+        - de: $enriquecimentos.buscaCliente_devedor.documento
+          para: documentoCliente
+    - nome: processaDadosClienteDivida
+      alias: processaDadosClienteDividaAlias
+      timeout: 150
+      order: 1
+        - de: $enriquecimento.buscaCliente_devedor.documento
+          para: dadosCliente
+        - de: $enriquecimento.buscaDividaCliente.divida
+          para: divida
+        - de: divida
+          para: dadosProcessada
+        - de: dadosCliente
+          para: dadosProcessado
+        - de: dadosProcessada
+          para: dadosFinais
+          conversor: geraDadosFinais

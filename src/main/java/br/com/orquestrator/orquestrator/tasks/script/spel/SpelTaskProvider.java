@@ -7,19 +7,13 @@ import br.com.orquestrator.orquestrator.tasks.base.Task;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 @Component
 @RequiredArgsConstructor
 public class SpelTaskProvider implements TaskProvider {
-
     private final ExpressionEngine expressionEngine;
-
-    @Override
-    public String getType() {
-        return "SPEL";
-    }
-
-    @Override
-    public Task create(TaskDefinition definition) {
-        return new SpelTask(expressionEngine, definition);
-    }
+    @Override public String getType() { return "SPEL"; }
+    @Override public Optional<Class<?>> getConfigClass() { return Optional.of(SpelTaskConfiguration.class); }
+    @Override public Task create(TaskDefinition definition) { return new SpelTask(expressionEngine); }
 }

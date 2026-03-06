@@ -1,32 +1,27 @@
 package br.com.orquestrator.orquestrator.core.engine.observability;
 
 import br.com.orquestrator.orquestrator.core.context.ContextMetadata;
+import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
+import java.util.List;
 
-/**
- * PipelineEventPublisher: Publica eventos seguindo normas de tempo ISO 8601.
- */
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class PipelineEventPublisher {
 
-    /**
-     * Publica o evento de finalização.
-     * Utiliza Instant para garantir conformidade com ISO 8601.
-     */
-    public void publishFinished(ContextMetadata metadata, boolean success) {
-        String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
-        
-        log.info("[{}] Pipeline finalizado | Operação: {} | ID: {} | Sucesso: {}", 
-                timestamp,
-                metadata.getOperationType(), 
-                metadata.getCorrelationId(), 
-                success);
+    private final List<PipelineEventListener> listeners;
+
+    public void publishPipelineStarted(ContextMetadata metadata) {
+        // Implementar no listener se necessário
+    }
+
+    public void publishPipelineFinished(ContextMetadata metadata, boolean success) {
+        listeners.forEach(l -> l.onPipelineFinished(metadata, success));
+    }
+
+    public void publishTaskFinished(String nodeId, DataValue result, long durationMs) {
+        listeners.forEach(l -> l.onTaskFinished(nodeId, result, durationMs));
     }
 }

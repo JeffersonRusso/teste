@@ -1,15 +1,19 @@
 package br.com.orquestrator.orquestrator.adapter.persistence.repository.entity;
 
 import br.com.orquestrator.orquestrator.adapter.persistence.repository.entity.json.TaskConfig;
+import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
+import br.com.orquestrator.orquestrator.domain.vo.NodeId;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "tb_pipeline_node")
@@ -38,13 +42,14 @@ public class PipelineNodeEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     private TaskConfig configuration;
 
-    @Column(name = "inputs")
-    @JdbcTypeCode(SqlTypes.JSON)
-    private Map<String, String> inputs;
+    // Relacionamentos obrigatórios para o novo modelo
+    @OneToMany(fetch = FetchType.EAGER)
+    @JoinColumn(name = "node_id")
+    private List<PipelineNodeInputEntity> inputs;
 
-    @Column(name = "outputs")
-    @JdbcTypeCode(SqlTypes.JSON)
-    private Map<String, String> outputs;
+    @OneToMany(fetch = FetchType.EAGER)
+    @JoinColumn(name = "node_id")
+    private List<PipelineNodeOutputEntity> outputs;
     
     @Column(name = "activation_tags")
     @JdbcTypeCode(SqlTypes.JSON)
@@ -55,4 +60,25 @@ public class PipelineNodeEntity {
     
     @Column(name = "fail_fast")
     private Boolean failFast;
+
+    public TaskDefinition toDomain() {
+        String finalType = type != null ? type : (template != null ? template.getType() : "UNKNOWN");
+        Map<String, Object> finalConfig = configuration != null ? configuration.toFullMap() : Map.of();
+        
+        // Converte as entidades de input/output para os mapas do domínio
+        Map<String, String> inputMap = inputs != null ? inputs.stream()
+                .collect(Collectors.toMap(PipelineNodeInputEntity::getLocalKey, PipelineNodeInputEntity::getSourceExpression)) : Map.of();
+
+        Map<String, String> outputMap = outputs != null ? outputs.stream()
+                .collect(Collectors.toMap(PipelineNodeOutputEntity::getLocalKey, PipelineNodeOutputEntity::getTargetKey)) : Map.of();
+
+        return new TaskDefinition(
+            new NodeId(nodeId.toString()), 1, name, finalType, 
+            0L, finalConfig, List.of(), 
+            failFast != null ? failFast : true,
+            inputMap, outputMap, activationTags, guardCondition,
+            configuration != null && Boolean.TRUE.equals(configuration.getGlobal()),
+            0L
+        );
+    }
 }

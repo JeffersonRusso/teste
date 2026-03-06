@@ -1,13 +1,13 @@
 package br.com.orquestrator.orquestrator.core.engine.binding;
 
+import br.com.orquestrator.orquestrator.domain.vo.DataPath;
 import java.util.Map;
 
 /**
- * MarshallingPlan: Um plano de execução imutável para movimentação de dados.
- * Criado no build-time para performance máxima no run-time.
+ * MarshallingPlan: Plano de execução imutável e pré-compilado.
  */
 public record MarshallingPlan(
-    Map<String, String> inputMap,  // LocalKey -> GlobalKey
-    Map<String, String> outputMap, // LocalKey -> GlobalKey
+    Map<String, String> inputMap,
+    Map<OutputMapper, DataPath> outputPlan, // Estratégia -> Destino
     String nodeId
 ) {}

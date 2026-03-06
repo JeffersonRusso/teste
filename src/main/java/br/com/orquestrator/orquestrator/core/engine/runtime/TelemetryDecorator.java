@@ -1,17 +1,12 @@
 package br.com.orquestrator.orquestrator.core.engine.runtime;
 
-import br.com.orquestrator.orquestrator.core.context.ContextHolder;
-import br.com.orquestrator.orquestrator.core.context.ContextSchema;
 import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
+import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * TelemetryDecorator: Responsável por medir a performance e latência de cada nó.
- * Registra os dados no banco de contexto para análise posterior.
- */
 @Slf4j
 @RequiredArgsConstructor
 public class TelemetryDecorator implements TaskDecorator {
@@ -19,26 +14,17 @@ public class TelemetryDecorator implements TaskDecorator {
     private final String nodeId;
 
     @Override
-    public TaskResult apply(TaskChain next) {
-        long start = System.nanoTime();
+    public TaskResult apply(TaskContext context, TaskChain next) {
+        long start = System.currentTimeMillis();
         try {
-            TaskResult result = next.proceed();
-            recordMetrics(start, true);
+            TaskResult result = next.proceed(context);
+            long duration = System.currentTimeMillis() - start;
+            log.debug("Nó [{}] finalizado em {}ms | Sucesso: {}", nodeId, duration, result.isSuccess());
             return result;
         } catch (Exception e) {
-            recordMetrics(start, false);
+            long duration = System.currentTimeMillis() - start;
+            log.error("Nó [{}] falhou em {}ms | Erro: {}", nodeId, duration, e.getMessage());
             throw e;
         }
-    }
-
-    private void recordMetrics(long startNano, boolean success) {
-        long durationMs = (System.nanoTime() - startNano) / 1_000_000;
-        
-        // Registra a latência no banco de contexto (visão de escrita)
-        String path = ContextSchema.toNodeResultPath(nodeId) + ".metrics";
-        ContextHolder.writer().put(path + ".durationMs", durationMs);
-        ContextHolder.writer().put(path + ".success", success);
-        
-        log.debug("Nó [{}] finalizado em {}ms | Sucesso: {}", nodeId, durationMs, success);
     }
 }

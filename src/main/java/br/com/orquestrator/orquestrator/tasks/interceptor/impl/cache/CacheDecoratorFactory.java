@@ -1,21 +1,19 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.impl.cache;
 
+import br.com.orquestrator.orquestrator.core.engine.runtime.CacheEngine;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.DecoratorFactory;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
-import br.com.orquestrator.orquestrator.tasks.interceptor.cache.CacheProvider;
 import br.com.orquestrator.orquestrator.tasks.interceptor.config.CacheConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Component
 @RequiredArgsConstructor
 public class CacheDecoratorFactory implements DecoratorFactory<CacheConfig> {
 
     private final ExpressionEngine expressionEngine;
-    private final List<CacheProvider> cacheProviders;
+    private final CacheEngine cacheEngine; // <--- Usando a nova abstração soberana
 
     @Override
     public String getType() {
@@ -29,11 +27,6 @@ public class CacheDecoratorFactory implements DecoratorFactory<CacheConfig> {
 
     @Override
     public TaskDecorator create(CacheConfig config, String nodeId) {
-        CacheProvider provider = cacheProviders.stream()
-                .filter(p -> p.getType().equalsIgnoreCase(config.provider()))
-                .findFirst()
-                .orElse(cacheProviders.get(0));
-
-        return new CacheInterceptor(expressionEngine, provider, config, nodeId);
+        return new CacheInterceptor(expressionEngine, cacheEngine, config, nodeId);
     }
 }

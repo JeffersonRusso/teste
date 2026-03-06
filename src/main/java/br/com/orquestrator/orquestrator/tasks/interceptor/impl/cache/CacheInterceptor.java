@@ -2,8 +2,10 @@ package br.com.orquestrator.orquestrator.tasks.interceptor.impl.cache;
 
 import br.com.orquestrator.orquestrator.core.context.ContextHolder;
 import br.com.orquestrator.orquestrator.core.engine.runtime.CacheEngine;
+import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
 import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
+import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
 import br.com.orquestrator.orquestrator.tasks.interceptor.config.CacheConfig;
@@ -18,32 +20,34 @@ import java.util.Optional;
 public class CacheInterceptor implements TaskDecorator {
 
     private final ExpressionEngine expressionEngine;
-    private final CacheEngine cacheEngine; // <--- Abstração Soberana
+    private final CacheEngine cacheEngine;
     private final CacheConfig config;
     private final String nodeId;
 
     @Override
-    public TaskResult apply(TaskChain next) {
-        if (config == null || config.key() == null) return next.proceed();
+    public TaskResult apply(TaskContext context, TaskChain next) {
+        if (config == null || config.key() == null) return next.proceed(context);
 
         try {
-            String cacheKey = expressionEngine.evaluate(config.key(), ContextHolder.reader(), String.class);
-            Optional<Object> cached = cacheEngine.get(nodeId, cacheKey);
+            DataValue keyDv = expressionEngine.evaluate(config.key(), ContextHolder.reader());
+            String cacheKey = keyDv.as(String.class).orElse(keyDv.raw().toString());
+
+            Optional<DataValue> cached = cacheEngine.get(nodeId, cacheKey);
 
             if (cached.isPresent()) {
                 log.debug("Cache HIT [{}] key [{}]", nodeId, cacheKey);
                 return TaskResult.success(cached.get(), Map.of("cache_hit", true));
             }
 
-            TaskResult result = next.proceed();
-            if (result != null && result.isSuccess() && result.body() != null) {
-                cacheEngine.put(nodeId, cacheKey, result.body().raw(), config.ttlMs());
+            TaskResult result = next.proceed(context);
+            if (result != null && result.isSuccess()) {
+                cacheEngine.put(nodeId, cacheKey, result.body(), config.ttlMs());
             }
             return result;
 
         } catch (Exception e) {
             log.error("Falha na operação de cache para {}: {}", nodeId, e.getMessage());
-            return next.proceed();
+            return next.proceed(context);
         }
     }
 }

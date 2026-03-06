@@ -1,10 +1,10 @@
 package br.com.orquestrator.orquestrator.tasks.base;
 
 /**
- * Task: Contrato fundamental de execução.
- * O contexto é acessado via ScopedValue (ContextHolder.CONTEXT).
+ * Task: Unidade atômica de trabalho.
+ * Stateless e Thread-Safe. Recebe todo o contexto necessário na execução.
  */
 @FunctionalInterface
 public interface Task {
-    TaskResult execute();
+    TaskResult execute(TaskContext context);
 }

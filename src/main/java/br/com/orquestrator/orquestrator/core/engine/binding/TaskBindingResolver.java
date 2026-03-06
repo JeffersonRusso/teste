@@ -10,12 +10,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * TaskBindingResolver: Resolve e converte configurações usando ObjectReaders pré-compilados.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -23,7 +21,6 @@ public class TaskBindingResolver {
 
     private final ExpressionEngine expressionEngine;
     private final ObjectMapper objectMapper;
-    
     private final Map<Class<?>, ObjectReader> readerCache = new ConcurrentHashMap<>(128);
 
     public <T> T resolve(Map<String, Object> rawConfig, Class<T> targetClass) {
@@ -32,26 +29,29 @@ public class TaskBindingResolver {
         }
 
         try {
-            Map<String, Object> resolvedMap = expressionEngine.resolveMap(rawConfig, ContextHolder.reader());
+            Map<String, Object> sourceData = ContextHolder.CURRENT_INPUTS.isBound() 
+                ? ContextHolder.CURRENT_INPUTS.get() 
+                : Map.of();
+
+            // Resolve o mapa de configuração delegando TUDO para a engine
+            Map<String, Object> resolvedMap = new HashMap<>();
+            rawConfig.forEach((key, value) -> {
+                resolvedMap.put(key, expressionEngine.evaluate(value, sourceData).raw());
+            });
+
             return convert(resolvedMap, targetClass);
+            
         } catch (Exception e) {
-            throw new TaskConfigurationException("Falha ao resolver binding para a classe " + targetClass.getSimpleName(), e);
+            throw new TaskConfigurationException("Falha ao resolver binding para " + targetClass.getSimpleName(), e);
         }
     }
 
-    @SuppressWarnings("unchecked")
     private <T> T convert(Map<String, Object> map, Class<T> targetClass) {
         try {
             ObjectReader reader = readerCache.computeIfAbsent(targetClass, objectMapper::readerFor);
-            
-            // Converte o Map para JsonNode (operação rápida em memória)
             JsonNode node = objectMapper.valueToTree(map);
-            
-            // Usa o reader pré-compilado com cast explícito para evitar ambiguidade
             return reader.readValue(node);
-            
         } catch (Exception e) {
-            log.error("Erro na conversão Jackson otimizada para {}: {}", targetClass.getSimpleName(), e.getMessage());
             return objectMapper.convertValue(map, targetClass);
         }
     }

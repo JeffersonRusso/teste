@@ -2,6 +2,7 @@ package br.com.orquestrator.orquestrator.core.context.identity;
 
 import br.com.orquestrator.orquestrator.core.context.OperationTypeResolver;
 import br.com.orquestrator.orquestrator.domain.ApiConstants;
+import br.com.orquestrator.orquestrator.exception.PipelineValidationException;
 import br.com.orquestrator.orquestrator.infra.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -21,7 +22,8 @@ public class IdentityResolver {
         String orderId = Optional.ofNullable(body)
                 .map(b -> b.get(ApiConstants.BODY_ORDER_ID))
                 .map(Object::toString)
-                .orElse("N/A");
+                .filter(id -> !id.isBlank())
+                .orElseThrow(() -> new PipelineValidationException("O campo '" + ApiConstants.BODY_ORDER_ID + "' é obrigatório."));
 
         return new RequestIdentity(
             correlationIdResolver.resolve(headers),

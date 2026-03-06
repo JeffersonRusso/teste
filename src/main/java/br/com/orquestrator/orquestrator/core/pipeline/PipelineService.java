@@ -8,26 +8,24 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/**
- * PipelineService: Orquestra a obtenção de pipelines.
- * Delega a compilação e o cache para o PipelineRegistry.
- */
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PipelineService {
 
-    private final PipelineRepository repository;
+    private final List<PipelineLoader> loaders;
     private final PipelineRegistry registry;
 
     public Pipeline create(ContextMetadata metadata) {
-        String operationType = metadata.getOperationType();
+        // Encontra o carregador baseado nos metadados (incluindo tags)
+        PipelineDefinition def = loaders.stream()
+                .filter(l -> l.supports(metadata))
+                .findFirst()
+                .flatMap(l -> l.load(metadata))
+                .orElseThrow(() -> new PipelineException("Nenhuma definição de pipeline encontrada para: " + metadata.getOperationType()));
 
-        // 1. Busca a definição ativa no banco (ou cache de definição)
-        PipelineDefinition def = repository.findActive(operationType)
-                .orElseThrow(() -> new PipelineException("Nenhum pipeline ativo encontrado para: " + operationType));
-
-        // 2. Solicita o executável ao registro (que gerencia o cache de compilação)
         return registry.get(def, metadata.getTags());
     }
 }

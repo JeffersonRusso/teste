@@ -1,7 +1,7 @@
 #!/bin/bash
 
 JMETER_HOME="src/main/resources/apache-jmeter-5.6.3"
-TEST_PLAN="teste-carga-orquestrador.jmx"
+TEST_PLAN="teste_carga_500_threads.jmx"
 RESULT_LOG="resultados.jtl"
 REPORT_DIR="report-dashboard"
 
@@ -15,17 +15,13 @@ else
     chmod +x "$JMETER_BIN"
 fi
 
-echo "Iniciando teste de carga com JMeter..."
+echo "Iniciando teste de carga massiva (1000 threads)..."
 
 # Limpa resultados anteriores
 rm -f "$RESULT_LOG"
 rm -rf "$REPORT_DIR"
 
-# Executa o teste
-# No Windows, o .bat cuida do HEAP, mas podemos tentar passar via env var se necessário.
-# O comando 'cmd /c' pode ser necessário para rodar .bat do bash corretamente em alguns casos,
-# mas geralmente chamar direto funciona se o path estiver correto.
-
+# Executa o teste em modo non-GUI
 "$JMETER_BIN" -n -t "$TEST_PLAN" -l "$RESULT_LOG" -e -o "$REPORT_DIR"
 
 echo ""

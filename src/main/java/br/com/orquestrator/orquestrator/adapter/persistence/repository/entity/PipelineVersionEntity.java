@@ -7,7 +7,6 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -28,10 +27,6 @@ public class PipelineVersionEntity {
 
     @Column(name = "timeout_ms")
     private Long timeoutMs;
-
-    @Column(name = "input_mapping")
-    @JdbcTypeCode(SqlTypes.JSON)
-    private Map<String, String> inputMapping;
 
     @Column(name = "required_outputs")
     @JdbcTypeCode(SqlTypes.JSON)

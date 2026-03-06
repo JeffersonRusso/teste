@@ -1,40 +1,39 @@
 package br.com.orquestrator.orquestrator.core.context;
 
 import br.com.orquestrator.orquestrator.domain.ContextKey;
+import br.com.orquestrator.orquestrator.domain.vo.DataPath;
 
 /**
- * ContextSchema: A única autoridade sobre a estrutura e endereçamento do banco de contexto.
+ * ContextSchema: A autoridade sobre a estrutura do banco de contexto.
+ * Agora retorna DataPath para garantir tipagem forte em todo o fluxo.
  */
 public final class ContextSchema {
 
     private ContextSchema() {}
 
-    /** Namespaces principais */
-    public static String raw() { return ContextKey.RAW; }
-    public static String standard() { return ContextKey.STANDARD; }
-    public static String header() { return ContextKey.HEADER; }
-    public static String operationType() { return ContextKey.OPERATION_TYPE; }
+    public static DataPath raw() { return DataPath.of(ContextKey.RAW); }
+    public static DataPath standard() { return DataPath.of(ContextKey.STANDARD); }
+    public static DataPath header() { return DataPath.of(ContextKey.HEADER); }
+    public static DataPath operationType() { return DataPath.of(ContextKey.OPERATION_TYPE); }
+    public static DataPath tags() { return DataPath.of("tags"); }
 
-    /** Constrói caminhos de dados */
-    public static String toStandardPath(String field) {
-        return standard() + "." + field;
+    public static DataPath toStandardPath(String field) {
+        return DataPath.of(ContextKey.STANDARD + "." + field);
     }
 
-    /** Constrói caminhos de execução de nós */
-    public static String toNodeResultPath(String nodeId) {
-        return nodeId; // O resultado bruto do nó fica na raiz com o nome do nó
+    public static DataPath toNodeResultPath(String nodeId) {
+        return DataPath.of(nodeId);
     }
 
-    public static String toNodeStatusPath(String nodeId) {
-        return nodeId + ".status";
+    public static DataPath toNodeStatusPath(String nodeId) {
+        return DataPath.of(nodeId + ".status");
     }
 
-    public static String toNodeErrorPath(String nodeId) {
-        return nodeId + ".error";
+    public static DataPath toNodeErrorPath(String nodeId) {
+        return DataPath.of(nodeId + ".error");
     }
 
-    /** Retorna as chaves que devem ser expostas como variáveis no SpEL */
     public static String[] sovereignNamespaces() {
-        return new String[]{raw(), standard(), header()};
+        return new String[]{ContextKey.RAW, ContextKey.STANDARD, ContextKey.HEADER, "tags"};
     }
 }

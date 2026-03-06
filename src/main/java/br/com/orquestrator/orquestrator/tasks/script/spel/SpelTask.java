@@ -1,33 +1,32 @@
 package br.com.orquestrator.orquestrator.tasks.script.spel;
 
-import br.com.orquestrator.orquestrator.core.context.ContextHolder;
-import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
+import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
+import br.com.orquestrator.orquestrator.tasks.base.Configurable;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
+import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import lombok.RequiredArgsConstructor;
 
-/**
- * SpelTask: Executa uma expressão SpEL como uma tarefa core.
- */
 @RequiredArgsConstructor
-public class SpelTask implements Task {
+public class SpelTask implements Task, Configurable<SpelTaskConfiguration> {
 
     private final ExpressionEngine expressionEngine;
-    private final TaskDefinition definition;
 
     @Override
-    public TaskResult execute() {
-        // Pega a expressão do mapa de configuração
-        String expression = (String) definition.config().get("expression");
+    public Class<SpelTaskConfiguration> getConfigClass() {
+        return SpelTaskConfiguration.class;
+    }
+
+    @Override
+    public TaskResult execute(TaskContext context) {
+        SpelTaskConfiguration config = context.getConfig();
         
-        if (expression == null || expression.isBlank()) {
-            return TaskResult.success(null);
+        if (config.expression() == null || config.expression().isBlank()) {
+            return TaskResult.success(new DataValue.Empty());
         }
 
-        // Avalia a expressão usando o motor unificado e o contexto do escopo
-        Object result = expressionEngine.evaluate(expression, ContextHolder.reader(), Object.class);
-        
+        DataValue result = expressionEngine.evaluate(config.expression(), context.inputs());
         return TaskResult.success(result);
     }
 }

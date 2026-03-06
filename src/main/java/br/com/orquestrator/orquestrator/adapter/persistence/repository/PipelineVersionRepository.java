@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface PipelineVersionRepository extends JpaRepository<PipelineVersionEntity, UUID> {
-
+    
     @Query("SELECT p FROM PipelineVersionEntity p WHERE p.operationType = :operationType AND p.isActive = true")
     Optional<PipelineVersionEntity> findActive(String operationType);
 

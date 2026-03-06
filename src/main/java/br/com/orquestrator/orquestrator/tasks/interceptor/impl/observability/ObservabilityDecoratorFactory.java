@@ -1,5 +1,6 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.impl.observability;
 
+import br.com.orquestrator.orquestrator.core.engine.observability.PipelineEventPublisher;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.DecoratorFactory;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +10,9 @@ import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
-public class                                                                                                                       ObservabilityDecoratorFactory implements DecoratorFactory<Map<String, Object>> {
+public class ObservabilityDecoratorFactory implements DecoratorFactory<Map<String, Object>> {
+
+    private final PipelineEventPublisher eventPublisher;
 
     @Override
     public String getType() {
@@ -17,13 +20,12 @@ public class                                                                    
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Class<Map<String, Object>> getConfigClass() {
-        return (Class<Map<String, Object>>) (Class<?>) Map.class;
+        return (Class) Map.class;
     }
 
     @Override
     public TaskDecorator create(Map<String, Object> config, String nodeId) {
-        return new ObservabilityInterceptor(nodeId);
+        return new ObservabilityInterceptor(eventPublisher, nodeId);
     }
 }

@@ -1,6 +1,5 @@
 package br.com.orquestrator.orquestrator.tasks.script.dmn;
 
-import br.com.orquestrator.orquestrator.core.context.ContextHolder;
 import br.com.orquestrator.orquestrator.core.engine.binding.TaskBindingResolver;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.exception.TaskConfigurationException;
@@ -13,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -29,9 +29,13 @@ public class DmnTaskProvider implements TaskProvider {
     }
 
     @Override
+    public Optional<Class<?>> getConfigClass() {
+        return Optional.of(DmnTaskConfiguration.class);
+    }
+
+    @Override
     public Task create(TaskDefinition def) {
-        // 1. Resolve a configuração (dmnFile, decisionKey)
-        // Nota: Aqui resolvemos apenas o que é necessário para carregar o DMN
+        // Resolve a configuração no startup para carregar o arquivo DMN
         var config = taskBindingResolver.resolve(def.config(), DmnTaskConfiguration.class);
         
         String cacheKey = config.dmnFile() + ":" + config.decisionKey();
@@ -39,12 +43,7 @@ public class DmnTaskProvider implements TaskProvider {
             loadDecision(config.dmnFile(), config.decisionKey(), def.nodeId().value())
         );
 
-        return () -> {
-            // 2. Resolve os inputs dinâmicos do contexto no momento da execução
-            // O DMN opera sobre o mapa de dados do contexto
-            var context = ContextHolder.CONTEXT.get();
-            return new DmnTask(dmnEngine, decision, context.getRoot()).execute();
-        };
+        return new DmnTask(dmnEngine, decision);
     }
 
     private DmnDecision loadDecision(String dmnFile, String decisionKey, String nodeId) {

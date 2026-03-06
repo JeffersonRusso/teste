@@ -1,60 +1,84 @@
 package br.com.orquestrator.orquestrator.core.context.storage;
 
 import br.com.orquestrator.orquestrator.core.context.ReadableContext;
+import br.com.orquestrator.orquestrator.domain.model.DataValue;
+import br.com.orquestrator.orquestrator.domain.vo.DataPath;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * MapDataStore: Implementação nativa de um banco de dados hierárquico.
- * Resolve o erro de navegação (EL1008E) ao gerenciar a árvore de mapas internamente.
+ * MapDataStore: Armazenamento de alta performance baseado em caminhos.
+ * Focado em simplicidade e delegação de responsabilidades.
  */
 public class MapDataStore implements DataStore, ReadableContext {
 
-    private final Map<String, Object> storage = new ConcurrentHashMap<>(64);
+    private final Map<String, DataValue> storage = new ConcurrentHashMap<>(64);
 
     @Override
-    @SuppressWarnings("unchecked")
-    public void put(String key, Object value) {
-        if (key == null || key.isBlank()) return;
-
-        // Se não há pontos, é uma gravação direta na raiz
-        if (key.indexOf('.') == -1) {
-            storage.put(key, value);
+    public void put(String key, DataValue value) {
+        DataPath path = DataPath.of(key);
+        
+        if (path.getParentPath().isEmpty()) {
+            storage.put(path.getLeafName(), value);
             return;
         }
 
-        // Navegação hierárquica nativa (O Coração da Solução)
-        String[] parts = key.split("\\.");
-        Map<String, Object> current = storage;
-
-        for (int i = 0; i < parts.length - 1; i++) {
-            // Cria o mapa intermediário se não existir, garantindo a estrutura para o SpEL
-            current = (Map<String, Object>) current.computeIfAbsent(parts[i], k -> new ConcurrentHashMap<>());
+        // Navega até o mapa pai e insere a folha
+        DataValue parentNode = ensurePath(path.getParentPath());
+        if (parentNode instanceof DataValue.Mapping m) {
+            ((Map<String, Object>) m.fields()).put(path.getLeafName(), value);
         }
-        current.put(parts[parts.length - 1], value);
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public Object get(String key) {
-        if (key == null || key.isBlank()) return null;
+    public DataValue get(String key) {
+        DataPath path = DataPath.of(key);
+        DataValue current = null;
 
-        if (key.indexOf('.') == -1) {
-            return storage.get(key);
+        for (String part : path.getParts()) {
+            if (current == null) {
+                current = storage.get(part);
+            } else if (current instanceof DataValue.Mapping m) {
+                current = DataValue.of(m.fields().get(part));
+            } else {
+                return new DataValue.Empty();
+            }
+            if (current == null) return new DataValue.Empty();
         }
-
-        String[] parts = key.split("\\.");
-        Object current = storage;
-
-        for (String part : parts) {
-            if (!(current instanceof Map)) return null;
-            current = ((Map<String, Object>) current).get(part);
-            if (current == null) return null;
-        }
-        return current;
+        return current != null ? current : new DataValue.Empty();
     }
 
-    @Override public Map<String, Object> getRoot() { return storage; }
-    @Override public Map<String, Object> getAll() { return storage; }
-    @Override public boolean contains(String key) { return get(key) != null; }
+    /**
+     * Garante que o caminho exista e seja mutável.
+     */
+    private DataValue ensurePath(String path) {
+        DataPath dataPath = DataPath.of(path);
+        Map<String, DataValue> currentMap = storage;
+        DataValue lastNode = null;
+
+        for (String part : dataPath.getParts()) {
+            lastNode = currentMap.computeIfAbsent(part, k -> 
+                new DataValue.Mapping(new ConcurrentHashMap<>(), null));
+            
+            if (lastNode instanceof DataValue.Mapping m) {
+                currentMap = (Map<String, DataValue>) m.fields();
+            } else {
+                // Colisão: Sobrescreve valor escalar com mapa para permitir navegação
+                Map<String, DataValue> newMap = new ConcurrentHashMap<>();
+                lastNode = new DataValue.Mapping(newMap, null);
+                currentMap.put(part, lastNode);
+                currentMap = newMap;
+            }
+        }
+        return lastNode;
+    }
+
+    @Override public Map<String, Object> getRoot() {
+        Map<String, Object> rawMap = new java.util.HashMap<>();
+        storage.forEach((k, v) -> rawMap.put(k, v.raw()));
+        return rawMap;
+    }
+
+    @Override public Map<String, Object> getAll() { return getRoot(); }
+    @Override public boolean contains(String key) { return !(get(key) instanceof DataValue.Empty); }
 }

@@ -1,72 +1,51 @@
 package br.com.orquestrator.orquestrator.core.engine.validation;
 
+import br.com.orquestrator.orquestrator.domain.model.DataType;
+import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.exception.PipelineValidationException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.networknt.schema.ValidationMessage;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validator;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.Set;
-import java.util.regex.Pattern;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
- * DataValidator: Especialista em validação híbrida (Bean Validation + JSON Schema).
+ * DataValidator: Orquestrador de estratégias de validação.
+ * SOLID: Open/Closed Principle e Strategy Pattern.
  */
 @Component
-@RequiredArgsConstructor
 public class DataValidator {
 
-    private final ObjectMapper objectMapper;
-    private final Validator beanValidator; // Injetado pelo Spring (Hibernate Validator)
+    private final Map<DataType, ValidationStrategy> strategies;
 
-    public void validate(ContractRegistry.CompiledContract compiled, Object value) {
-        var def = compiled.definition();
-        
-        if (value == null) {
-            if (def.required()) throw new PipelineValidationException("O dado '" + def.contextKey() + "' é obrigatório.");
+    public DataValidator(List<ValidationStrategy> strategyList) {
+        this.strategies = strategyList.stream()
+                .collect(Collectors.toMap(ValidationStrategy::getType, Function.identity(), (a, b) -> a));
+    }
+
+    public void validate(ContractRegistry.CompiledContract compiled, Object rawValue) {
+        var contract = compiled.definition();
+        var value = DataValue.of(rawValue);
+
+        // 1. Validação de Obrigatoriedade
+        if (value instanceof DataValue.Empty) {
+            if (contract.required()) {
+                throw new PipelineValidationException("O dado '" + contract.contextKey() + "' é obrigatório.");
+            }
             return;
         }
 
-        // 1. Validação via JSON Schema (Para dados dinâmicos do banco)
-        if (compiled.schema() != null) {
-            validateWithSchema(compiled, value);
-        } 
+        // 2. Seleção de Estratégia
+        ValidationStrategy strategy = strategies.get(contract.type());
         
-        // 2. Validação via Bean Validation (Se o objeto for um POJO/Record com anotações)
-        validateBean(value);
-
-        // 3. Validações Simples (Fallback para tipos primitivos)
-        validateSimple(def, value);
-    }
-
-    private void validateWithSchema(ContractRegistry.CompiledContract compiled, Object value) {
-        JsonNode node = objectMapper.valueToTree(value);
-        Set<ValidationMessage> errors = compiled.schema().validate(node);
-
-        if (!errors.isEmpty()) {
-            throw new PipelineValidationException(String.format(
-                "Contrato violado em '%s': %s", 
-                compiled.definition().contextKey(), errors.iterator().next().getMessage()));
+        // Fallback para Scalar se não houver estratégia específica (ex: STRING, NUMBER, BOOLEAN)
+        if (strategy == null && contract.type() != DataType.OBJECT) {
+            strategy = strategies.get(DataType.STRING); // ScalarStrategy
         }
-    }
 
-    private void validateBean(Object value) {
-        // Valida anotações como @NotNull, @Email, @Min, etc.
-        Set<ConstraintViolation<Object>> violations = beanValidator.validate(value);
-        if (!violations.isEmpty()) {
-            throw new PipelineValidationException("Erro de validação no objeto: " + 
-                violations.iterator().next().getMessage());
-        }
-    }
-
-    private void validateSimple(br.com.orquestrator.orquestrator.domain.model.DataContract def, Object value) {
-        if (def.formatRule() != null && value instanceof String str) {
-            if (!Pattern.matches(def.formatRule(), str)) {
-                throw new PipelineValidationException("Formato inválido para '" + def.contextKey() + "'");
-            }
+        if (strategy != null) {
+            strategy.validate(compiled, value);
         }
     }
 }

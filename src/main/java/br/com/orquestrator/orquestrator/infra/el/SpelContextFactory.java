@@ -10,6 +10,8 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.expression.spel.support.StandardTypeConverter;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 @RequiredArgsConstructor
 public class SpelContextFactory {
@@ -18,14 +20,18 @@ public class SpelContextFactory {
     private final ExecutionContextAccessor contextAccessor;
     private final DefaultConversionService spelConversionService;
     
-    private volatile TypeConverter typeConverter;
+    // Reutiliza o conversor de tipos para evitar alocações
+    private final TypeConverter sharedTypeConverter = new StandardTypeConverter(new DefaultConversionService());
 
     public StandardEvaluationContext create(Object root) {
+        // Cria um contexto leve
         StandardEvaluationContext context = new StandardEvaluationContext(root);
         
+        // Adiciona os acessores pré-instanciados (Singleton)
         context.addPropertyAccessor(contextAccessor);
         context.addPropertyAccessor(mapAccessor);
-        context.setTypeConverter(getTypeConverter());
+        
+        context.setTypeConverter(sharedTypeConverter);
 
         if (root instanceof ReadableContext rc) {
             injectSovereignVariables(context, rc);
@@ -35,20 +41,9 @@ public class SpelContextFactory {
     }
 
     private void injectSovereignVariables(StandardEvaluationContext context, ReadableContext rc) {
-        // Usa o SCHEMA para saber quais variáveis injetar
+        // Usa os namespaces soberanos definidos no schema
         for (String ns : ContextSchema.sovereignNamespaces()) {
             context.setVariable(ns, rc.get(ns));
         }
-    }
-
-    private TypeConverter getTypeConverter() {
-        if (typeConverter == null) {
-            synchronized (this) {
-                if (typeConverter == null) {
-                    typeConverter = new StandardTypeConverter(spelConversionService);
-                }
-            }
-        }
-        return typeConverter;
     }
 }

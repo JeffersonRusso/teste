@@ -5,6 +5,7 @@ import br.com.orquestrator.orquestrator.core.context.identity.RequestIdentity;
 import br.com.orquestrator.orquestrator.core.context.storage.MapDataStore;
 import br.com.orquestrator.orquestrator.domain.ApiConstants;
 import br.com.orquestrator.orquestrator.domain.ContextKey;
+import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.exception.PipelineException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -23,24 +24,22 @@ public class ContextFactory {
         
         ExecutionContext context = new ExecutionContext(identity, storage);
         
-        // Extrai apenas os dados de negócio (campo 'operation') para o namespace 'raw'
         Map<String, Object> operationData = (Map<String, Object>) fullBody.getOrDefault(ApiConstants.BODY_OPERATION_DATA, Map.of());
 
-        storage.put(ContextSchema.header(), safeConcurrentMap(headers));
-        storage.put(ContextSchema.raw(), safeConcurrentMap(operationData));
-        storage.put(ContextSchema.standard(), new ConcurrentHashMap<>());
+        WriteableContext writer = context.writer();
         
-        storage.put(ContextKey.OPERATION_TYPE, requestIdentity.operationType());
-        storage.put("order_id", requestIdentity.orderId());
-        storage.put("execution_id", requestIdentity.executionId());
+        // CRÍTICO: Usar ConcurrentHashMap para garantir mutabilidade nos namespaces
+        writer.put(ContextSchema.header(), DataValue.of(new ConcurrentHashMap<>(headers)));
+        writer.put(ContextSchema.raw(), DataValue.of(new ConcurrentHashMap<>(operationData)));
+        writer.put(ContextSchema.standard(), DataValue.of(new ConcurrentHashMap<>()));
+        
+        writer.put(ContextKey.OPERATION_TYPE, DataValue.of(requestIdentity.operationType()));
+        writer.put("order_id", DataValue.of(requestIdentity.orderId()));
+        writer.put("execution_id", DataValue.of(requestIdentity.executionId()));
 
         addDefaultConstraints(context);
 
         return context;
-    }
-
-    private <K, V> Map<K, V> safeConcurrentMap(Map<K, V> source) {
-        return source != null ? new ConcurrentHashMap<>(source) : new ConcurrentHashMap<>();
     }
 
     private void addDefaultConstraints(ExecutionContext context) {

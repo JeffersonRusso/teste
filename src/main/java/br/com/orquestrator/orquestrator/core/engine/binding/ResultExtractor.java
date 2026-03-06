@@ -1,31 +1,36 @@
 package br.com.orquestrator.orquestrator.core.engine.binding;
 
 import br.com.orquestrator.orquestrator.core.context.ReadableContext;
+import br.com.orquestrator.orquestrator.domain.model.DataValue;
+import br.com.orquestrator.orquestrator.domain.vo.DataPath;
 import br.com.orquestrator.orquestrator.domain.vo.Pipeline;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * ResultExtractor: Extrai os dados finais do banco de contexto.
- * Recebe a visão de leitura explicitamente (Desacoplado do escopo).
- */
+@Slf4j
 @Component
 public class ResultExtractor {
 
     public Map<String, Object> extract(ReadableContext reader, Pipeline pipeline) {
-        Set<String> outputs = pipeline.requiredOutputs();
+        Set<DataPath> outputs = pipeline.requiredOutputs();
+        
         if (outputs == null || outputs.isEmpty()) return Map.of();
 
         Map<String, Object> result = new HashMap<>((int) (outputs.size() / 0.75f) + 1);
-        for (String key : outputs) {
-            Object value = reader.get(key);
-            if (value != null) {
-                result.put(key, value);
+        
+        for (DataPath path : outputs) {
+            // CAMINHO QUENTE: Usa o DataPath pré-resolvido
+            DataValue dv = reader.get(path);
+            
+            if (!(dv instanceof DataValue.Empty)) {
+                result.put(path.value(), dv.raw());
             }
         }
+
         return result;
     }
 }

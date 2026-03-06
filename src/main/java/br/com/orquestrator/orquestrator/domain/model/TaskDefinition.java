@@ -7,10 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * TaskDefinition: Definição imutável de uma tarefa.
- * Refatorado para refletir o novo schema Data-Driven (Rede de Petri).
- */
 public record TaskDefinition(
     NodeId nodeId,
     Integer version,
@@ -20,18 +16,10 @@ public record TaskDefinition(
     Map<String, Object> config,
     List<FeatureDefinition> features,
     boolean failFast,
-    
-    // Data-Driven: Inputs e Outputs como Mapas
-    // Inputs: { "param_name": "context_key" }
     Map<String, String> inputs,
-    // Outputs: { "result_name": "context_key" }
     Map<String, String> outputs,
-    
-    // Controle de Fluxo
     Set<String> activationTags,
     String guardCondition,
-    
-    // Legado (para compatibilidade se necessário, mas idealmente removido)
     boolean global,
     long refreshIntervalMs
 ) {
@@ -44,11 +32,16 @@ public record TaskDefinition(
         activationTags = activationTags != null ? Set.copyOf(activationTags) : Set.of("default");
     }
 
-    public List<FeatureDefinition> getAllFeaturesOrdered() {
-        return features;
+    /**
+     * Identifica se a task é CPU-Bound (Leve).
+     * Tasks de script e lógica são candidatas à fusão para economizar Virtual Threads.
+     */
+    public boolean isCpuBound() {
+        return "AVIATOR".equalsIgnoreCase(type) || 
+               "GROOVY_SCRIPT".equalsIgnoreCase(type) || 
+               "SPEL".equalsIgnoreCase(type);
     }
-    
-    // Métodos de conveniência
+
     public NodeId getNodeId() { return nodeId; }
     public String getName() { return name; }
     public String getType() { return type; }

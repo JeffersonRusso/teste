@@ -1,34 +1,46 @@
 package br.com.orquestrator.orquestrator.core.engine.runtime;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 
 /**
- * ExecutionClock: A única autoridade sobre prazos e timeouts.
- * Centraliza o cálculo de deadlines para evitar dispersão de lógica de tempo.
+ * ExecutionClock: A autoridade sobre o tempo.
+ * Permite injeção de Clock para testes determinísticos.
  */
 public final class ExecutionClock {
 
+    private static Clock clock = Clock.systemUTC();
+
     private ExecutionClock() {}
 
-    /** Calcula o momento exato de expiração baseado em um timeout. */
+    /** Permite alterar o relógio global (Útil APENAS para testes). */
+    public static void setClock(Clock newClock) {
+        clock = newClock;
+    }
+
+    public static void reset() {
+        clock = Clock.systemUTC();
+    }
+
+    public static Instant now() {
+        return Instant.now(clock);
+    }
+
     public static Instant calculateDeadline(Duration timeout) {
-        return Instant.now().plus(timeout);
+        return now().plus(timeout);
     }
 
-    /** Calcula o momento exato de expiração baseado em milissegundos. */
     public static Instant calculateDeadline(long timeoutMs) {
-        return Instant.now().plusMillis(timeoutMs);
+        return now().plusMillis(timeoutMs);
     }
 
-    /** Verifica se um prazo já foi atingido. */
     public static boolean isExpired(Instant deadline) {
-        return Instant.now().isAfter(deadline);
+        return now().isAfter(deadline);
     }
 
-    /** Retorna o tempo restante até um prazo. */
     public static Duration remaining(Instant deadline) {
-        Duration d = Duration.between(Instant.now(), deadline);
+        Duration d = Duration.between(now(), deadline);
         return d.isNegative() ? Duration.ZERO : d;
     }
 }

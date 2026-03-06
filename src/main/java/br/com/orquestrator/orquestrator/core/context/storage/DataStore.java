@@ -1,18 +1,21 @@
 package br.com.orquestrator.orquestrator.core.context.storage;
 
+import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import java.util.Map;
 
 /**
- * DataStore: Contrato único para armazenamento.
+ * DataStore: Contrato único para armazenamento tipado.
+ * Alinhado com ReadableContext e WriteableContext.
  */
 public interface DataStore {
-    /**
-     * Grava um dado. Se a chave contiver pontos (ex: a.b.c), 
-     * cria a estrutura aninhada automaticamente.
-     */
-    void put(String key, Object value);
+    /** Grava um DataValue. */
+    void put(String key, DataValue value);
 
-    Object get(String key);
+    /** Retorna o DataValue completo. */
+    DataValue get(String key);
+
+    /** Retorna o estado completo do armazenamento. */
     Map<String, Object> getAll();
+
     boolean contains(String key);
 }

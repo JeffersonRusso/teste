@@ -1,11 +1,8 @@
 package br.com.orquestrator.orquestrator.tasks.script.spel;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-/**
- * Configuração imutável e tipada para a SpelTask.
- */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record SpelTaskConfiguration(
-    @JsonProperty("expression") String expression,
-    @JsonProperty("required") boolean required
+    String expression
 ) {}
