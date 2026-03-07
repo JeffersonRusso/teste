@@ -12,9 +12,9 @@ import java.util.concurrent.Executors;
 
 /**
  * Configuração HTTP de ultra-performance otimizada para Java 21+.
- * Ajustada para HTTP/1.1 para evitar o erro 'too many concurrent streams' em alta carga.
+ * DESATIVADO: Substituído pelo HttpClientConfig (Apache HttpClient 5) para melhor performance de pool.
  */
-@Configuration
+// @Configuration 
 public class HttpConfig {
 
     @Bean
@@ -22,9 +22,6 @@ public class HttpConfig {
         return HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
                 .executor(Executors.newVirtualThreadPerTaskExecutor())
-                // Forçamos HTTP/1.1 para garantir que o cliente abra múltiplas conexões TCP
-                // em vez de tentar multiplexar tudo em uma única conexão HTTP/2,
-                // o que causa gargalo de 'concurrent streams' em orquestradores massivos.
                 .version(HttpClient.Version.HTTP_1_1) 
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();

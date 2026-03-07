@@ -1,0 +1,71 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/v1/cliente/.*"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 100,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "id": "123456789",
+      "nome": "João da Silva",
+      "cpf": "123.456.789-00",
+      "data_nascimento": "1985-05-20",
+      "email": "joao.silva@exemplo.com.br",
+      "telefone": "+55 11 98765-4321",
+      "status": "ATIVO",
+      "endereco": {
+        "logradouro": "Avenida Paulista",
+        "numero": "1000",
+        "complemento": "Apto 101",
+        "bairro": "Bela Vista",
+        "cidade": "São Paulo",
+        "estado": "SP",
+        "cep": "01310-100",
+        "pais": "Brasil",
+        "coordenadas": {
+          "latitude": -23.5614,
+          "longitude": -46.6559
+        }
+      },
+      "dados_financeiros": {
+        "renda_mensal": 15000.50,
+        "patrimonio_estimado": 500000.00,
+        "score_interno": 850,
+        "limite_credito_atual": 25000.00,
+        "historico_pagamentos": [
+          { "mes": "2023-01", "status": "PAGO", "valor": 1200.00 },
+          { "mes": "2023-02", "status": "PAGO", "valor": 1250.00 },
+          { "mes": "2023-03", "status": "PAGO", "valor": 1100.00 },
+          { "mes": "2023-04", "status": "PAGO", "valor": 1300.00 },
+          { "mes": "2023-05", "status": "PAGO", "valor": 1200.00 }
+        ],
+        "contas_bancarias": [
+          { "banco": "001", "agencia": "1234", "conta": "56789-0", "tipo": "CORRENTE" },
+          { "banco": "237", "agencia": "4321", "conta": "98765-4", "tipo": "POUPANCA" }
+        ]
+      },
+      "documentos": {
+        "rg": { "numero": "12.345.678-9", "orgao_emissor": "SSP", "uf": "SP" },
+        "cnh": { "numero": "98765432100", "categoria": "AB", "validade": "2028-12-31" },
+        "passaporte": { "numero": "FP123456", "validade": "2030-01-01" }
+      },
+      "preferencias": {
+        "notificacoes": { "email": true, "sms": false, "push": true },
+        "idioma": "pt-BR",
+        "tema": "DARK",
+        "categorias_interesse": ["INVESTIMENTOS", "VIAGENS", "TECNOLOGIA"]
+      },
+      "metadata": {
+        "ultima_atualizacao": "2023-10-27T14:30:00Z",
+        "origem_cadastro": "APP_MOBILE",
+        "versao_termos_uso": "2.1.0",
+        "dispositivo_frequente": "iPhone 15 Pro",
+        "tags": ["VIP", "ALTA_RENDA", "INVESTIDOR"]
+      }
+    }
+  }
+}

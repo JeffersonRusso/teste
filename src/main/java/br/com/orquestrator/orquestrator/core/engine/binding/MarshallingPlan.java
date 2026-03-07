@@ -9,5 +9,6 @@ import java.util.Map;
 public record MarshallingPlan(
     Map<String, String> inputMap,
     Map<OutputMapper, DataPath> outputPlan, // Estratégia -> Destino
+    Map<String, String> rawOutputMap,       // Expressão Original -> Destino (Para otimizações)
     String nodeId
 ) {}

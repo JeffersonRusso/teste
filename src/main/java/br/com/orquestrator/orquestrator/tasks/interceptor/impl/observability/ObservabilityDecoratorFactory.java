@@ -2,7 +2,7 @@ package br.com.orquestrator.orquestrator.tasks.interceptor.impl.observability;
 
 import br.com.orquestrator.orquestrator.core.engine.observability.PipelineEventPublisher;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.DecoratorFactory;
-import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
+import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -14,18 +14,13 @@ public class ObservabilityDecoratorFactory implements DecoratorFactory<Map<Strin
 
     private final PipelineEventPublisher eventPublisher;
 
-    @Override
-    public String getType() {
-        return "OBSERVABILITY";
+    @Override public String getType() { return "OBSERVABILITY"; }
+    @Override public Class<Map<String, Object>> getConfigClass() { 
+        return (Class<Map<String, Object>>) (Class<?>) Map.class; 
     }
 
     @Override
-    public Class<Map<String, Object>> getConfigClass() {
-        return (Class) Map.class;
-    }
-
-    @Override
-    public TaskDecorator create(Map<String, Object> config, String nodeId) {
+    public TaskInterceptor create(Map<String, Object> config, String nodeId) {
         return new ObservabilityInterceptor(eventPublisher, nodeId);
     }
 }

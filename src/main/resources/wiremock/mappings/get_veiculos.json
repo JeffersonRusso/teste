@@ -1,0 +1,54 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/v1/veiculos/.*"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 100,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "id_veiculo": "VEI-998877",
+      "placa": "ABC-1234",
+      "renavam": "12345678901",
+      "chassi": "9BWZZZ37Z8P000001",
+      "marca": "VOLKSWAGEN",
+      "modelo": "GOLF GTI",
+      "ano_fabricacao": 2023,
+      "ano_modelo": 2024,
+      "cor": "PRETO",
+      "combustivel": "GASOLINA",
+      "status_documentacao": "REGULAR",
+      "licenciamento": {
+        "data_vencimento": "2024-10-31",
+        "valor_estimado": 250.00,
+        "status": "PAGO"
+      },
+      "ipva": {
+        "ano": 2023,
+        "valor_total": 4500.00,
+        "parcelas_pagas": 3,
+        "total_parcelas": 5,
+        "status": "EM_DIA"
+      },
+      "multas": [
+        { "data": "2023-08-15", "valor": 195.23, "descricao": "EXCESSO_VELOCIDADE", "status": "PAGA" },
+        { "data": "2023-09-20", "valor": 130.16, "descricao": "ESTACIONAMENTO_IRREGULAR", "status": "EM_RECURSO" }
+      ],
+      "seguro_obrigatorio": {
+        "data_vencimento": "2024-01-01",
+        "valor": 65.00,
+        "status": "PAGO"
+      },
+      "valor_fipe": 215000.00,
+      "quilometragem_atual": 12500,
+      "ultima_revisao": "2023-05-10",
+      "proxima_revisao": "2024-05-10",
+      "caracteristicas_adicionais": {
+        "blindado": false,
+        "teto_solar": true,
+        "bancos_couro": true
+      }
+    }
+  }
+}

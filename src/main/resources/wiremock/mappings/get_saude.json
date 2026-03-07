@@ -1,0 +1,55 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/v1/saude/.*"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 100,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "id_paciente": "PAC-112233",
+      "plano_saude": {
+        "nome": "Amil One",
+        "numero_carteirinha": "1234567890123456",
+        "tipo_plano": "PREMIUM",
+        "status": "ATIVO",
+        "validade": "2025-12-31"
+      },
+      "historico_clinico": {
+        "tipo_sanguineo": "O+",
+        "alergias": ["PENICILINA", "ACAROS"],
+        "doencas_cronicas": ["HIPERTENSAO"],
+        "medicamentos_uso_continuo": [
+          { "nome": "Losartana", "dosagem": "50mg", "frequencia": "1x ao dia" }
+        ]
+      },
+      "ultimos_exames": [
+        { "nome": "Hemograma Completo", "data": "2023-09-15", "laboratorio": "Fleury", "status": "NORMAL" },
+        { "nome": "Colesterol Total", "data": "2023-09-15", "laboratorio": "Fleury", "status": "ALTERADO" }
+      ],
+      "consultas_agendadas": [
+        { "especialidade": "Cardiologia", "medico": "Dr. Roberto Silva", "data": "2023-11-05T14:00:00Z" },
+        { "especialidade": "Dermatologia", "medico": "Dra. Ana Costa", "data": "2023-11-12T10:30:00Z" }
+      ],
+      "vacinas": [
+        { "nome": "COVID-19", "doses": 4, "ultima_dose": "2023-01-10" },
+        { "nome": "Gripe", "doses": 1, "ultima_dose": "2023-05-20" }
+      ],
+      "biometria": {
+        "peso": 82.5,
+        "altura": 1.80,
+        "imc": 25.46,
+        "pressao_arterial": "12/8"
+      },
+      "ultima_atualizacao": "2023-10-27T20:00:00Z",
+      "risco_saude": "BAIXO",
+      "objetivos": ["PERDA_PESO", "CONDICIONAMENTO_FISICO"],
+      "caracteristicas_adicionais": {
+        "doador_orgaos": true,
+        "pratica_exercicios": true,
+        "fumante": false
+      }
+    }
+  }
+}

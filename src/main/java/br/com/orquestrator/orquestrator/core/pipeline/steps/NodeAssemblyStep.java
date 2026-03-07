@@ -21,12 +21,10 @@ public class NodeAssemblyStep implements CompilationStep {
     @Override public int getOrder() { return 40; }
 
     @Override
-    public void execute(CompilationSession session) {
+    public CompilationSession execute(CompilationSession session) {
         Map<String, ExecutionNode> nodes = new HashMap<>();
         Set<String> processed = new HashSet<>();
         
-        // CRÍTICO: Apenas chaves produzidas por tasks que ESTÃO NESTA SESSÃO
-        // podem ser consideradas dependências bloqueantes.
         Set<String> activeProducedKeys = new HashSet<>();
         session.getTasks().forEach(t -> activeProducedKeys.addAll(t.outputs().values()));
 
@@ -44,5 +42,6 @@ public class NodeAssemblyStep implements CompilationStep {
             }
         }
         session.setNodes(nodes);
+        return session;
     }
 }

@@ -1,0 +1,43 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/v1/seguros/.*"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 100,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "id_apolice": "SEG-123456",
+      "tipo_seguro": "VIDA_E_SAUDE",
+      "status": "VIGENTE",
+      "data_inicio": "2023-01-01",
+      "data_fim": "2024-01-01",
+      "premio_mensal": 250.00,
+      "coberturas": [
+        { "nome": "Morte Natural", "valor": 500000.00, "status": "ATIVO" },
+        { "nome": "Morte Acidental", "valor": 1000000.00, "status": "ATIVO" },
+        { "nome": "Invalidez Permanente", "valor": 250000.00, "status": "ATIVO" },
+        { "nome": "Assistência Funeral", "valor": 10000.00, "status": "ATIVO" }
+      ],
+      "beneficiarios": [
+        { "nome": "Maria da Silva", "parentesco": "CONJUGE", "percentual": 50 },
+        { "nome": "Pedro da Silva", "parentesco": "FILHO", "percentual": 50 }
+      ],
+      "seguradora": {
+        "nome": "Seguradora X",
+        "cnpj": "12.345.678/0001-99",
+        "telefone_emergencia": "0800-123-4567"
+      },
+      "historico_sinistros": [],
+      "proxima_renovacao": "2023-12-01",
+      "forma_pagamento": "DEBITO_AUTOMATICO",
+      "agencia_conta": "1234-56789-0",
+      "caracteristicas_adicionais": {
+        "doencas_preexistentes": false,
+        "fumante": false,
+        "esportes_radicais": true
+      }
+    }
+  }
+}

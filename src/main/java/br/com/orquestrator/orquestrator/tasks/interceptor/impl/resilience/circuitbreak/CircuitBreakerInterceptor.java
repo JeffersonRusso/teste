@@ -1,19 +1,17 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.impl.resilience.circuitbreak;
 
-import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
-import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
-import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
+import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public class CircuitBreakerInterceptor implements TaskDecorator {
+public class CircuitBreakerInterceptor implements TaskInterceptor {
 
     private final CircuitBreaker circuitBreaker;
 
     @Override
-    public TaskResult apply(TaskContext context, TaskChain next) {
-        return circuitBreaker.executeSupplier(() -> next.proceed(context));
+    public TaskResult intercept(Chain chain) {
+        return circuitBreaker.executeSupplier(() -> chain.proceed(chain.context()));
     }
 }

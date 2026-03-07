@@ -1,9 +1,8 @@
 package br.com.orquestrator.orquestrator.core.engine.runtime;
 
 import br.com.orquestrator.orquestrator.domain.FeatureDefinition;
-import br.com.orquestrator.orquestrator.exception.PipelineException;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.DecoratorFactory;
-import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
+import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -15,7 +14,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * InterceptorEngine: Fábrica de decoradores otimizada com Map Injection.
+ * InterceptorEngine: Fábrica de interceptores lineares.
  */
 @Slf4j
 @Component
@@ -34,22 +33,22 @@ public class InterceptorEngine {
                 ));
     }
 
-    public List<TaskDecorator> resolveInterceptors(List<FeatureDefinition> features, String nodeId) {
+    public List<TaskInterceptor> resolveInterceptors(List<FeatureDefinition> features, String nodeId) {
         if (features == null || features.isEmpty()) return List.of();
 
         return features.stream()
-                .map(feature -> createDecorator(feature, nodeId))
+                .map(feature -> createInterceptor(feature, nodeId))
                 .filter(Objects::nonNull)
                 .toList();
     }
 
     @SuppressWarnings("unchecked")
-    private TaskDecorator createDecorator(FeatureDefinition feature, String nodeId) {
+    private TaskInterceptor createInterceptor(FeatureDefinition feature, String nodeId) {
         String type = feature.type().toUpperCase();
         DecoratorFactory<Object> factory = (DecoratorFactory<Object>) factoryMap.get(type);
 
         if (factory == null) {
-            log.warn("Nenhuma fábrica encontrada para o decorador: {} no nó {}", type, nodeId);
+            log.warn("Nenhuma fábrica encontrada para o interceptor: {} no nó {}", type, nodeId);
             return null;
         }
 
@@ -57,7 +56,7 @@ public class InterceptorEngine {
             Object config = objectMapper.convertValue(feature.config(), factory.getConfigClass());
             return factory.create(config, nodeId);
         } catch (Exception e) {
-            log.error("Erro ao configurar decorador [{}] no nó [{}]: {}", type, nodeId, e.getMessage());
+            log.error("Erro ao configurar interceptor [{}] no nó [{}]: {}", type, nodeId, e.getMessage());
             return null;
         }
     }

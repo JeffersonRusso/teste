@@ -4,10 +4,8 @@ import br.com.orquestrator.orquestrator.core.context.ContextHolder;
 import br.com.orquestrator.orquestrator.core.engine.runtime.CacheEngine;
 import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
-import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
-import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
-import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
+import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 import br.com.orquestrator.orquestrator.tasks.interceptor.config.CacheConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +15,7 @@ import java.util.Optional;
 
 @Slf4j
 @RequiredArgsConstructor
-public class CacheInterceptor implements TaskDecorator {
+public class CacheInterceptor implements TaskInterceptor {
 
     private final ExpressionEngine expressionEngine;
     private final CacheEngine cacheEngine;
@@ -25,11 +23,11 @@ public class CacheInterceptor implements TaskDecorator {
     private final String nodeId;
 
     @Override
-    public TaskResult apply(TaskContext context, TaskChain next) {
-        if (config == null || config.key() == null) return next.proceed(context);
+    public TaskResult intercept(Chain chain) {
+        if (config == null || config.key() == null) return chain.proceed(chain.context());
 
         try {
-            DataValue keyDv = expressionEngine.evaluate(config.key(), ContextHolder.reader());
+            DataValue keyDv = expressionEngine.compile(config.key()).evaluate(ContextHolder.reader());
             String cacheKey = keyDv.as(String.class).orElse(keyDv.raw().toString());
 
             Optional<DataValue> cached = cacheEngine.get(nodeId, cacheKey);
@@ -39,7 +37,7 @@ public class CacheInterceptor implements TaskDecorator {
                 return TaskResult.success(cached.get(), Map.of("cache_hit", true));
             }
 
-            TaskResult result = next.proceed(context);
+            TaskResult result = chain.proceed(chain.context());
             if (result != null && result.isSuccess()) {
                 cacheEngine.put(nodeId, cacheKey, result.body(), config.ttlMs());
             }
@@ -47,7 +45,7 @@ public class CacheInterceptor implements TaskDecorator {
 
         } catch (Exception e) {
             log.error("Falha na operação de cache para {}: {}", nodeId, e.getMessage());
-            return next.proceed(context);
+            return chain.proceed(chain.context());
         }
     }
 }

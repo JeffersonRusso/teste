@@ -1,0 +1,47 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/v1/conta/.*"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 100,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "id_conta": "987654321",
+      "numero_agencia": "1234",
+      "numero_conta": "56789-0",
+      "digito_verificador": "0",
+      "tipo_conta": "CORRENTE",
+      "data_abertura": "2020-01-15",
+      "status_conta": "ATIVA",
+      "saldo": {
+        "valor_disponivel": 12500.75,
+        "valor_bloqueado": 500.00,
+        "limite_cheque_especial": 5000.00,
+        "moeda": "BRL"
+      },
+      "titularidade": {
+        "cpf_cnpj": "123.456.789-00",
+        "nome_titular": "João da Silva",
+        "tipo_pessoa": "FISICA"
+      },
+      "cartoes": [
+        { "final_cartao": "4321", "bandeira": "VISA", "status": "ATIVO", "tipo": "DEBITO" },
+        { "final_cartao": "8765", "bandeira": "MASTERCARD", "status": "BLOQUEADO", "tipo": "CREDITO" }
+      ],
+      "configuracoes": {
+        "pix_ativo": true,
+        "debito_automatico": true,
+        "investimento_automatico": false
+      },
+      "ultima_transacao": {
+        "data": "2023-10-27T10:15:00Z",
+        "valor": -150.00,
+        "descricao": "PAGAMENTO BOLETO LUZ"
+      }
+    }
+  }
+}

@@ -23,10 +23,11 @@ public class SpelTask implements Task, Configurable<SpelTaskConfiguration> {
         SpelTaskConfiguration config = context.getConfig();
         
         if (config.expression() == null || config.expression().isBlank()) {
-            return TaskResult.success(new DataValue.Empty());
+            return TaskResult.success(DataValue.EMPTY);
         }
 
-        DataValue result = expressionEngine.evaluate(config.expression(), context.inputs());
+        // OTIMIZAÇÃO: Compila e avalia
+        DataValue result = expressionEngine.compile(config.expression()).evaluate(context.inputs());
         return TaskResult.success(result);
     }
 }

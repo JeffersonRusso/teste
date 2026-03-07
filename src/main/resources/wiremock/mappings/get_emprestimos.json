@@ -1,0 +1,46 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/v1/emprestimos/.*"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 100,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "id_contrato": "EMP-776655",
+      "tipo_emprestimo": "CONSIGNADO",
+      "status": "ATIVO",
+      "data_contratacao": "2022-05-15",
+      "data_vencimento": "2025-05-15",
+      "valor_contratado": 50000.00,
+      "valor_total_pagar": 72500.00,
+      "valor_saldo_devedor": 35450.20,
+      "taxa_juros": {
+        "mensal": 1.25,
+        "anual": 16.08,
+        "cet_anual": 18.50
+      },
+      "parcelas": {
+        "total": 36,
+        "pagas": 18,
+        "restantes": 18,
+        "valor_parcela": 2013.89,
+        "vencimento_proxima": "2023-11-15"
+      },
+      "garantias": [
+        { "tipo": "RESERVA_MARGEM", "valor": 50000.00, "status": "ATIVO" }
+      ],
+      "historico_pagamentos": [
+        { "parcela": 1, "data": "2022-06-15", "valor": 2013.89, "status": "PAGO" },
+        { "parcela": 2, "data": "2022-07-15", "valor": 2013.89, "status": "PAGO" },
+        { "parcela": 3, "data": "2022-08-15", "valor": 2013.89, "status": "PAGO" }
+      ],
+      "seguro_prestamista": true,
+      "iof_total": 1250.00,
+      "custo_efetivo_total": 18.50,
+      "canal_contratacao": "APP_MOBILE",
+      "finalidade": "REFORMA_CASA"
+    }
+  }
+}

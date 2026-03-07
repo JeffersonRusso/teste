@@ -3,7 +3,8 @@ package br.com.orquestrator.orquestrator.tasks.registry.factory;
 import br.com.orquestrator.orquestrator.core.engine.binding.MarshallingPlan;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
-import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
+import br.com.orquestrator.orquestrator.tasks.interceptor.api.InterceptorTask;
+import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 import br.com.orquestrator.orquestrator.tasks.registry.TaskRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -18,12 +19,11 @@ public class TaskChainCompiler {
     private final TaskRegistry taskRegistry;
 
     public Task compile(Task core, TaskDefinition def) {
-        MarshallingPlan plan = context.marshaller().createPlan(def);
-
-        // DESACOPLAMENTO TOTAL: O compilador pergunta ao registro qual é a config
+        MarshallingPlan plan = context.outputCompiler().createPlan(def);
         Class<?> configClass = taskRegistry.getConfigClass(def.type()).orElse(null);
 
-        List<TaskDecorator> chain = new DecoratorPipelineBuilder(context, def)
+        // O Builder agora retorna uma lista de Interceptores (Bolinhas lineares)
+        List<TaskInterceptor> interceptors = new DecoratorPipelineBuilder(context, def)
                 .withInfra()
                 .withData(plan)
                 .withConfigResolution(configClass)
@@ -31,18 +31,9 @@ public class TaskChainCompiler {
                 .withFeatures()
                 .withGuard()
                 .withValidation()
-                .build();
+                .buildInterceptors();
 
-        return assemble(core, chain);
-    }
-
-    private Task assemble(Task core, List<TaskDecorator> chain) {
-        Task current = core;
-        for (int i = chain.size() - 1; i >= 0; i--) {
-            final TaskDecorator decorator = chain.get(i);
-            final Task next = current;
-            current = (ctx) -> decorator.apply(ctx, next::execute);
-        }
-        return current;
+        // Retorna a task envolta na cadeia linear
+        return new InterceptorTask(core, interceptors);
     }
 }

@@ -1,0 +1,45 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/v1/investimentos/.*"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 100,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "id_carteira": "INV-998877",
+      "perfil_investidor": "ARROJADO",
+      "patrimonio_total": 150450.75,
+      "rentabilidade_mes": 1.25,
+      "rentabilidade_ano": 12.8,
+      "posicao_consolidada": {
+        "renda_fixa": {
+          "total": 50000.00,
+          "ativos": [
+            { "nome": "CDB Banco X", "vencimento": "2025-12-01", "taxa": "110% CDI", "valor": 30000.00 },
+            { "nome": "Tesouro Selic", "vencimento": "2026-03-01", "taxa": "SELIC + 0.1%", "valor": 20000.00 }
+          ]
+        },
+        "renda_variavel": {
+          "total": 100450.75,
+          "acoes": [
+            { "ticker": "PETR4", "quantidade": 500, "preco_medio": 32.50, "valor_atual": 38.20 },
+            { "ticker": "VALE3", "quantidade": 200, "preco_medio": 65.00, "valor_atual": 72.15 },
+            { "ticker": "ITUB4", "quantidade": 1000, "preco_medio": 28.00, "valor_atual": 33.40 }
+          ],
+          "fundos_imobiliarios": [
+            { "ticker": "HGLG11", "quantidade": 50, "valor_atual": 165.00 },
+            { "ticker": "KNRI11", "quantidade": 30, "valor_atual": 158.00 }
+          ]
+        }
+      },
+      "proventos_recebidos": 450.20,
+      "proventos_provisionados": 120.50,
+      "ultima_atualizacao": "2023-10-27T17:00:00Z",
+      "risco_carteira": "MEDIO_ALTO",
+      "objetivos": ["APOSENTADORIA", "COMPRA_IMOVEL"],
+      "alocacao_alvo": { "renda_fixa": 30, "renda_variavel": 70 }
+    }
+  }
+}

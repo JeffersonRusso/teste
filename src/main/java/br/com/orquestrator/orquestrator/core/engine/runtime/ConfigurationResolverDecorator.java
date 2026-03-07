@@ -2,33 +2,31 @@ package br.com.orquestrator.orquestrator.core.engine.runtime;
 
 import br.com.orquestrator.orquestrator.core.engine.binding.TaskBindingResolver;
 import br.com.orquestrator.orquestrator.domain.model.DataValue;
-import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
 import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
-import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
+import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
 
 @RequiredArgsConstructor
-public class ConfigurationResolverDecorator implements TaskDecorator {
+public class ConfigurationResolverDecorator implements TaskInterceptor {
 
     private final TaskBindingResolver bindingResolver;
     private final Map<String, Object> rawConfig;
     private final Class<?> configClass;
 
     @Override
-    public TaskResult apply(TaskContext context, TaskChain next) {
-        // Resolve a configuração usando os inputs do contexto (que já foram populados pelo InputDecorator)
-        // O TaskBindingResolver foi atualizado para usar CURRENT_INPUTS, mas aqui podemos passar explicitamente
-        // se refatorarmos o TaskBindingResolver para aceitar inputs.
-        // Por enquanto, confiamos que o InputDecorator já setou o ScopedValue.
-        
+    public TaskResult intercept(Chain chain) {
         Object resolvedConfig = bindingResolver.resolve(rawConfig, configClass);
         
-        // Cria um novo contexto enriquecido com a configuração
-        TaskContext enrichedContext = new TaskContext(context.inputs(), DataValue.of(resolvedConfig), context.nodeId());
+        TaskContext enrichedContext = new TaskContext(
+            chain.context().inputs(), 
+            DataValue.of(resolvedConfig), 
+            chain.context().nodeId(), 
+            chain.context().requiredFields()
+        );
         
-        return next.proceed(enrichedContext);
+        return chain.proceed(enrichedContext);
     }
 }

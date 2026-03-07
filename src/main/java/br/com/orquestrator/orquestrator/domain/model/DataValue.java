@@ -1,5 +1,6 @@
 package br.com.orquestrator.orquestrator.domain.model;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import java.util.Map;
 import java.util.List;
 import java.util.Optional;
@@ -9,6 +10,11 @@ public sealed interface DataValue
             DataValue.Mapping, DataValue.Sequence, DataValue.DomainObject, 
             DataValue.Empty {
     
+    // FLYWEIGHTS: Instâncias únicas para valores comuns (Economia de memória massiva)
+    DataValue EMPTY = new Empty();
+    DataValue TRUE = new Logic(true, null);
+    DataValue FALSE = new Logic(false, null);
+
     class FormatterHolder {
         private static SemanticFormatter formatter = (type, val) -> val.toString();
         public static void setFormatter(SemanticFormatter f) { formatter = f; }
@@ -35,7 +41,6 @@ public sealed interface DataValue
         @Override public String toString() { return value.toString(); }
     }
 
-    // Otimizado: Guarda a coleção original sem copiar
     record Mapping(Map<String, ?> fields, String semanticType) implements DataValue {
         @Override public Object raw() { return fields; }
     }
@@ -56,18 +61,26 @@ public sealed interface DataValue
     static DataValue of(Object val) { return of(val, null); }
 
     static DataValue of(Object val, String semanticType) {
-        if (val == null) return new Empty();
+        if (val == null) return EMPTY;
         if (val instanceof DataValue dv) return dv;
         
-        // Pattern Matching para criação direta (Zero Recursão)
         return switch (val) {
             case String s -> new Text(s, semanticType);
             case Number n -> new Numeric(n, semanticType);
-            case Boolean b -> new Logic(b, semanticType);
+            case Boolean b -> (semanticType == null) ? (b ? TRUE : FALSE) : new Logic(b, semanticType);
             case Map m -> new Mapping((Map<String, ?>) m, semanticType);
             case List l -> new Sequence(l, semanticType);
+            case JsonNode node -> fromJsonNode(node, semanticType);
             default -> new DomainObject(val, semanticType);
         };
+    }
+
+    private static DataValue fromJsonNode(JsonNode node, String semanticType) {
+        if (node.isTextual()) return new Text(node.asText(), semanticType);
+        if (node.isNumber()) return new Numeric(node.numberValue(), semanticType);
+        if (node.isBoolean()) return (semanticType == null) ? (node.asBoolean() ? TRUE : FALSE) : new Logic(node.asBoolean(), semanticType);
+        if (node.isNull() || node.isMissingNode()) return EMPTY;
+        return new DomainObject(node, semanticType);
     }
 
     default <T> Optional<T> as(Class<T> type) {

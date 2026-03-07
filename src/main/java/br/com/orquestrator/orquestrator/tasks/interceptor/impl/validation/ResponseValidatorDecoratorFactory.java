@@ -2,7 +2,7 @@ package br.com.orquestrator.orquestrator.tasks.interceptor.impl.validation;
 
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.DecoratorFactory;
-import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
+import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 import br.com.orquestrator.orquestrator.tasks.interceptor.config.ResponseValidatorConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -13,18 +13,11 @@ public class ResponseValidatorDecoratorFactory implements DecoratorFactory<Respo
 
     private final ExpressionEngine expressionEngine;
 
-    @Override
-    public String getType() {
-        return "RESPONSE_VALIDATOR";
-    }
+    @Override public String getType() { return "RESPONSE_VALIDATOR"; }
+    @Override public Class<ResponseValidatorConfig> getConfigClass() { return ResponseValidatorConfig.class; }
 
     @Override
-    public Class<ResponseValidatorConfig> getConfigClass() {
-        return ResponseValidatorConfig.class;
-    }
-
-    @Override
-    public TaskDecorator create(ResponseValidatorConfig config, String nodeId) {
+    public TaskInterceptor create(ResponseValidatorConfig config, String nodeId) {
         return new ResponseValidatorDecorator(config, nodeId, expressionEngine);
     }
 }

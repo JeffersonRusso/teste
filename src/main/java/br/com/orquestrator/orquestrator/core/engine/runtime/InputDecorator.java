@@ -1,38 +1,36 @@
 package br.com.orquestrator.orquestrator.core.engine.runtime;
 
 import br.com.orquestrator.orquestrator.core.context.ContextHolder;
-import br.com.orquestrator.orquestrator.core.engine.binding.DataMarshaller;
-import br.com.orquestrator.orquestrator.core.engine.binding.MarshallingPlan;
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
-import br.com.orquestrator.orquestrator.exception.PipelineValidationException;
-import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
+import br.com.orquestrator.orquestrator.core.context.ReadableContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
-import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
+import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 
 @RequiredArgsConstructor
-public class InputDecorator implements TaskDecorator {
+public class InputDecorator implements TaskInterceptor {
 
-    private final DataMarshaller marshaller;
-    private final MarshallingPlan plan;
+    private final Function<ReadableContext, Map<String, Object>> inputResolver;
+    private final Set<String> requiredFields;
 
     @Override
-    public TaskResult apply(TaskContext context, TaskChain next) {
-        // 1. Resolve os inputs brutos
-        Map<String, Object> inputs = marshaller.resolveInputs(plan, ContextHolder.reader());
+    public TaskResult intercept(Chain chain) {
+        Map<String, Object> inputs = inputResolver.apply(ContextHolder.reader());
         
-        // 2. Validação Semântica (Opcional, mas poderosa)
-        // Aqui poderíamos iterar sobre o plano e garantir que cada input bate com o esperado.
-        // Por enquanto, vamos apenas garantir que o contexto seja criado.
-
-        TaskContext enrichedContext = new TaskContext(inputs, context.configuration(), context.nodeId());
+        TaskContext enrichedContext = new TaskContext(
+            inputs, 
+            chain.context().configuration(), 
+            chain.context().nodeId(), 
+            requiredFields
+        );
         
         try {
             return ScopedValue.where(ContextHolder.CURRENT_INPUTS, inputs)
-                    .call(() -> next.proceed(enrichedContext));
+                    .call(() -> chain.proceed(enrichedContext));
         } catch (Exception e) {
             throw (e instanceof RuntimeException re) ? re : new RuntimeException(e);
         }

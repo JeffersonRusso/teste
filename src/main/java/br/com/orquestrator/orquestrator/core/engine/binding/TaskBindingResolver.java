@@ -29,15 +29,15 @@ public class TaskBindingResolver {
         }
 
         try {
+            // Corrigido: API correta do ScopedValue
             Map<String, Object> sourceData = ContextHolder.CURRENT_INPUTS.isBound() 
                 ? ContextHolder.CURRENT_INPUTS.get() 
                 : Map.of();
 
-            // Resolve o mapa de configuração delegando TUDO para a engine
             Map<String, Object> resolvedMap = new HashMap<>();
-            rawConfig.forEach((key, value) -> {
-                resolvedMap.put(key, expressionEngine.evaluate(value, sourceData).raw());
-            });
+            rawConfig.forEach((key, value) -> 
+                resolvedMap.put(key, expressionEngine.compile(value).evaluate(sourceData).raw())
+            );
 
             return convert(resolvedMap, targetClass);
             

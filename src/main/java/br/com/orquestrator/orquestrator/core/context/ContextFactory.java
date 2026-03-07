@@ -18,13 +18,17 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ContextFactory {
 
     @SuppressWarnings("unchecked")
-    public ExecutionContext create(RequestIdentity requestIdentity, Map<String, String> headers, Map<String, Object> fullBody) {
+    public ExecutionContext create(
+            RequestIdentity requestIdentity,
+            Map<String, String> headers,
+            Map<String, Object> fullBody) {
         var identity = new ContextIdentity(requestIdentity.correlationId(), requestIdentity.operationType());
         var storage = new MapDataStore();
         
         ExecutionContext context = new ExecutionContext(identity, storage);
         
-        Map<String, Object> operationData = (Map<String, Object>) fullBody.getOrDefault(ApiConstants.BODY_OPERATION_DATA, Map.of());
+        Map<String, Object> operationData =
+                (Map<String, Object>) fullBody.getOrDefault(ApiConstants.BODY_OPERATION_DATA, Map.of());
 
         WriteableContext writer = context.writer();
         

@@ -1,0 +1,63 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/v1/viagens/.*"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 100,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "id_viagem": "VIA-112233",
+      "tipo_viagem": "INTERNACIONAL",
+      "status": "CONFIRMADA",
+      "data_inicio": "2023-12-15",
+      "data_fim": "2024-01-05",
+      "valor_total": 15000.00,
+      "destino": {
+        "cidade": "Paris",
+        "pais": "França",
+        "continente": "Europa"
+      },
+      "passagens": [
+        { "id_passagem": "PAS-112233", "companhia": "Air France", "voo": "AF123", "classe": "EXECUTIVA", "valor": 8500.00 },
+        { "id_passagem": "PAS-445566", "companhia": "Air France", "voo": "AF456", "classe": "EXECUTIVA", "valor": 6500.00 }
+      ],
+      "hospedagem": {
+        "id_hospedagem": "HOS-112233",
+        "hotel": "Hotel Ritz",
+        "tipo_quarto": "SUITE_LUXO",
+        "valor_total": 5000.00,
+        "checkin": "2023-12-15",
+        "checkout": "2024-01-05"
+      },
+      "seguro_viagem": {
+        "id_apolice": "SEG-112233",
+        "valor_premio": 1250.00,
+        "data_vencimento": "2024-01-05",
+        "status": "VIGENTE"
+      },
+      "aluguel_carro": {
+        "id_aluguel": "ALU-112233",
+        "locadora": "Hertz",
+        "modelo": "BMW X5",
+        "valor_total": 1500.00,
+        "data_inicio": "2023-12-15",
+        "data_fim": "2024-01-05"
+      },
+      "atividades": [
+        { "nome": "Torre Eiffel", "valor": 150.00, "data": "2023-12-16" },
+        { "nome": "Museu do Louvre", "valor": 120.00, "data": "2023-12-17" },
+        { "nome": "Palácio de Versalhes", "valor": 180.00, "data": "2023-12-18" }
+      ],
+      "ultima_atualizacao": "2023-10-27T18:00:00Z",
+      "risco_viagem": "BAIXO",
+      "objetivos": ["LAZER", "TURISMO"],
+      "caracteristicas_adicionais": {
+        "visto_necessario": false,
+        "vacinas_em_dia": true,
+        "seguro_saude_internacional": true
+      }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/v1/cartoes/.*"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 100,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "id_cartao": "CARD-554433",
+      "numero_mascarado": "4532 **** **** 1234",
+      "bandeira": "VISA",
+      "categoria": "INFINITE",
+      "status": "ATIVO",
+      "data_vencimento": "2028-10-01",
+      "limite": {
+        "total": 50000.00,
+        "utilizado": 12500.50,
+        "disponivel": 37499.50,
+        "limite_saque": 5000.00
+      },
+      "fatura_atual": {
+        "valor": 4500.20,
+        "vencimento": "2023-11-10",
+        "status": "ABERTA",
+        "melhor_dia_compra": 1
+      },
+      "programa_pontos": {
+        "nome": "Livelo",
+        "saldo_atual": 15450,
+        "pontos_a_expirar": 1200,
+        "data_expiracao": "2024-01-15"
+      },
+      "beneficios": ["SALA_VIP", "SEGURO_VIAGEM", "CONCIERGE", "CASHBACK"],
+      "configuracoes": {
+        "compra_online": true,
+        "compra_internacional": false,
+        "aproximacao": true,
+        "limite_ajustado": 25000.00
+      },
+      "ultimas_compras": [
+        { "data": "2023-10-27T10:00:00Z", "estabelecimento": "Amazon", "valor": 1500.00, "categoria": "SHOPPING" },
+        { "data": "2023-10-26T15:30:00Z", "estabelecimento": "Posto Shell", "valor": 250.00, "categoria": "TRANSPORTE" },
+        { "data": "2023-10-25T20:15:00Z", "estabelecimento": "Restaurante Fasano", "valor": 850.00, "categoria": "ALIMENTACAO" }
+      ],
+      "adicionais": [
+        { "nome": "Maria da Silva", "parentesco": "CONJUGE", "status": "ATIVO" }
+      ]
+    }
+  }
+}

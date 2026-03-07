@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Component
@@ -40,8 +41,8 @@ public class BackgroundExecutionEngine {
 
         ScopedValue.where(ContextHolder.CONTEXT, context).run(() -> {
             try {
-                // Corrigido: Passando o TaskContext inicial
-                TaskContext taskContext = new TaskContext(Map.of(), null, def.nodeId().value());
+                // Corrigido: Adicionado Set.of() para requiredFields
+                TaskContext taskContext = new TaskContext(Map.of(), null, def.nodeId().value(), Set.of());
                 executable.execute(taskContext);
             } catch (Exception e) {
                 log.error("Falha na task background [{}]: {}", def.nodeId().value(), e.getMessage());

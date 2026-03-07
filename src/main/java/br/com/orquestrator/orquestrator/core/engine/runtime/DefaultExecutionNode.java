@@ -7,10 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-/**
- * DefaultExecutionNode: Implementação do nó de execução que respeita a malha de sinais.
- */
 @Slf4j
 @RequiredArgsConstructor
 public class DefaultExecutionNode implements ExecutionNode {
@@ -26,34 +24,42 @@ public class DefaultExecutionNode implements ExecutionNode {
             // 1. Bloqueia até que todos os sinais de dependência sejam emitidos
             onSignal(signals);
 
-            // 2. Executa a cadeia de tarefas (Decoradores + Core)
-            TaskContext context = new TaskContext(Map.of(), null, nodeId);
+            // 2. Executa a cadeia de tarefas
+            TaskContext context = new TaskContext(Map.of(), null, nodeId, Set.of());
             executable.execute(context);
 
-        } finally {
-            // 3. Libera os nós sucessores emitindo os sinais de saída
+            // 3. Sucesso: Libera os nós sucessores
             emitSignal(signals);
+
+        } catch (Exception e) {
+            // 4. Falha: Avisa os sucessores para não esperarem (Fail-Fast)
+            failSignal(signals, e);
+            throw e;
         }
     }
 
     @Override
     public void onSignal(SignalRegistry signals) {
-        if (inputSignals != null && !inputSignals.isEmpty()) {
-            log.trace("Nó [{}] aguardando sinais de dependência: {}", nodeId, inputSignals);
+        if (inputSignals != null) {
             inputSignals.forEach(signals::await);
         }
     }
 
     @Override
     public void emitSignal(SignalRegistry signals) {
-        if (outputSignals != null && !outputSignals.isEmpty()) {
-            log.trace("Nó [{}] emitindo sinais de conclusão: {}", nodeId, outputSignals);
+        if (outputSignals != null) {
             outputSignals.forEach(signals::emit);
         }
     }
 
-    @Override
-    public String nodeId() {
-        return nodeId;
+    /**
+     * Propaga a falha para os sinais de saída.
+     */
+    private void failSignal(SignalRegistry signals, Throwable cause) {
+        if (outputSignals != null) {
+            outputSignals.forEach(s -> signals.fail(s, cause));
+        }
     }
+
+    @Override public String nodeId() { return nodeId; }
 }

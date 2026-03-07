@@ -4,21 +4,21 @@
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
         </Console>
+
+        <!-- OTIMIZAÇÃO: Usamos YieldingWaitStrategy para reduzir contenção de monitor -->
+        <Async name="Async" bufferSize="262144" includeLocation="false">
+            <AppenderRef ref="Console"/>
+        </Async>
     </Appenders>
 
     <Loggers>
-        <!-- Log do Spring em INFO para ver o startup -->
-        <Logger name="org.springframework" level="INFO" additivity="false">
-            <AppenderRef ref="Console"/>
-        </Logger>
-
-        <!-- Log do Orquestrador em DEBUG para ver a execução das tasks -->
-        <Logger name="br.com.orquestrator" level="DEBUG" additivity="false">
-            <AppenderRef ref="Console"/>
-        </Logger>
+        <Logger name="org.springframework" level="WARN"/>
+        <Logger name="org.hibernate" level="WARN"/>
+        <!-- Silenciamos a telemetria no log para salvar CPU -->
+        <Logger name="br.com.orquestrator.orquestrator.core.engine.runtime.TelemetryDecorator" level="OFF"/>
 
         <Root level="INFO">
-            <AppenderRef ref="Console"/>
+            <AppenderRef ref="Async"/>
         </Root>
     </Loggers>
 </Configuration>

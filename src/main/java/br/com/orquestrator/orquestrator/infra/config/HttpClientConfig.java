@@ -1,48 +1,54 @@
 package br.com.orquestrator.orquestrator.infra.config;
 
-import org.apache.hc.client5.http.config.ConnectionConfig;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
-import org.apache.hc.core5.util.Timeout;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.context.annotation.Primary;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
-import java.util.concurrent.TimeUnit;
+import java.net.http.HttpClient;
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * HttpClientConfig: Configuração centralizada do cliente HTTP.
- * Otimizado para Virtual Threads usando Apache HttpClient 5.
- */
 @Configuration
 public class HttpClientConfig {
 
-    @Bean
-    public RestClient restClient(CloseableHttpClient httpClient) {
-        return RestClient.builder()
-                .requestFactory(new HttpComponentsClientHttpRequestFactory(httpClient))
-                .build();
+    private static final int CLIENT_SHARDS = 16; // Aumentado para 16 para reduzir contenção no Selector
+    private final HttpClient[] httpClients = new HttpClient[CLIENT_SHARDS];
+    private final AtomicInteger counter = new AtomicInteger(0);
+
+    public HttpClientConfig() {
+        // OTIMIZAÇÃO: Configura o sistema para reduzir wakeups do Selector no Windows
+        System.setProperty("jdk.httpclient.selectorTimeout", "1000");
+
+        for (int i = 0; i < CLIENT_SHARDS; i++) {
+            httpClients[i] = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(2))
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .build();
+        }
     }
 
     @Bean
-    public CloseableHttpClient apacheHttpClient() {
-        // Gerenciador de conexões com pool robusto
-        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-        connectionManager.setMaxTotal(5000); // Até 5k conexões simultâneas
-        connectionManager.setDefaultMaxPerRoute(1000); // Até 1k por host
+    @Primary
+    public RestClient restClient(RestClient.Builder builder) {
+        return builder.build();
+    }
 
-        connectionManager.setDefaultConnectionConfig(ConnectionConfig.custom()
-                .setConnectTimeout(Timeout.ofMilliseconds(2000))
-                .setSocketTimeout(Timeout.ofMilliseconds(5000))
-                .setTimeToLive(60, TimeUnit.SECONDS)
-                .build());
+    @Bean
+    @Primary
+    public RestClient.Builder restClientBuilder(ClientHttpRequestFactory factory) {
+        return RestClient.builder().requestFactory(factory);
+    }
 
-        return HttpClients.custom()
-                .setConnectionManager(connectionManager)
-                .disableAutomaticRetries() // Retries são feitos via Decorator
-                .disableCookieManagement()
-                .build();
+    @Bean
+    public ClientHttpRequestFactory clientHttpRequestFactory() {
+        return (uri, httpMethod) -> {
+            int index = Math.abs(counter.getAndIncrement() % CLIENT_SHARDS);
+            JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClients[index]);
+            factory.setReadTimeout(Duration.ofSeconds(5));
+            return factory.createRequest(uri, httpMethod);
+        };
     }
 }

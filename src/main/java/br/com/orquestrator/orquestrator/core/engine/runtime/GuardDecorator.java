@@ -2,10 +2,8 @@ package br.com.orquestrator.orquestrator.core.engine.runtime;
 
 import br.com.orquestrator.orquestrator.core.context.ContextHolder;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
-import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
-import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
-import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
+import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -13,22 +11,22 @@ import java.util.Map;
 
 @Slf4j
 @RequiredArgsConstructor
-public class GuardDecorator implements TaskDecorator {
+public class GuardDecorator implements TaskInterceptor {
     private final ExpressionEngine expressionEngine;
     private final String guardCondition;
     private final String nodeId;
 
     @Override
-    public TaskResult apply(TaskContext context, TaskChain next) {
+    public TaskResult intercept(Chain chain) {
         if (guardCondition == null || guardCondition.isBlank()) {
-            return next.proceed(context);
+            return chain.proceed(chain.context());
         }
 
-        if (!Boolean.TRUE.equals(expressionEngine.evaluate(guardCondition, ContextHolder.reader(), Boolean.class))) {
+        if (!Boolean.TRUE.equals(expressionEngine.compile(guardCondition).evaluate(ContextHolder.reader(), Boolean.class))) {
             log.debug("Task [{}] ignorada pela condição de guarda.", nodeId);
             return TaskResult.success(Map.of("skipped", true));
         }
 
-        return next.proceed(context);
+        return chain.proceed(chain.context());
     }
 }

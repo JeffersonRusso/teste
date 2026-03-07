@@ -16,9 +16,11 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * NodeAssembler: Responsável por transformar definições de tarefas em nós executáveis.
+ * OTIMIZADO: Sinais de dependência agora usam a RAIZ do path para garantir sincronismo com streaming.
  */
 @Component
 @RequiredArgsConstructor
@@ -32,12 +34,18 @@ public class NodeAssembler {
         var coreTask = taskRegistry.getTask(def);
         var executableTask = taskChainCompiler.compile(coreTask, def);
 
+        // Dependências: O que eu preciso para rodar (sempre pela raiz)
         List<String> dependencies = def.inputs().values().stream()
                 .map(val -> DataPath.of(val).getRoot())
-                .filter(taskProducedKeys::contains)
+                .filter(root -> isAnyKeyProduced(root, taskProducedKeys))
+                .distinct()
                 .toList();
 
-        List<String> signalsToEmit = def.outputs().values().stream().toList();
+        // Sinais: O que eu libero quando termino (sempre pela raiz)
+        List<String> signalsToEmit = def.outputs().values().stream()
+                .map(val -> DataPath.of(val).getRoot())
+                .distinct()
+                .toList();
 
         ExecutionNode node = new DefaultExecutionNode(def.nodeId().value(), executableTask, dependencies, signalsToEmit);
 
@@ -48,6 +56,14 @@ public class NodeAssembler {
         return node;
     }
 
+    /**
+     * Verifica se a raiz ou qualquer sub-caminho dela é produzido por alguma task.
+     */
+    private boolean isAnyKeyProduced(String root, Set<String> producedKeys) {
+        if (producedKeys.contains(root)) return true;
+        return producedKeys.stream().anyMatch(key -> key.startsWith(root + "."));
+    }
+
     public ExecutionNode assembleFused(List<TaskDefinition> group, Set<String> taskProducedKeys) {
         List<Task> executables = group.stream()
                 .map(def -> taskChainCompiler.compile(taskRegistry.getTask(def), def))
@@ -55,16 +71,17 @@ public class NodeAssembler {
 
         TaskDefinition leader = group.getFirst();
 
-        // 1. Dependências do líder (entrada do grupo)
         List<String> dependencies = leader.inputs().values().stream()
                 .map(val -> DataPath.of(val).getRoot())
-                .filter(taskProducedKeys::contains)
+                .filter(root -> isAnyKeyProduced(root, taskProducedKeys))
+                .distinct()
                 .toList();
 
-        // 2. Sinais de saída: Agrega os outputs de TODAS as tasks do grupo
-        // Isso garante que dependentes externos de qualquer task interna sejam liberados.
-        List<String> allSignalsToEmit = new ArrayList<>();
-        group.forEach(def -> allSignalsToEmit.addAll(def.outputs().values()));
+        List<String> allSignalsToEmit = group.stream()
+                .flatMap(def -> def.outputs().values().stream())
+                .map(val -> DataPath.of(val).getRoot())
+                .distinct()
+                .toList();
 
         return new DefaultExecutionNode(leader.nodeId().value(), new FusedTask(executables), dependencies, allSignalsToEmit);
     }

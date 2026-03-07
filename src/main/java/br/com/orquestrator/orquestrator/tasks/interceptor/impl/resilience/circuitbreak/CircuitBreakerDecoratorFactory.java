@@ -1,9 +1,10 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.impl.resilience.circuitbreak;
 
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.DecoratorFactory;
-import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
+import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 import br.com.orquestrator.orquestrator.tasks.interceptor.config.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -13,25 +14,22 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class CircuitBreakerDecoratorFactory implements DecoratorFactory<CircuitBreakerConfig> {
 
-    @Override
-    public String getType() {
-        return "CIRCUIT_BREAKER";
-    }
+    private final CircuitBreakerRegistry circuitBreakerRegistry;
+
+    @Override public String getType() { return "CIRCUIT_BREAKER"; }
+    @Override public Class<CircuitBreakerConfig> getConfigClass() { return CircuitBreakerConfig.class; }
 
     @Override
-    public Class<CircuitBreakerConfig> getConfigClass() {
-        return CircuitBreakerConfig.class;
-    }
-
-    @Override
-    public TaskDecorator create(CircuitBreakerConfig config, String nodeId) {
-        io.github.resilience4j.circuitbreaker.CircuitBreakerConfig r4jConfig = io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.custom()
+    public TaskInterceptor create(CircuitBreakerConfig config, String nodeId) {
+        // Corrigido: Usando os métodos getter que fazem o unboxing e conversão correta
+        io.github.resilience4j.circuitbreaker.CircuitBreakerConfig cbConfig = io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.custom()
                 .failureRateThreshold(config.getFailureRateThreshold())
                 .waitDurationInOpenState(Duration.ofMillis(config.getWaitDurationMs()))
-                .slidingWindowSize(config.getSlidingWindowSize())
                 .permittedNumberOfCallsInHalfOpenState(config.getPermittedCalls())
+                .slidingWindowSize(config.getSlidingWindowSize())
                 .build();
 
-        return new CircuitBreakerInterceptor(CircuitBreaker.of(nodeId, r4jConfig));
+        CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker(nodeId, cbConfig);
+        return new CircuitBreakerInterceptor(cb);
     }
 }

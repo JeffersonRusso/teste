@@ -7,8 +7,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * MapDataStore: Armazenamento de alta performance baseado em caminhos.
- * Focado em simplicidade e delegação de responsabilidades.
+ * MapDataStore: Armazenamento focado em DataValue.
+ * Mantém a integridade do domínio e evita o uso de Object genérico.
  */
 public class MapDataStore implements DataStore, ReadableContext {
 
@@ -23,9 +23,9 @@ public class MapDataStore implements DataStore, ReadableContext {
             return;
         }
 
-        // Navega até o mapa pai e insere a folha
         DataValue parentNode = ensurePath(path.getParentPath());
         if (parentNode instanceof DataValue.Mapping m) {
+            // Cast seguro: Mapping sempre contém Map<String, DataValue> no nosso design
             ((Map<String, Object>) m.fields()).put(path.getLeafName(), value);
         }
     }
@@ -39,7 +39,8 @@ public class MapDataStore implements DataStore, ReadableContext {
             if (current == null) {
                 current = storage.get(part);
             } else if (current instanceof DataValue.Mapping m) {
-                current = DataValue.of(m.fields().get(part));
+                Object val = m.fields().get(part);
+                current = (val instanceof DataValue dv) ? dv : DataValue.of(val);
             } else {
                 return new DataValue.Empty();
             }
@@ -48,9 +49,11 @@ public class MapDataStore implements DataStore, ReadableContext {
         return current != null ? current : new DataValue.Empty();
     }
 
-    /**
-     * Garante que o caminho exista e seja mutável.
-     */
+    @Override
+    public Object getRaw(String key) {
+        return get(key).raw();
+    }
+
     private DataValue ensurePath(String path) {
         DataPath dataPath = DataPath.of(path);
         Map<String, DataValue> currentMap = storage;
@@ -63,7 +66,6 @@ public class MapDataStore implements DataStore, ReadableContext {
             if (lastNode instanceof DataValue.Mapping m) {
                 currentMap = (Map<String, DataValue>) m.fields();
             } else {
-                // Colisão: Sobrescreve valor escalar com mapa para permitir navegação
                 Map<String, DataValue> newMap = new ConcurrentHashMap<>();
                 lastNode = new DataValue.Mapping(newMap, null);
                 currentMap.put(part, lastNode);

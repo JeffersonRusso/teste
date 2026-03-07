@@ -1,11 +1,16 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.api;
 
-import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
-import java.util.function.Function;
+import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
+import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 
 /**
- * Contrato fundamental de um Interceptor.
+ * TaskInterceptor: Unidade de lógica linear.
  */
-@FunctionalInterface
-public interface TaskInterceptor extends Function<TaskChain, TaskChain> {
+public interface TaskInterceptor {
+    TaskResult intercept(Chain chain);
+
+    interface Chain {
+        TaskContext context();
+        TaskResult proceed(TaskContext context);
+    }
 }

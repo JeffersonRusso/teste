@@ -1,6 +1,8 @@
 package br.com.orquestrator.orquestrator.tasks.registry.factory;
 
-import br.com.orquestrator.orquestrator.core.engine.binding.DataMarshaller;
+import br.com.orquestrator.orquestrator.core.engine.binding.InputCompiler;
+import br.com.orquestrator.orquestrator.core.engine.binding.OutputCompiler;
+import br.com.orquestrator.orquestrator.core.engine.binding.NormalizationCompiler;
 import br.com.orquestrator.orquestrator.core.engine.binding.TaskBindingResolver;
 import br.com.orquestrator.orquestrator.core.engine.runtime.InterceptorEngine;
 import br.com.orquestrator.orquestrator.core.engine.validation.ContractRegistry;
@@ -11,8 +13,10 @@ import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public record CompilationContext(
-    DataMarshaller marshaller,
-    TaskBindingResolver bindingResolver, // <--- ADICIONADO
+    InputCompiler inputCompiler,
+    OutputCompiler outputCompiler,
+    NormalizationCompiler normalizationCompiler,
+    TaskBindingResolver bindingResolver,
     TaskValidator validator,
     DataValidator dataValidator,
     ContractRegistry contractRegistry,

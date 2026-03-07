@@ -18,9 +18,10 @@ public class TreeShakingStep implements CompilationStep {
     @Override public int getOrder() { return 20; }
 
     @Override
-    public void execute(CompilationSession session) {
+    public CompilationSession execute(CompilationSession session) {
         var graph = graphBuilder.build(session.getTasks());
         var optimized = treeShaker.optimize(graph, session.getDefinition().defaultRequiredOutputs());
         session.setTasks(new ArrayList<>(optimized));
+        return session;
     }
 }

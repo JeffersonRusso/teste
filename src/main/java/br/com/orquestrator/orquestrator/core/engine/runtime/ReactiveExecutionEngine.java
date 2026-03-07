@@ -16,20 +16,19 @@ public class ReactiveExecutionEngine {
 
     public void execute(Pipeline pipeline) {
         Instant deadline = ExecutionClock.calculateDeadline(pipeline.timeout());
-        
-        // Cria a malha de sinais efêmera para esta execução
         SignalRegistry signals = new SignalRegistry();
 
-        try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
-            
+        // OTIMIZAÇÃO: Usamos o escopo base para permitir que falhas individuais
+        // sejam tratadas pelos Decorators (Retry, ErrorPolicy) sem derrubar o motor.
+        try (var scope = new StructuredTaskScope<Void>()) {
+
             pipeline.getNodes().forEach(node -> scope.fork(() -> {
                 node.run(signals);
                 return null;
             }));
 
             scope.joinUntil(deadline);
-            scope.throwIfFailed();
-            
+
         } catch (Exception e) {
             throw handleException(e);
         }

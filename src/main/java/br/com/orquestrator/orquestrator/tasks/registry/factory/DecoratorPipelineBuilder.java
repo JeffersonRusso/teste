@@ -4,14 +4,14 @@ import br.com.orquestrator.orquestrator.core.engine.binding.MarshallingPlan;
 import br.com.orquestrator.orquestrator.core.engine.runtime.*;
 import br.com.orquestrator.orquestrator.domain.FeatureDefinition;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
-import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
+import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class DecoratorPipelineBuilder {
 
-    private final List<TaskDecorator> chain = new ArrayList<>();
+    private final List<TaskInterceptor> interceptors = new ArrayList<>();
     private final CompilationContext context;
     private final TaskDefinition def;
     private final String nodeId;
@@ -23,31 +23,31 @@ public class DecoratorPipelineBuilder {
     }
 
     public DecoratorPipelineBuilder withInfra() {
-        chain.add(new ScopeDecorator(nodeId));
-        chain.add(new TelemetryDecorator(nodeId));
-        chain.add(new ErrorPolicyDecorator(nodeId, def.failFast()));
+        // OTIMIZAÇÃO: Removido ScopeDecorator para evitar overhead de ScopedValue.where()
+        // O nodeId já está disponível no TaskContext.
+        interceptors.add(new TelemetryDecorator(nodeId));
+        interceptors.add(new ErrorPolicyDecorator(nodeId, def.failFast()));
         return this;
     }
 
     public DecoratorPipelineBuilder withData(MarshallingPlan plan) {
-        chain.add(new InputDecorator(context.marshaller(), plan));
+        interceptors.add(new InputDecorator(
+            context.inputCompiler().bake(def),
+            context.inputCompiler().extractRequiredFields(def)
+        ));
         return this;
     }
 
     public DecoratorPipelineBuilder withConfigResolution(Class<?> configClass) {
         if (configClass != null) {
-            chain.add(new ConfigurationResolverDecorator(context.bindingResolver(), def.config(), configClass));
+            interceptors.add(new ConfigurationResolverDecorator(context.bindingResolver(), def.config(), configClass));
         }
         return this;
     }
 
     public DecoratorPipelineBuilder withOutput(MarshallingPlan plan) {
-        // Agora o OutputMappingDecorator recebe o validador e o registro de contratos
-        chain.add(new OutputMappingDecorator(
-            context.marshaller(), 
-            context.dataValidator(), 
-            context.contractRegistry(), 
-            plan
+        interceptors.add(new OutputMappingDecorator(
+            context.outputCompiler().bake(def)
         ));
         return this;
     }
@@ -55,20 +55,20 @@ public class DecoratorPipelineBuilder {
     public DecoratorPipelineBuilder withFeatures() {
         List<FeatureDefinition> features = def.features();
         if (features != null && !features.isEmpty()) {
-            chain.addAll(context.interceptorEngine().resolveInterceptors(features, nodeId));
+            interceptors.addAll(context.interceptorEngine().resolveInterceptors(features, nodeId));
         }
         return this;
     }
 
     public DecoratorPipelineBuilder withGuard() {
         if (def.guardCondition() != null && !def.guardCondition().isBlank()) {
-            chain.add(new GuardDecorator(context.expressionEngine(), def.guardCondition(), nodeId));
+            interceptors.add(new GuardDecorator(context.expressionEngine(), def.guardCondition(), nodeId));
         }
         return this;
     }
 
     public DecoratorPipelineBuilder withValidation() {
-        chain.add(new ValidationDecorator(
+        interceptors.add(new ValidationDecorator(
             context.validator(), 
             context.dataValidator(), 
             context.contractRegistry(), 
@@ -77,7 +77,7 @@ public class DecoratorPipelineBuilder {
         return this;
     }
 
-    public List<TaskDecorator> build() {
-        return chain;
+    public List<TaskInterceptor> buildInterceptors() {
+        return interceptors;
     }
 }

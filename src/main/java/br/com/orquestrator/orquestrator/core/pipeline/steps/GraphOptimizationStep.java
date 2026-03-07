@@ -16,8 +16,9 @@ public class GraphOptimizationStep implements CompilationStep {
     @Override public int getOrder() { return 30; }
 
     @Override
-    public void execute(CompilationSession session) {
+    public CompilationSession execute(CompilationSession session) {
         var graph = graphBuilder.build(session.getTasks());
         session.setFusionGroups(graphOptimizer.identifyFusionGroups(graph));
+        return session;
     }
 }

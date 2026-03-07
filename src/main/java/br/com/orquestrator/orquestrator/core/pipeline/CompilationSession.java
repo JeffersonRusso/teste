@@ -1,6 +1,6 @@
 package br.com.orquestrator.orquestrator.core.pipeline;
 
-import br.com.orquestrator.orquestrator.core.engine.binding.DataMarshaller;
+import br.com.orquestrator.orquestrator.core.engine.binding.NormalizationStep;
 import br.com.orquestrator.orquestrator.core.engine.runtime.ExecutionNode;
 import br.com.orquestrator.orquestrator.domain.model.PipelineDefinition;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
@@ -18,7 +18,7 @@ public class CompilationSession {
     private List<TaskDefinition> tasks;
     private Map<String, List<TaskDefinition>> fusionGroups = new HashMap<>();
     private Map<String, ExecutionNode> nodes = new HashMap<>();
-    private List<DataMarshaller.NormalizationStep> normalizationPlan = new ArrayList<>(); // <--- NOVO
+    private List<NormalizationStep> normalizationPlan = new ArrayList<>();
 
     public CompilationSession(PipelineDefinition definition, Set<String> activeTags) {
         this.definition = definition;

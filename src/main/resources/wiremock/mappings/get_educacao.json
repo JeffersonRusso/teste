@@ -1,0 +1,60 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/v1/educacao/.*"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 100,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "id_aluno": "ALU-112233",
+      "tipo_curso": "GRADUACAO",
+      "status": "MATRICULADO",
+      "data_inicio": "2021-02-01",
+      "data_fim": "2025-12-31",
+      "valor_mensal": 2500.00,
+      "instituicao": {
+        "nome": "Universidade X",
+        "cnpj": "12.345.678/0001-99",
+        "telefone_atendimento": "0800-123-4567"
+      },
+      "curso": {
+        "nome": "Engenharia de Software",
+        "periodo": "NOTURNO",
+        "semestre_atual": 6,
+        "total_semestres": 10
+      },
+      "historico_notas": [
+        { "disciplina": "Algoritmos", "nota": 9.5, "semestre": 1, "status": "APROVADO" },
+        { "disciplina": "Banco de Dados", "nota": 8.5, "semestre": 2, "status": "APROVADO" },
+        { "disciplina": "Sistemas Operacionais", "nota": 7.5, "semestre": 3, "status": "APROVADO" }
+      ],
+      "mensalidades": {
+        "total_parcelas": 60,
+        "parcelas_pagas": 30,
+        "parcelas_restantes": 30,
+        "valor_parcela": 2500.00,
+        "vencimento_proxima": "2023-11-10"
+      },
+      "bolsa_estudos": {
+        "tipo": "PROUNI",
+        "percentual": 50,
+        "valor_desconto": 1250.00,
+        "status": "ATIVO"
+      },
+      "atividades_extracurriculares": [
+        { "nome": "Monitoria de Algoritmos", "horas": 40, "semestre": 2 },
+        { "nome": "Projeto de Extensão", "horas": 60, "semestre": 3 }
+      ],
+      "ultima_atualizacao": "2023-10-27T19:00:00Z",
+      "risco_evasao": "BAIXO",
+      "objetivos": ["GRADUACAO", "CARREIRA"],
+      "caracteristicas_adicionais": {
+        "estagio_obrigatorio": true,
+        "tcc_concluido": false,
+        "diploma_emitido": false
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/v1/beneficios/.*"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 100,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "id_beneficio": "BEN-112233",
+      "tipo_beneficio": "VALE_ALIMENTACAO",
+      "status": "ATIVO",
+      "data_inicio": "2023-01-01",
+      "data_fim": "2024-01-01",
+      "valor_mensal": 1250.00,
+      "saldo_atual": 850.20,
+      "extrato_recente": [
+        { "data": "2023-10-27T12:00:00Z", "estabelecimento": "Pão de Açúcar", "valor": 150.00, "categoria": "SUPERMERCADO" },
+        { "data": "2023-10-26T13:30:00Z", "estabelecimento": "Restaurante Fasano", "valor": 250.00, "categoria": "ALIMENTACAO" },
+        { "data": "2023-10-25T14:15:00Z", "estabelecimento": "Padaria Real", "valor": 50.00, "categoria": "ALIMENTACAO" }
+      ],
+      "configuracoes": {
+        "bloqueio_automatico": false,
+        "limite_diario": 500.00,
+        "notificacao_saldo_baixo": true
+      },
+      "beneficiarios": [
+        { "nome": "João da Silva", "parentesco": "TITULAR", "percentual": 100 }
+      ],
+      "empresa_emissora": {
+        "nome": "Empresa X",
+        "cnpj": "12.345.678/0001-99",
+        "telefone_atendimento": "0800-123-4567"
+      },
+      "proxima_recarga": "2023-11-01",
+      "valor_recarga": 1250.00,
+      "forma_pagamento": "FOLHA_PAGAMENTO",
+      "agencia_conta": "1234-56789-0",
+      "caracteristicas_adicionais": {
+        "uso_internacional": false,
+        "saque_dinheiro": false,
+        "transferencia_saldo": true
+      }
+    }
+  }
+}

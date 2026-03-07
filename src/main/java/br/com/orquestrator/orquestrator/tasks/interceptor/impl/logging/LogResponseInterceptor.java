@@ -1,23 +1,21 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.impl.logging;
 
-import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
-import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
-import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskDecorator;
+import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 import br.com.orquestrator.orquestrator.tasks.interceptor.config.LogResponseConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
-public class LogResponseInterceptor implements TaskDecorator {
+public class LogResponseInterceptor implements TaskInterceptor {
 
     private final LogResponseConfig config;
     private final String nodeId;
 
     @Override
-    public TaskResult apply(TaskContext context, TaskChain next) {
-        TaskResult result = next.proceed(context);
+    public TaskResult intercept(Chain chain) {
+        TaskResult result = chain.proceed(chain.context());
         
         if (log.isInfoEnabled()) {
             log.info("Nó [{}] retornou status: {} | Body: {}", nodeId, result.status(), result.body());

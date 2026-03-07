@@ -1,0 +1,25 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/v1/score/.*"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 100,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "id_usuario": "123456789",
+      "score_atual": 845,
+      "faixa_risco": "BAIXO",
+      "data_ultima_consulta": "2023-10-27T14:00:00Z",
+      "proxima_atualizacao": "2023-11-27T00:00:00Z",
+      "fatores_positivos": ["PAGAMENTO_EM_DIA", "HISTORICO_CREDITO_LONGO"],
+      "fatores_negativos": ["CONSULTAS_RECENTES"],
+      "percentual_evolucao": 2.5,
+      "status_consulta": "SUCESSO",
+      "provedor_origem": "SERASA"
+    }
+  }
+}

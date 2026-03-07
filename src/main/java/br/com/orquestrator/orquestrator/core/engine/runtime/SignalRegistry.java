@@ -15,13 +15,19 @@ public class SignalRegistry {
         getChannel(signalName).complete(null);
     }
 
+    /**
+     * Propaga uma falha para todos os dependentes deste sinal.
+     */
+    public void fail(String signalName, Throwable cause) {
+        getChannel(signalName).completeExceptionally(cause);
+    }
+
     public void await(String signalName) {
         try {
-            // Aguarda o sinal com um timeout de segurança para evitar deadlocks infinitos
+            // Aguarda o sinal. Se o pai falhar, o 'get' lança ExecutionException imediatamente.
             getChannel(signalName).get(30, TimeUnit.SECONDS);
         } catch (Exception e) {
-            log.error("Timeout aguardando sinal: {}. Possível quebra no grafo de dependências.", signalName);
-            throw new RuntimeException("Sinal não recebido: " + signalName, e);
+            throw new RuntimeException("Dependência não satisfeita: " + signalName, e);
         }
     }
 

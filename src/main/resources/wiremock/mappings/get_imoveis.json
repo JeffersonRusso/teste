@@ -1,0 +1,73 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPattern": "/v1/imoveis/.*"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 100,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "id_imovel": "IMO-112233",
+      "tipo_imovel": "APARTAMENTO",
+      "status": "PROPRIO",
+      "data_aquisicao": "2021-03-15",
+      "valor_aquisicao": 750000.00,
+      "valor_mercado_estimado": 850000.00,
+      "endereco": {
+        "logradouro": "Rua das Flores",
+        "numero": "123",
+        "complemento": "Apto 101",
+        "bairro": "Jardins",
+        "cidade": "São Paulo",
+        "estado": "SP",
+        "cep": "01410-000",
+        "pais": "Brasil"
+      },
+      "caracteristicas": {
+        "area_total": 120.50,
+        "area_util": 110.00,
+        "quartos": 3,
+        "suites": 1,
+        "banheiros": 2,
+        "vagas_garagem": 2,
+        "andar": 10,
+        "posicao_solar": "NASCENTE"
+      },
+      "condominio": {
+        "valor_mensal": 1250.00,
+        "vencimento": "2023-11-05",
+        "status": "EM_DIA"
+      },
+      "iptu": {
+        "ano": 2023,
+        "valor_total": 4500.00,
+        "parcelas_pagas": 8,
+        "total_parcelas": 10,
+        "status": "EM_DIA"
+      },
+      "seguro_residencial": {
+        "id_apolice": "SEG-998877",
+        "valor_premio": 1250.00,
+        "data_vencimento": "2024-03-15",
+        "status": "VIGENTE"
+      },
+      "financiamento": {
+        "id_contrato": "FIN-112233",
+        "valor_financiado": 500000.00,
+        "valor_saldo_devedor": 450000.00,
+        "taxa_juros": 9.5,
+        "parcelas_restantes": 240,
+        "valor_parcela": 4500.00,
+        "status": "EM_DIA"
+      },
+      "ultima_reforma": "2022-05-10",
+      "proxima_manutencao": "2024-05-10",
+      "caracteristicas_adicionais": {
+        "piscina": true,
+        "academia": true,
+        "salao_festas": true
+      }
+    }
+  }
+}

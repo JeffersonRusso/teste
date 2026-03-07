@@ -12,7 +12,7 @@ public class ScenarioFilterStep implements CompilationStep {
     @Override public int getOrder() { return 10; }
 
     @Override
-    public void execute(CompilationSession session) {
+    public CompilationSession execute(CompilationSession session) {
         Set<String> effectiveTags = (session.getActiveTags() == null || session.getActiveTags().isEmpty()) 
             ? Set.of("default") : session.getActiveTags();
 
@@ -21,5 +21,6 @@ public class ScenarioFilterStep implements CompilationStep {
                 .toList();
         
         session.setTasks(filtered);
+        return session;
     }
 }

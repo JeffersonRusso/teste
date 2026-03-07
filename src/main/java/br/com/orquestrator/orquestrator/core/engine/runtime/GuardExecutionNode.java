@@ -5,10 +5,6 @@ import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * GuardExecutionNode: Decorador de nó que implementa a lógica de execução condicional.
- * SOLID: Single Responsibility Principle (O motor não precisa saber de guards).
- */
 @Slf4j
 @RequiredArgsConstructor
 public class GuardExecutionNode implements ExecutionNode {
@@ -19,24 +15,20 @@ public class GuardExecutionNode implements ExecutionNode {
 
     @Override
     public void run(SignalRegistry signals) {
-        // 1. O GuardNode SEMPRE deve participar da malha de sinais para não travar o grafo
-        // Mas ele delega a espera para o nó interno ou faz aqui?
-        // Melhor: O GuardNode espera os sinais ANTES de avaliar a condição.
-        
         delegate.onSignal(signals);
 
-        // 2. Avalia a condição
         if (shouldExecute()) {
-            delegate.run(signals); // Executa o nó real (que já teve onSignal chamado)
+            delegate.run(signals);
         } else {
             log.debug("Nó [{}] pulado pela condição de guarda: {}", nodeId(), condition);
-            delegate.emitSignal(signals); // Emite os sinais para não travar os sucessores
+            delegate.emitSignal(signals);
         }
     }
 
     private boolean shouldExecute() {
         if (condition == null || condition.isBlank()) return true;
-        return Boolean.TRUE.equals(expressionEngine.evaluate(condition, ContextHolder.reader(), Boolean.class));
+        // OTIMIZAÇÃO: Compila e avalia
+        return Boolean.TRUE.equals(expressionEngine.compile(condition).evaluate(ContextHolder.reader(), Boolean.class));
     }
 
     @Override public void onSignal(SignalRegistry signals) { delegate.onSignal(signals); }
