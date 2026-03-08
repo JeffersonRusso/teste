@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="WARN">
+<Configuration status="ERROR">
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
@@ -12,12 +12,12 @@
     </Appenders>
 
     <Loggers>
-        <Logger name="org.springframework" level="WARN"/>
-        <Logger name="org.hibernate" level="WARN"/>
+        <Logger name="org.springframework" level="ERROR"/>
+        <Logger name="org.hibernate" level="ERROR"/>
         <!-- Silenciamos a telemetria no log para salvar CPU -->
-        <Logger name="br.com.orquestrator.orquestrator.core.engine.runtime.TelemetryDecorator" level="OFF"/>
+        <Logger name="br.com.orquestrator.orquestrator.core.engine.runtime.TelemetryDecorator" level="ERROR"/>
 
-        <Root level="INFO">
+        <Root level="ERROR">
             <AppenderRef ref="Async"/>
         </Root>
     </Loggers>

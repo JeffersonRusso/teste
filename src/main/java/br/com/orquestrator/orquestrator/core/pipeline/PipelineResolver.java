@@ -1,6 +1,6 @@
 package br.com.orquestrator.orquestrator.core.pipeline;
 
-import br.com.orquestrator.orquestrator.core.context.ContextMetadata;
+import br.com.orquestrator.orquestrator.core.context.identity.RequestIdentity;
 import br.com.orquestrator.orquestrator.domain.model.PipelineDefinition;
 import br.com.orquestrator.orquestrator.exception.PipelineException;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  * PipelineResolver: Único responsável por decidir qual definição de pipeline usar.
- * Aplica o Strategy Pattern para desacoplar a origem dos dados.
+ * Agora usa RequestIdentity para desacoplar do ExecutionContext.
  */
 @Component
 @RequiredArgsConstructor
@@ -18,11 +18,11 @@ public class PipelineResolver {
 
     private final List<PipelineLoader> loaders;
 
-    public PipelineDefinition resolve(ContextMetadata metadata) {
+    public PipelineDefinition resolve(RequestIdentity identity) {
         return loaders.stream()
-                .filter(l -> l.supports(metadata))
+                .filter(l -> l.supports(identity))
                 .findFirst()
-                .flatMap(l -> l.load(metadata))
-                .orElseThrow(() -> new PipelineException("Nenhuma definição de pipeline encontrada para: " + metadata.getOperationType()));
+                .flatMap(l -> l.load(identity))
+                .orElseThrow(() -> new PipelineException("Nenhuma definição de pipeline encontrada para: " + identity.getOperationType()));
     }
 }

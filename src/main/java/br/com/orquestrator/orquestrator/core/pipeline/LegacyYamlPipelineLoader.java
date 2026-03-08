@@ -1,6 +1,6 @@
 package br.com.orquestrator.orquestrator.core.pipeline;
 
-import br.com.orquestrator.orquestrator.core.context.ContextMetadata;
+import br.com.orquestrator.orquestrator.core.context.identity.RequestIdentity;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.domain.model.PipelineDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.NodeId;
@@ -16,6 +16,10 @@ import org.springframework.util.StreamUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+/**
+ * LegacyYamlPipelineLoader: Carrega e traduz pipelines YAML do sistema legado.
+ * Agora desacoplado do ExecutionContext e focado na identidade da requisição.
+ */
 @Slf4j
 @Component
 @LegacyBridge(description = "Carrega e traduz pipelines YAML do sistema legado para o motor moderno.")
@@ -32,16 +36,16 @@ public class LegacyYamlPipelineLoader implements PipelineLoader {
     }
 
     @Override
-    public Optional<PipelineDefinition> load(ContextMetadata metadata) {
-        String operationType = metadata.getOperationType();
+    public Optional<PipelineDefinition> load(RequestIdentity identity) {
+        String operationType = identity.getOperationType();
         Map<String, Object> raw = legacyPipelines.get(operationType);
         if (raw == null) return Optional.empty();
         return Optional.of(translate(raw));
     }
 
     @Override
-    public boolean supports(ContextMetadata metadata) {
-        return metadata.getTags().contains("legacy") && legacyPipelines.containsKey(metadata.getOperationType());
+    public boolean supports(RequestIdentity identity) {
+        return identity.getTags().contains("legacy") && legacyPipelines.containsKey(identity.getOperationType());
     }
 
     @SuppressWarnings("unchecked")
@@ -79,9 +83,6 @@ public class LegacyYamlPipelineLoader implements PipelineLoader {
             TaskDefinition modernDef = taskRepository.findByName(name)
                     .orElseThrow(() -> new RuntimeException("Task moderna não encontrada: " + name));
 
-            // Tradução para o modelo moderno:
-            // 1. Usa '.' para mapear o objeto inteiro para o alias global
-            // 2. Garante que o alias seja um UUID válido se necessário (aqui mantemos o alias como ID)
             tasks.add(new TaskDefinition(
                 new NodeId(alias), modernDef.version(), modernDef.name(), modernDef.type(),
                 (int) enr.get("timeout"), modernDef.config(), modernDef.features(),
@@ -101,7 +102,7 @@ public class LegacyYamlPipelineLoader implements PipelineLoader {
             new NodeId(id), 1, scriptName, "AVIATOR", 100,
             Map.of("script", scriptCode), List.of(), true,
             Map.of("input", translateLegacyPath(sourcePath)),
-            Map.of(".", targetKey), // Usa '.' para o resultado do conversor
+            Map.of(".", targetKey),
             Set.of("default"), null, false, 0
         );
     }
@@ -121,8 +122,8 @@ public class LegacyYamlPipelineLoader implements PipelineLoader {
 
     private String translateLegacyPath(String legacyPath) {
         if (legacyPath == null || legacyPath.isBlank()) return "";
-        // Traduz para o novo padrão de namespace SpEL (#raw, #standard)
-        if (legacyPath.startsWith("$payload.")) return "#raw." + legacyPath.substring(9);
+        // Traduz para o novo padrão de sinais (raw em vez de $payload)
+        if (legacyPath.startsWith("$payload.")) return "raw." + legacyPath.substring(9);
         if (legacyPath.startsWith("$enriquecimentos.")) return legacyPath.substring(17);
         return legacyPath;
     }

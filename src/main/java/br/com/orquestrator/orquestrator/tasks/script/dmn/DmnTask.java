@@ -1,5 +1,6 @@
 package br.com.orquestrator.orquestrator.tasks.script.dmn;
 
+import br.com.orquestrator.orquestrator.domain.model.DataValueFactory;
 import br.com.orquestrator.orquestrator.tasks.base.Configurable;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
 import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
@@ -9,8 +10,12 @@ import org.camunda.bpm.dmn.engine.DmnDecision;
 import org.camunda.bpm.dmn.engine.DmnDecisionTableResult;
 import org.camunda.bpm.dmn.engine.DmnEngine;
 
+import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * DmnTask: Executa tabelas de decisão DMN usando o Shadow Context.
+ */
 @RequiredArgsConstructor
 public class DmnTask implements Task, Configurable<DmnTaskConfiguration> {
 
@@ -24,9 +29,12 @@ public class DmnTask implements Task, Configurable<DmnTaskConfiguration> {
 
     @Override
     public TaskResult execute(TaskContext context) {
-        // O DMN opera sobre o mapa de inputs locais da task
-        DmnDecisionTableResult result = dmnEngine.evaluateDecisionTable(decision, context.inputs());
+        Map<String, Object> rawInputs = new HashMap<>();
+        context.inputs().forEach((k, v) -> rawInputs.put(k, v.raw()));
+
+        DmnDecisionTableResult result = dmnEngine.evaluateDecisionTable(decision, rawInputs);
+        
         Object output = result.isEmpty() ? null : result.getFirstResult().getEntryMap();
-        return TaskResult.success(output);
+        return TaskResult.success(DataValueFactory.of(output));
     }
 }

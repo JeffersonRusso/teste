@@ -4,7 +4,6 @@ import br.com.orquestrator.orquestrator.core.engine.runtime.ExecutionNode;
 import br.com.orquestrator.orquestrator.core.pipeline.CompilationSession;
 import br.com.orquestrator.orquestrator.core.pipeline.CompilationStep;
 import br.com.orquestrator.orquestrator.core.pipeline.NodeAssembler;
-import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -13,9 +12,14 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * NodeAssemblyStep: Transforma as definições de tarefas em nós executáveis.
+ * Agora simplificado para o modelo de Dataflow.
+ */
 @Component
 @RequiredArgsConstructor
 public class NodeAssemblyStep implements CompilationStep {
+
     private final NodeAssembler nodeAssembler;
 
     @Override public int getOrder() { return 40; }
@@ -23,24 +27,15 @@ public class NodeAssemblyStep implements CompilationStep {
     @Override
     public CompilationSession execute(CompilationSession session) {
         Map<String, ExecutionNode> nodes = new HashMap<>();
-        Set<String> processed = new HashSet<>();
         
         Set<String> activeProducedKeys = new HashSet<>();
         session.getTasks().forEach(t -> activeProducedKeys.addAll(t.outputs().values()));
 
         for (var taskDef : session.getTasks()) {
             String nodeId = taskDef.nodeId().value();
-            if (processed.contains(nodeId)) continue;
-
-            if (session.getFusionGroups().containsKey(nodeId)) {
-                var group = session.getFusionGroups().get(nodeId);
-                nodes.put(nodeId, nodeAssembler.assembleFused(group, activeProducedKeys));
-                group.forEach(t -> processed.add(t.nodeId().value()));
-            } else {
-                nodes.put(nodeId, nodeAssembler.assemble(taskDef, activeProducedKeys));
-                processed.add(nodeId);
-            }
+            nodes.put(nodeId, nodeAssembler.assemble(taskDef, activeProducedKeys));
         }
+
         session.setNodes(nodes);
         return session;
     }

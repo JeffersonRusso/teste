@@ -1,6 +1,5 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.impl.cache;
 
-import br.com.orquestrator.orquestrator.core.context.ContextHolder;
 import br.com.orquestrator.orquestrator.core.engine.runtime.CacheEngine;
 import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
@@ -13,6 +12,10 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * CacheInterceptor: Gerencia o cache de resultados de tarefas.
+ * Agora desacoplado do ContextHolder e focado no Shadow Context.
+ */
 @Slf4j
 @RequiredArgsConstructor
 public class CacheInterceptor implements TaskInterceptor {
@@ -27,7 +30,8 @@ public class CacheInterceptor implements TaskInterceptor {
         if (config == null || config.key() == null) return chain.proceed(chain.context());
 
         try {
-            DataValue keyDv = expressionEngine.compile(config.key()).evaluate(ContextHolder.reader());
+            // Gera a chave do cache usando os inputs da task (Shadow Context)
+            DataValue keyDv = expressionEngine.compile(config.key()).evaluate(chain.context().inputs());
             String cacheKey = keyDv.as(String.class).orElse(keyDv.raw().toString());
 
             Optional<DataValue> cached = cacheEngine.get(nodeId, cacheKey);

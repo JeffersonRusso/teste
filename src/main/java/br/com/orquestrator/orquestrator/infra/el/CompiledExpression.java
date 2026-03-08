@@ -1,6 +1,7 @@
 package br.com.orquestrator.orquestrator.infra.el;
 
 import br.com.orquestrator.orquestrator.domain.model.DataValue;
+import br.com.orquestrator.orquestrator.domain.model.DataValueFactory;
 
 /**
  * CompiledExpression: O contrato para uma bolinha de lógica.
@@ -19,5 +20,5 @@ public interface CompiledExpression {
     default void setValue(Object root, Object value) {}
 
     // Identidade: A bolinha que apenas passa o dado adiante.
-    CompiledExpression IDENTITY = (root) -> DataValue.of(root);
+    CompiledExpression IDENTITY = (root) -> DataValueFactory.of(root);
 }

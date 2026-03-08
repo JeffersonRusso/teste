@@ -6,19 +6,34 @@ import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.concurrent.Executors;
+
+/**
+ * UndertowConfig: Configuração de ultra-performance para Java 21.
+ * Força o uso de Virtual Threads para processamento de requisições,
+ * eliminando a criação excessiva de threads nativas.
+ */
 @Configuration
 public class UndertowConfig {
 
     @Bean
     public WebServerFactoryCustomizer<UndertowServletWebServerFactory> undertowCustomizer() {
-        return factory -> factory.addBuilderCustomizers(builder -> {
-            // OTIMIZAÇÃO CRÍTICA PARA VIRTUAL THREADS:
-            // Desativa o cache de ThreadLocal que causa contenção massiva (SynchronizedMap).
-            // Usamos um pool direto e maior para evitar context switching.
-            builder.setByteBufferPool(new DefaultByteBufferPool(true, 16384, -1, 0));
-            
-            // Ajusta o número de threads de IO para o número de cores (ideal para VTs)
-            builder.setIoThreads(Runtime.getRuntime().availableProcessors());
-        });
+        return factory -> {
+            // Configura o executor do Undertow para usar Virtual Threads
+            factory.addDeploymentInfoCustomizers(deploymentInfo -> 
+                deploymentInfo.setExecutor(Executors.newVirtualThreadPerTaskExecutor())
+            );
+
+            factory.addBuilderCustomizers(builder -> {
+                // Otimização de buffer para evitar contenção
+                builder.setByteBufferPool(new DefaultByteBufferPool(true, 16384, -1, 0));
+                
+                // Threads de IO limitadas aos cores da CPU (ideal para VTs)
+                builder.setIoThreads(Runtime.getRuntime().availableProcessors());
+                
+                // Desativa o worker thread pool nativo (já que usamos VTs no deployment)
+                builder.setWorkerThreads(1); 
+            });
+        };
     }
 }

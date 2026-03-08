@@ -1,8 +1,5 @@
 package br.com.orquestrator.orquestrator.config;
 
-import br.com.orquestrator.orquestrator.core.engine.binding.InputCompiler;
-import br.com.orquestrator.orquestrator.core.engine.binding.OutputCompiler;
-import br.com.orquestrator.orquestrator.core.engine.binding.NormalizationCompiler;
 import br.com.orquestrator.orquestrator.core.engine.binding.TaskBindingResolver;
 import br.com.orquestrator.orquestrator.core.engine.runtime.InterceptorEngine;
 import br.com.orquestrator.orquestrator.core.engine.validation.ContractRegistry;
@@ -15,14 +12,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * CompilationConfig: Configura o contexto de compilação do pipeline.
+ * Limpo de dependências obsoletas.
+ */
 @Configuration
 public class CompilationConfig {
 
     @Bean
-    public CompilationContext compilationContext(InputCompiler inputCompiler,
-                                                 OutputCompiler outputCompiler,
-                                                 NormalizationCompiler normalizationCompiler,
-                                                 TaskBindingResolver bindingResolver,
+    public CompilationContext compilationContext(TaskBindingResolver bindingResolver,
                                                  TaskValidator validator, 
                                                  DataValidator dataValidator,
                                                  ContractRegistry contractRegistry,
@@ -31,9 +29,6 @@ public class CompilationConfig {
                                                  InterceptorEngine interceptorEngine,
                                                  ObjectMapper objectMapper) {
         return new CompilationContext(
-            inputCompiler,
-            outputCompiler,
-            normalizationCompiler,
             bindingResolver,
             validator,
             dataValidator,

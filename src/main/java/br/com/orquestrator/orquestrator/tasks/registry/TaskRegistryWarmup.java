@@ -2,7 +2,7 @@ package br.com.orquestrator.orquestrator.tasks.registry;
 
 import br.com.orquestrator.orquestrator.adapter.persistence.repository.DataContractRepository;
 import br.com.orquestrator.orquestrator.adapter.persistence.repository.PipelineVersionRepository;
-import br.com.orquestrator.orquestrator.core.context.ContextMetadata;
+import br.com.orquestrator.orquestrator.core.context.identity.RequestIdentity;
 import br.com.orquestrator.orquestrator.core.engine.validation.ContractRegistry;
 import br.com.orquestrator.orquestrator.core.pipeline.PipelineService;
 import br.com.orquestrator.orquestrator.domain.model.DataContract;
@@ -15,6 +15,10 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * TaskRegistryWarmup: Aquece o cache de pipelines e contratos no startup.
+ * Agora desacoplado do ExecutionContext e focado na identidade da requisição.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -60,12 +64,16 @@ public class TaskRegistryWarmup {
         List<String> activeOperations = versionRepository.findAllActiveOperations();
         for (String operation : activeOperations) {
             try {
-                ContextMetadata warmupMetadata = new ContextMetadata() {
-                    @Override public String getCorrelationId() { return "WARMUP"; }
-                    @Override public String getOperationType() { return operation; }
-                    @Override public Set<String> getTags() { return Set.of("default"); }
-                };
-                pipelineService.create(warmupMetadata);
+                // Cria uma identidade de warm-up para o PipelineService
+                RequestIdentity warmupIdentity = new RequestIdentity(
+                    "WARMUP", 
+                    operation, 
+                    "WARMUP_ORDER", 
+                    "WARMUP_EXEC", 
+                    Set.of("default")
+                );
+                
+                pipelineService.create(warmupIdentity);
                 log.info("Pipeline [{}] aquecido com sucesso.", operation);
             } catch (Exception e) {
                 log.error("Falha ao aquecer pipeline [{}]: {}", operation, e.getMessage());

@@ -1,43 +1,33 @@
 package br.com.orquestrator.orquestrator.infra.el;
 
-import br.com.orquestrator.orquestrator.core.context.ContextSchema;
-import br.com.orquestrator.orquestrator.core.context.ReadableContext;
+import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.expression.MapAccessor;
-import org.springframework.core.convert.support.DefaultConversionService;
-import org.springframework.expression.TypeConverter;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.expression.spel.support.StandardTypeConverter;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
+/**
+ * SpelContextFactory: Cria o contexto de avaliação SpEL para o Shadow Context.
+ * Otimizado para Zero-Copy usando DataValueAccessor.
+ */
 @Component
 @RequiredArgsConstructor
 public class SpelContextFactory {
 
     private final MapAccessor mapAccessor = new MapAccessor();
-    private final ExecutionContextAccessor contextAccessor;
-
-    // Reutiliza o conversor de tipos para evitar alocações (TLAB optimization)
-    private final TypeConverter sharedTypeConverter = new StandardTypeConverter(new DefaultConversionService());
+    private final DataValueAccessor dataValueAccessor;
 
     public StandardEvaluationContext create(Object root) {
-        // Voltamos para o StandardEvaluationContext para garantir compatibilidade total
+        // Agora passamos o root (Map<String, DataValue>) diretamente!
+        // Não há mais conversão para Map<String, Object>.
         StandardEvaluationContext context = new StandardEvaluationContext(root);
-
-        context.addPropertyAccessor(contextAccessor);
+        
+        // Adicionamos o nosso acessor customizado para DataValue
+        context.addPropertyAccessor(dataValueAccessor);
         context.addPropertyAccessor(mapAccessor);
-        context.setTypeConverter(sharedTypeConverter);
-
-        if (root instanceof ReadableContext rc) {
-            injectSovereignVariables(context, rc);
-        }
         
         return context;
-    }
-
-    private void injectSovereignVariables(StandardEvaluationContext context, ReadableContext rc) {
-        for (String ns : ContextSchema.sovereignNamespaces()) {
-            context.setVariable(ns, rc.get(ns));
-        }
     }
 }

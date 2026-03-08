@@ -6,7 +6,11 @@ import br.com.orquestrator.orquestrator.domain.vo.NodeId;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+/**
+ * TaskDefinition: Definição imutável de uma tarefa no pipeline.
+ */
 public record TaskDefinition(
     NodeId nodeId,
     Integer version,
@@ -33,9 +37,14 @@ public record TaskDefinition(
     }
 
     /**
-     * Identifica se a task é CPU-Bound (Leve).
-     * Tasks de script e lógica são candidatas à fusão para economizar Virtual Threads.
+     * Identifica quais campos a tarefa pretende produzir (baseado nas chaves de saída).
+     * Útil para otimizações de extração (ex: HttpTask).
      */
+    public Set<String> getRequiredFields() {
+        if (outputs == null || outputs.isEmpty()) return Set.of(".");
+        return outputs.keySet();
+    }
+
     public boolean isCpuBound() {
         return "AVIATOR".equalsIgnoreCase(type) || 
                "GROOVY_SCRIPT".equalsIgnoreCase(type) || 

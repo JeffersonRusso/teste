@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 
 /**
  * PipelineCompiler: Transforma definições em executáveis usando um DAG de compilação.
- * SOLID: Aberto para novos passos de compilação sem alterar o motor.
+ * Agora simplificado para o modelo de Dataflow puro.
  */
 @Slf4j
 @Component
@@ -30,14 +30,12 @@ public class PipelineCompiler {
     }
 
     public Pipeline compile(PipelineDefinition def, Set<String> activeTags) {
-        // Inicia o fluxo de compilação (DAG de Bolinhas)
         return Flow.start(new CompilationSession(def, activeTags))
                 .next(this::runCompilationSteps)
                 .finish(this::buildFinalPipeline);
     }
 
     private CompilationSession runCompilationSteps(CompilationSession session) {
-        // Percorre as bolinhas de compilação
         for (CompilationStep step : steps) {
             session = step.execute(session);
         }
@@ -51,11 +49,11 @@ public class PipelineCompiler {
                 .map(DataPath::of)
                 .collect(Collectors.toSet());
 
+        // O Pipeline agora é apenas o Grafo de Nós e metadados de execução
         return new Pipeline(
             session.getNodes(), 
             Duration.ofMillis(def.timeoutMs()), 
-            requiredPaths,
-            session.getNormalizationPlan()
+            requiredPaths
         );
     }
 }

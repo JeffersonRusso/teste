@@ -3,12 +3,16 @@ package br.com.orquestrator.orquestrator.tasks.registry.factory;
 import br.com.orquestrator.orquestrator.core.engine.binding.MarshallingPlan;
 import br.com.orquestrator.orquestrator.core.engine.runtime.*;
 import br.com.orquestrator.orquestrator.domain.FeatureDefinition;
+import br.com.orquestrator.orquestrator.domain.model.DataValueFactory;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * DecoratorPipelineBuilder: Constrói a cadeia de interceptores para uma tarefa.
+ */
 public class DecoratorPipelineBuilder {
 
     private final List<TaskInterceptor> interceptors = new ArrayList<>();
@@ -23,32 +27,31 @@ public class DecoratorPipelineBuilder {
     }
 
     public DecoratorPipelineBuilder withInfra() {
-        // OTIMIZAÇÃO: Removido ScopeDecorator para evitar overhead de ScopedValue.where()
-        // O nodeId já está disponível no TaskContext.
         interceptors.add(new TelemetryDecorator(nodeId));
         interceptors.add(new ErrorPolicyDecorator(nodeId, def.failFast()));
         return this;
     }
 
     public DecoratorPipelineBuilder withData(MarshallingPlan plan) {
-        interceptors.add(new InputDecorator(
-            context.inputCompiler().bake(def),
-            context.inputCompiler().extractRequiredFields(def)
-        ));
+        interceptors.add(new InputDecorator(def.getRequiredFields()));
         return this;
     }
 
-    public DecoratorPipelineBuilder withConfigResolution(Class<?> configClass) {
+    /**
+     * Resolve a configuração: se for dinâmica, adiciona o decorator. 
+     * Se for estática, injeta o valor pronto no contexto.
+     */
+    public DecoratorPipelineBuilder withConfigResolution(Class<?> configClass, Object staticValue) {
         if (configClass != null) {
             interceptors.add(new ConfigurationResolverDecorator(context.bindingResolver(), def.config(), configClass));
+        } else if (staticValue != null) {
+            // Injeta a configuração estática já resolvida
+            interceptors.add(chain -> chain.proceed(chain.context().withConfiguration(DataValueFactory.of(staticValue))));
         }
         return this;
     }
 
     public DecoratorPipelineBuilder withOutput(MarshallingPlan plan) {
-        interceptors.add(new OutputMappingDecorator(
-            context.outputCompiler().bake(def)
-        ));
         return this;
     }
 
@@ -61,9 +64,6 @@ public class DecoratorPipelineBuilder {
     }
 
     public DecoratorPipelineBuilder withGuard() {
-        if (def.guardCondition() != null && !def.guardCondition().isBlank()) {
-            interceptors.add(new GuardDecorator(context.expressionEngine(), def.guardCondition(), nodeId));
-        }
         return this;
     }
 

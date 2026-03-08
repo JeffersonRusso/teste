@@ -1,6 +1,6 @@
 package br.com.orquestrator.orquestrator.core.engine.binding;
 
-import br.com.orquestrator.orquestrator.core.context.ContextHolder;
+import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
 import br.com.orquestrator.orquestrator.exception.TaskConfigurationException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -14,6 +14,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * TaskBindingResolver: Resolve expressões dinâmicas dentro da configuração de uma Task.
+ * Agora desacoplado do ContextHolder e focado no Shadow Context.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -23,20 +27,18 @@ public class TaskBindingResolver {
     private final ObjectMapper objectMapper;
     private final Map<Class<?>, ObjectReader> readerCache = new ConcurrentHashMap<>(128);
 
-    public <T> T resolve(Map<String, Object> rawConfig, Class<T> targetClass) {
+    /**
+     * Resolve a configuração da task usando os inputs coletados (Shadow Context).
+     */
+    public <T> T resolve(Map<String, Object> rawConfig, Map<String, DataValue> inputs, Class<T> targetClass) {
         if (rawConfig == null || rawConfig.isEmpty()) {
             return convert(Map.of(), targetClass);
         }
 
         try {
-            // Corrigido: API correta do ScopedValue
-            Map<String, Object> sourceData = ContextHolder.CURRENT_INPUTS.isBound() 
-                ? ContextHolder.CURRENT_INPUTS.get() 
-                : Map.of();
-
             Map<String, Object> resolvedMap = new HashMap<>();
             rawConfig.forEach((key, value) -> 
-                resolvedMap.put(key, expressionEngine.compile(value).evaluate(sourceData).raw())
+                resolvedMap.put(key, expressionEngine.compile(value).evaluate(inputs).raw())
             );
 
             return convert(resolvedMap, targetClass);

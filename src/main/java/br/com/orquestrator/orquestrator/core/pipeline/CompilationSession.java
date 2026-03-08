@@ -1,6 +1,5 @@
 package br.com.orquestrator.orquestrator.core.pipeline;
 
-import br.com.orquestrator.orquestrator.core.engine.binding.NormalizationStep;
 import br.com.orquestrator.orquestrator.core.engine.runtime.ExecutionNode;
 import br.com.orquestrator.orquestrator.domain.model.PipelineDefinition;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
@@ -9,6 +8,10 @@ import lombok.Setter;
 
 import java.util.*;
 
+/**
+ * CompilationSession: Estado mutável durante o processo de compilação do pipeline.
+ * Agora simplificado para o modelo de Dataflow.
+ */
 @Getter
 @Setter
 public class CompilationSession {
@@ -16,9 +19,7 @@ public class CompilationSession {
     private final Set<String> activeTags;
     
     private List<TaskDefinition> tasks;
-    private Map<String, List<TaskDefinition>> fusionGroups = new HashMap<>();
     private Map<String, ExecutionNode> nodes = new HashMap<>();
-    private List<NormalizationStep> normalizationPlan = new ArrayList<>();
 
     public CompilationSession(PipelineDefinition definition, Set<String> activeTags) {
         this.definition = definition;

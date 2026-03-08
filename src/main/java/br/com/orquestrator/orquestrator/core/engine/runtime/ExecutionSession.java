@@ -1,72 +1,40 @@
 package br.com.orquestrator.orquestrator.core.engine.runtime;
 
-import br.com.orquestrator.orquestrator.core.context.*;
 import br.com.orquestrator.orquestrator.core.context.identity.RequestIdentity;
-import br.com.orquestrator.orquestrator.core.context.tag.TagManager;
-import br.com.orquestrator.orquestrator.core.engine.binding.NormalizationCompiler;
-import br.com.orquestrator.orquestrator.core.engine.binding.ResultExtractor;
 import br.com.orquestrator.orquestrator.core.pipeline.PipelineService;
 import br.com.orquestrator.orquestrator.domain.vo.Pipeline;
-import br.com.orquestrator.orquestrator.infra.Flow;
-import br.com.orquestrator.orquestrator.infra.el.SpelContextFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.expression.EvaluationContext;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
+/**
+ * ExecutionSession: O ponto de entrada para a execução de um pipeline.
+ * Agora simplificado para um orquestrador de Dataflow puro.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class ExecutionSession {
 
-    private final ContextFactory contextFactory;
-    private final TagManager tagManager;
     private final PipelineService pipelineService;
     private final ReactiveExecutionEngine engine;
-    private final NormalizationCompiler normalizationCompiler;
-    private final ResultExtractor resultExtractor;
-    private final SpelContextFactory spelContextFactory;
 
+    /**
+     * Executa um pipeline baseado na identidade da requisição e no corpo de dados.
+     */
+    @SuppressWarnings("unchecked")
     public Map<String, Object> run(RequestIdentity identity, Map<String, String> headers, Map<String, Object> body) {
-        ExecutionContext context = contextFactory.create(identity, headers, body);
-        EvaluationContext evalContext = spelContextFactory.create(context);
+        log.info("Iniciando execução para operação: {}", identity.getOperationType());
 
-        try {
-            return ScopedValue.where(ContextHolder.CONTEXT, context)
-                    .where(ContextHolder.EVAL_CONTEXT, evalContext)
-                    .call(() -> executeFlow(context));
-        } catch (Exception e) {
-            throw (e instanceof RuntimeException re) ? re : new RuntimeException(e);
-        }
-    }
+        // 1. Resolve o Pipeline (Grafo)
+        Pipeline pipeline = pipelineService.create(identity);
 
-    private Map<String, Object> executeFlow(ExecutionContext context) {
-        // O código agora é puramente um DAG de bolinhas (Flow Step Pattern)
-        return Flow.start(context)
-                .next(this::resolveScenario)
-                .next(this::normalizeInput)
-                .next(this::runEngine)
-                .finish(this::extractResult);
-    }
+        // 2. Extrai a parte de 'operation' para o sinal 'raw'
+        Map<String, Object> operationBody = (Map<String, Object>) body.getOrDefault("operation", body);
 
-    private Pipeline resolveScenario(ExecutionContext ctx) {
-        tagManager.resolveAndApply(ctx.reader(), ctx.writer());
-        return pipelineService.create(ctx.metadata());
-    }
-
-    private Pipeline normalizeInput(Pipeline pipeline) {
-        normalizationCompiler.execute(pipeline.normalizationPlan(), ContextHolder.writer());
-        return pipeline;
-    }
-
-    private Pipeline runEngine(Pipeline pipeline) {
-        engine.execute(pipeline);
-        return pipeline;
-    }
-
-    private Map<String, Object> extractResult(Pipeline pipeline) {
-        return resultExtractor.extract(ContextHolder.reader(), pipeline);
+        // 3. Executa o motor de sinais (Dataflow)
+        return engine.execute(pipeline, identity, operationBody);
     }
 }

@@ -1,6 +1,5 @@
 package br.com.orquestrator.orquestrator.adapter.web.controller;
 
-import br.com.orquestrator.orquestrator.core.context.ContextHolder;
 import br.com.orquestrator.orquestrator.exception.PipelineException;
 import br.com.orquestrator.orquestrator.exception.PipelineValidationException;
 import br.com.orquestrator.orquestrator.exception.TaskConfigurationException;
@@ -13,11 +12,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
-import java.util.Optional;
 
 /**
  * GlobalExceptionHandler: Centraliza o tratamento de erros da API.
- * Segue o padrão RFC 7807 (Problem Details for HTTP APIs).
+ * Extrai metadados de rastreabilidade diretamente das exceções (Dataflow).
  */
 @Slf4j
 @RestControllerAdvice
@@ -59,15 +57,11 @@ public class GlobalExceptionHandler {
         problem.setType(URI.create(TYPE_BASE + code));
         problem.setTitle(title);
         
-        // Injeta metadados de rastreabilidade se o contexto estiver disponível
-        ContextHolder.getContext().ifPresent(ctx -> {
-            problem.setProperty("correlationId", ctx.metadata().getCorrelationId());
-            problem.setProperty("operation", ctx.metadata().getOperationType());
-        });
-
-        // Injeta metadados da exceção
+        // Injeta metadados de rastreabilidade se a exceção for do tipo PipelineException
         if (e instanceof PipelineException pe) {
-            Optional.ofNullable(pe.getNodeId()).ifPresent(id -> problem.setProperty("nodeId", id));
+            if (pe.getCorrelationId() != null) problem.setProperty("correlationId", pe.getCorrelationId());
+            if (pe.getOperation() != null) problem.setProperty("operation", pe.getOperation());
+            if (pe.getNodeId() != null) problem.setProperty("nodeId", pe.getNodeId());
         }
 
         return ResponseEntity.status(status).body(problem);

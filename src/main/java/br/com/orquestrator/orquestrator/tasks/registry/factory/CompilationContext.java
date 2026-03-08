@@ -1,8 +1,5 @@
 package br.com.orquestrator.orquestrator.tasks.registry.factory;
 
-import br.com.orquestrator.orquestrator.core.engine.binding.InputCompiler;
-import br.com.orquestrator.orquestrator.core.engine.binding.OutputCompiler;
-import br.com.orquestrator.orquestrator.core.engine.binding.NormalizationCompiler;
 import br.com.orquestrator.orquestrator.core.engine.binding.TaskBindingResolver;
 import br.com.orquestrator.orquestrator.core.engine.runtime.InterceptorEngine;
 import br.com.orquestrator.orquestrator.core.engine.validation.ContractRegistry;
@@ -12,10 +9,11 @@ import br.com.orquestrator.orquestrator.core.engine.validation.TaskValidator;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+/**
+ * CompilationContext: Agrupa as dependências necessárias para a compilação de tarefas.
+ * Agora 100% limpo de compiladores de binding obsoletos.
+ */
 public record CompilationContext(
-    InputCompiler inputCompiler,
-    OutputCompiler outputCompiler,
-    NormalizationCompiler normalizationCompiler,
     TaskBindingResolver bindingResolver,
     TaskValidator validator,
     DataValidator dataValidator,

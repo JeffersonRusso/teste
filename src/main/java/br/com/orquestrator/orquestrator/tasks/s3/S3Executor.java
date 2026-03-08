@@ -1,6 +1,6 @@
 package br.com.orquestrator.orquestrator.tasks.s3;
 
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
+import br.com.orquestrator.orquestrator.domain.model.DataValueFactory;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ public class S3Executor {
             
             // Simulação de upload (Aqui entraria a SDK da AWS)
             
-            return TaskResult.success(DataValue.of(content), Map.of(
+            return TaskResult.success(DataValueFactory.of(content), Map.of(
                 "s3.location", "s3://" + bucket + "/" + key,
                 "s3.region", region != null ? region : "default"
             ));

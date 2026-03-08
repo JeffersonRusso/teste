@@ -1,23 +1,24 @@
 package br.com.orquestrator.orquestrator.core.context.tag;
 
-import br.com.orquestrator.orquestrator.core.context.ReadableContext;
-import br.com.orquestrator.orquestrator.domain.ContextKey;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
+/**
+ * SystemTagProvider: Resolve tags automáticas do sistema baseadas no contexto da requisição.
+ */
 @Component
 public class SystemTagProvider implements TagProvider {
 
     @Override
-    public Set<String> resolve(ReadableContext reader) {
+    public Set<String> resolve(Map<String, String> headers, Map<String, Object> body) {
         Set<String> tags = new HashSet<>();
-        tags.add("default");
         
-        Object opType = reader.getRaw(ContextKey.OPERATION_TYPE);
-        if (opType != null) {
-            tags.add(opType.toString().toLowerCase());
+        // Exemplo: Adiciona tag baseada no ambiente se fornecido via header
+        if (headers != null && headers.containsKey("X-Environment")) {
+            tags.add(headers.get("X-Environment").toLowerCase());
         }
         
         return tags;

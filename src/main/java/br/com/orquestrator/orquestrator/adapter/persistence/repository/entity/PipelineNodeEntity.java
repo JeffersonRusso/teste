@@ -42,7 +42,6 @@ public class PipelineNodeEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     private TaskConfig configuration;
 
-    // Relacionamentos obrigatórios para o novo modelo
     @OneToMany(fetch = FetchType.EAGER)
     @JoinColumn(name = "node_id")
     private List<PipelineNodeInputEntity> inputs;
@@ -65,9 +64,8 @@ public class PipelineNodeEntity {
         String finalType = type != null ? type : (template != null ? template.getType() : "UNKNOWN");
         Map<String, Object> finalConfig = configuration != null ? configuration.toFullMap() : Map.of();
         
-        // Converte as entidades de input/output para os mapas do domínio
         Map<String, String> inputMap = inputs != null ? inputs.stream()
-                .collect(Collectors.toMap(PipelineNodeInputEntity::getLocalKey, PipelineNodeInputEntity::getSourceExpression)) : Map.of();
+                .collect(Collectors.toMap(PipelineNodeInputEntity::getLocalKey, PipelineNodeInputEntity::getSourcePath)) : Map.of();
 
         Map<String, String> outputMap = outputs != null ? outputs.stream()
                 .collect(Collectors.toMap(PipelineNodeOutputEntity::getLocalKey, PipelineNodeOutputEntity::getTargetKey)) : Map.of();

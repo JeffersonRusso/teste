@@ -19,6 +19,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * JpaPipelineRepositoryAdapter: Adaptador para persistência de pipelines via JPA.
+ * Agora alinhado com o padrão source_path.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -47,9 +51,9 @@ public class JpaPipelineRepositoryAdapter implements PipelineRepository, TaskRep
                 .map(PipelineNodeEntity::toDomain)
                 .toList();
 
-        // Carrega normalização da tabela tb_input_normalization
+        // Carrega normalização usando o novo campo sourcePath
         Map<String, String> inputMapping = normalizationRepository.findByOperationType(version.getOperationType()).stream()
-                .collect(Collectors.toMap(InputNormalizationEntity::getTargetField, InputNormalizationEntity::getSourceExpression));
+                .collect(Collectors.toMap(InputNormalizationEntity::getTargetField, InputNormalizationEntity::getSourcePath));
 
         return new PipelineDefinition(
                 version.getOperationType(),

@@ -22,8 +22,8 @@ public class PipelineNodeInputEntity {
     @Column(name = "local_key")
     private String localKey;
 
-    @Column(name = "source_expression")
-    private String sourceExpression;
+    @Column(name = "source_path")
+    private String sourcePath;
 
     @Column(name = "expected_semantic_type")
     private String expectedSemanticType;

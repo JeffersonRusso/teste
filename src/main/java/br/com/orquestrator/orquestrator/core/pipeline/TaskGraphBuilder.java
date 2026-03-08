@@ -1,6 +1,7 @@
 package br.com.orquestrator.orquestrator.core.pipeline;
 
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
+import br.com.orquestrator.orquestrator.domain.vo.DataPath;
 import br.com.orquestrator.orquestrator.exception.PipelineException;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedAcyclicGraph;
@@ -12,7 +13,7 @@ import java.util.Map;
 
 /**
  * TaskGraphBuilder: Transforma uma lista de tarefas em um Grafo Acíclico Dirigido (DAG).
- * Detecta ciclos e resolve dependências baseadas em dados.
+ * Agora entende a Soberania de Sinais para ligar produtores e consumidores.
  */
 @Component
 public class TaskGraphBuilder {
@@ -21,40 +22,38 @@ public class TaskGraphBuilder {
         var graph = new DirectedAcyclicGraph<TaskDefinition, DefaultEdge>(DefaultEdge.class);
         tasks.forEach(graph::addVertex);
 
-        Map<String, TaskDefinition> producers = mapProducers(tasks);
+        // Mapeia todos os sinais produzidos por cada task
+        Map<String, TaskDefinition> signalProducers = new HashMap<>();
+        for (var task : tasks) {
+            if (task.outputs() != null) {
+                task.outputs().values().forEach(out -> signalProducers.put(DataPath.of(out).getRoot(), task));
+            }
+        }
 
         for (var task : tasks) {
-            connectDependencies(graph, task, producers);
+            connectDependencies(graph, task, signalProducers);
         }
 
         return graph;
     }
 
-    private Map<String, TaskDefinition> mapProducers(List<TaskDefinition> tasks) {
-        Map<String, TaskDefinition> producers = new HashMap<>();
-        for (var task : tasks) {
-            if (task.outputs() != null) {
-                task.outputs().values().forEach(outputKey -> producers.put(outputKey, task));
-            }
-        }
-        return producers;
-    }
-
     private void connectDependencies(DirectedAcyclicGraph<TaskDefinition, DefaultEdge> graph, 
                                      TaskDefinition consumer, 
-                                     Map<String, TaskDefinition> producers) {
+                                     Map<String, TaskDefinition> signalProducers) {
         if (consumer.inputs() == null) return;
 
-        for (String inputKey : consumer.inputs().values()) {
-            TaskDefinition producer = producers.get(inputKey);
+        for (String inputPath : consumer.inputs().values()) {
+            // Resolve o produtor pela raiz do sinal (ex: de 'perfil_cliente.id' busca 'perfil_cliente')
+            String signalRoot = DataPath.of(inputPath).getRoot();
+            TaskDefinition producer = signalProducers.get(signalRoot);
             
             if (producer != null && !producer.equals(consumer)) {
                 try {
                     graph.addEdge(producer, consumer);
                 } catch (IllegalArgumentException e) {
                     throw new PipelineException(String.format(
-                        "Ciclo detectado! A task [%s] cria uma dependência circular via dado '%s'", 
-                        consumer.nodeId().value(), inputKey), e);
+                        "Ciclo detectado! A task [%s] cria uma dependência circular via sinal '%s'", 
+                        consumer.nodeId().value(), signalRoot), e);
                 }
             }
         }

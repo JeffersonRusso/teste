@@ -1,7 +1,7 @@
 package br.com.orquestrator.orquestrator.core.engine.runtime;
 
 import br.com.orquestrator.orquestrator.core.engine.binding.TaskBindingResolver;
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
+import br.com.orquestrator.orquestrator.domain.model.DataValueFactory;
 import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
@@ -9,6 +9,10 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
 
+/**
+ * ConfigurationResolverDecorator: Resolve expressões dinâmicas na configuração da Task.
+ * Agora usa o Shadow Context (inputs) para a resolução.
+ */
 @RequiredArgsConstructor
 public class ConfigurationResolverDecorator implements TaskInterceptor {
 
@@ -18,11 +22,12 @@ public class ConfigurationResolverDecorator implements TaskInterceptor {
 
     @Override
     public TaskResult intercept(Chain chain) {
-        Object resolvedConfig = bindingResolver.resolve(rawConfig, configClass);
+        // Resolve a configuração usando os inputs já coletados pelo nó
+        Object resolvedConfig = bindingResolver.resolve(rawConfig, chain.context().inputs(), configClass);
         
         TaskContext enrichedContext = new TaskContext(
             chain.context().inputs(), 
-            DataValue.of(resolvedConfig), 
+            DataValueFactory.of(resolvedConfig),
             chain.context().nodeId(), 
             chain.context().requiredFields()
         );

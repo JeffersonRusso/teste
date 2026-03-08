@@ -1,6 +1,7 @@
 package br.com.orquestrator.orquestrator.tasks.base;
 
 import br.com.orquestrator.orquestrator.domain.model.DataValue;
+import br.com.orquestrator.orquestrator.domain.model.DataValueFactory;
 import java.util.Map;
 
 /**
@@ -16,9 +17,9 @@ public record TaskResult(
         return new TaskResult(body, 200, Map.of());
     }
 
-    // Sobrecarga de conveniência para facilitar a criação (converte automaticamente)
+    // Sobrecarga de conveniência para facilitar a criação (converte automaticamente via Factory)
     public static TaskResult success(Object body) {
-        return new TaskResult(DataValue.of(body), 200, Map.of());
+        return new TaskResult(DataValueFactory.of(body), 200, Map.of());
     }
 
     public static TaskResult success(DataValue body, Map<String, Object> metadata) {
@@ -26,11 +27,11 @@ public record TaskResult(
     }
 
     public static TaskResult error(int status, String message) {
-        return new TaskResult(new DataValue.Empty(), status, Map.of("error_message", message));
+        return new TaskResult(DataValue.EMPTY, status, Map.of("error_message", message));
     }
 
     public static TaskResult failure(Map<String, Object> errorBody) {
-        return new TaskResult(DataValue.of(errorBody), 500, Map.of());
+        return new TaskResult(DataValueFactory.of(errorBody), 500, Map.of());
     }
 
     public boolean isSuccess() {

@@ -15,6 +15,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * DmnTaskProvider: Carrega e prepara tarefas DMN.
+ */
 @Component
 @RequiredArgsConstructor
 public class DmnTaskProvider implements TaskProvider {
@@ -35,8 +38,8 @@ public class DmnTaskProvider implements TaskProvider {
 
     @Override
     public Task create(TaskDefinition def) {
-        // Resolve a configuração no startup para carregar o arquivo DMN
-        var config = taskBindingResolver.resolve(def.config(), DmnTaskConfiguration.class);
+        // Resolve a configuração estática no startup (sem inputs dinâmicos)
+        DmnTaskConfiguration config = taskBindingResolver.resolve(def.config(), Map.of(), DmnTaskConfiguration.class);
         
         String cacheKey = config.dmnFile() + ":" + config.decisionKey();
         DmnDecision decision = decisionCache.computeIfAbsent(cacheKey, k -> 

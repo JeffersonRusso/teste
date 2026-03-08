@@ -1,65 +1,59 @@
 package br.com.orquestrator.orquestrator.core.engine.runtime;
 
+import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
 import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
+import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * DefaultExecutionNode: Maestro da execução de uma Task na DAG.
+ * Otimizado: Usa templates pré-calculados para evitar alocações no caminho quente.
+ */
 @Slf4j
 @RequiredArgsConstructor
 public class DefaultExecutionNode implements ExecutionNode {
 
     private final String nodeId;
     private final Task executable;
-    private final List<String> inputSignals;
-    private final List<String> outputSignals;
+    private final SignalProjector inputProjector;
+    private final SignalProjector outputProjector;
+    private final Set<String> requiredFields; // Pré-calculado no Assembler
+    private ExecutionNode next;
 
     @Override
     public void run(SignalRegistry signals) {
         try {
-            // 1. Bloqueia até que todos os sinais de dependência sejam emitidos
-            onSignal(signals);
+            // 1. Gathering: Projeta sinais para a Task
+            Map<String, DataValue> inputs = inputProjector.projectIn(signals);
 
-            // 2. Executa a cadeia de tarefas
-            TaskContext context = new TaskContext(Map.of(), null, nodeId, Set.of());
-            executable.execute(context);
+            // 2. Execution: Executa a tarefa usando o Shadow Context
+            // O nodeId e requiredFields são fixos, reduzindo o custo de criação do contexto
+            TaskContext context = new TaskContext(inputs, null, nodeId, requiredFields);
+            TaskResult result = executable.execute(context);
 
-            // 3. Sucesso: Libera os nós sucessores
-            emitSignal(signals);
+            // 3. Emission: Projeta o resultado de volta para o Registry
+            if (result.isSuccess()) {
+                outputProjector.projectOut(result.body(), signals);
+            } else {
+                throw new RuntimeException("Falha na execução da tarefa [" + nodeId + "]: " + result.status());
+            }
+
+            // 4. Continuation: Próximo nó na mesma thread (Zero Context Switch)
+            if (next != null) next.run(signals);
 
         } catch (Exception e) {
-            // 4. Falha: Avisa os sucessores para não esperarem (Fail-Fast)
-            failSignal(signals, e);
+            outputProjector.fail(signals, e);
             throw e;
         }
     }
 
-    @Override
-    public void onSignal(SignalRegistry signals) {
-        if (inputSignals != null) {
-            inputSignals.forEach(signals::await);
-        }
-    }
-
-    @Override
-    public void emitSignal(SignalRegistry signals) {
-        if (outputSignals != null) {
-            outputSignals.forEach(signals::emit);
-        }
-    }
-
-    /**
-     * Propaga a falha para os sinais de saída.
-     */
-    private void failSignal(SignalRegistry signals, Throwable cause) {
-        if (outputSignals != null) {
-            outputSignals.forEach(s -> signals.fail(s, cause));
-        }
-    }
-
+    @Override public void then(ExecutionNode next) { this.next = next; }
+    @Override public Map<String, DataValue> onSignal(SignalRegistry signals) { return inputProjector.projectIn(signals); }
+    @Override public void emitSignal(SignalRegistry signals, DataValue resultBody) { outputProjector.projectOut(resultBody, signals); }
     @Override public String nodeId() { return nodeId; }
 }

@@ -20,8 +20,8 @@ public class InputNormalizationEntity {
     @Column(name = "target_field")
     private String targetField;
 
-    @Column(name = "source_expression")
-    private String sourceExpression;
+    @Column(name = "source_path")
+    private String sourcePath;
 
     @Column(name = "transformation_expression")
     private String transformationExpression;

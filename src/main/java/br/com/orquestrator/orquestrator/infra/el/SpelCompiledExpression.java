@@ -1,7 +1,7 @@
 package br.com.orquestrator.orquestrator.infra.el;
 
-import br.com.orquestrator.orquestrator.core.context.ContextHolder;
 import br.com.orquestrator.orquestrator.domain.model.DataValue;
+import br.com.orquestrator.orquestrator.domain.model.DataValueFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
@@ -19,21 +19,18 @@ public final class SpelCompiledExpression implements CompiledExpression {
 
     @Override
     public DataValue evaluate(Object root) {
-        EvaluationContext context = ContextHolder.EVAL_CONTEXT.isBound() 
-            ? ContextHolder.EVAL_CONTEXT.get() 
-            : contextFactory.create(root);
+        EvaluationContext context = contextFactory.create(root);
         try {
-            return DataValue.of(expression.getValue(context));
+            Object value = expression.getValue(context);
+            return DataValueFactory.of(value);
         } catch (Exception e) {
-            return DataValue.of(expression.getExpressionString());
+            return DataValueFactory.of(expression.getExpressionString());
         }
     }
 
     @Override
     public <T> T evaluate(Object root, Class<T> targetType) {
-        EvaluationContext context = ContextHolder.EVAL_CONTEXT.isBound() 
-            ? ContextHolder.EVAL_CONTEXT.get() 
-            : contextFactory.create(root);
+        EvaluationContext context = contextFactory.create(root);
         try {
             return expression.getValue(context, targetType);
         } catch (Exception e) {
@@ -56,9 +53,7 @@ public final class SpelCompiledExpression implements CompiledExpression {
 
     @Override
     public void setValue(Object root, Object value) {
-        EvaluationContext context = ContextHolder.EVAL_CONTEXT.isBound() 
-            ? ContextHolder.EVAL_CONTEXT.get() 
-            : contextFactory.create(root);
+        EvaluationContext context = contextFactory.create(root);
         try {
             expression.setValue(context, value);
         } catch (Exception ignored) {}

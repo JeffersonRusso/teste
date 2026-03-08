@@ -1,6 +1,7 @@
 package br.com.orquestrator.orquestrator.infra.el;
 
 import br.com.orquestrator.orquestrator.domain.model.DataValue;
+import br.com.orquestrator.orquestrator.domain.model.DataValueFactory;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -13,6 +14,6 @@ public final class ConstantCompiledExpression implements CompiledExpression {
 
     @Override
     public DataValue evaluate(Object root) {
-        return DataValue.of(value);
+        return DataValueFactory.of(value);
     }
 }

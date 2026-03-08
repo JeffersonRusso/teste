@@ -9,6 +9,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+/**
+ * AnalysisController: Ponto de entrada para as análises de risco.
+ * Gerencia a identidade soberana da requisição.
+ */
 @Slf4j
 @RestController
 @RequestMapping("/v1/analysis")
@@ -22,13 +26,13 @@ public class AnalysisController {
     public Map<String, Object> analyze(@RequestHeader Map<String, String> headers, 
                                        @RequestBody Map<String, Object> body) {
         
-        // 1. Define a identidade soberana logo na entrada
+        // 1. Resolve a identidade soberana
         RequestIdentity identity = identityResolver.resolve(headers, body);
         
         log.info("Iniciando análise. CorrelationId: {} | ExecutionId: {} | Operation: {}", 
                 identity.correlationId(), identity.executionId(), identity.operationType());
 
-        // 2. Passa a identidade completa para o serviço
+        // 2. Executa o serviço de análise
         return riskAnalysisService.analyze(identity, headers, body);
     }
 }
