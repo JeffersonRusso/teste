@@ -14,7 +14,6 @@ import java.util.Map;
 
 /**
  * ValidationDecorator: Aplica validações de contrato e de tarefa antes da execução.
- * Agora adaptado para o Shadow Context (DataValue).
  */
 @RequiredArgsConstructor
 public class ValidationDecorator implements TaskInterceptor {
@@ -25,23 +24,20 @@ public class ValidationDecorator implements TaskInterceptor {
 
     @Override
     public TaskResult intercept(Chain chain) {
-        Map<String, DataValue> taskInputs = chain.context().inputs();
+        Map<String, DataValue> taskInputs = chain.inputs();
         
-        // 1. Converte o Shadow Context (DataValue) para Raw Map (Object) para os validadores
         Map<String, Object> rawInputs = new HashMap<>();
         taskInputs.forEach((k, v) -> rawInputs.put(k, v.raw()));
         
-        // 2. Executa as validações
         validator.validate(definition, rawInputs);
         validateDataContracts(taskInputs);
         
-        return chain.proceed(chain.context());
+        return chain.proceed(taskInputs);
     }
 
     private void validateDataContracts(Map<String, DataValue> inputs) {
         definition.inputs().forEach((localKey, globalKey) -> {
             contractRegistry.get(globalKey).ifPresent(contract -> {
-                // O DataValidator recebe o valor bruto (raw) do DataValue
                 dataValidator.validate(contract, inputs.getOrDefault(localKey, DataValue.EMPTY).raw());
             });
         });

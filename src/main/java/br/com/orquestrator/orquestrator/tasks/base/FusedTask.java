@@ -1,24 +1,24 @@
-package br.com.orquestrator.orquestrator.tasks.base;
-
-import lombok.RequiredArgsConstructor;
-import java.util.List;
-
-@RequiredArgsConstructor
-public class FusedTask implements Task {
-
-    private final List<Task> tasks;
-
-    @Override
-    public TaskResult execute(TaskContext context) {
-        TaskResult lastResult = null;
-        // Nota: Em uma fusão real, o contexto pode mudar entre as tasks (outputs de uma viram inputs da outra).
-        // Mas como a fusão é feita no nível de executáveis já compilados (com seus decoradores),
-        // cada task interna já tem sua própria cadeia de Input/Output.
-        // O contexto passado aqui é o inicial do grupo.
-        
-        for (Task task : tasks) {
-            lastResult = task.execute(context);
-        }
-        return lastResult;
-    }
-}
+//package br.com.orquestrator.orquestrator.tasks.base;
+//
+//import br.com.orquestrator.orquestrator.domain.model.DataValue;
+//import lombok.RequiredArgsConstructor;
+//import java.util.List;
+//import java.util.Map;
+//
+///**
+// * FusedTask: Executa uma lista de tarefas em sequência na mesma thread.
+// */
+//@RequiredArgsConstructor
+//public class FusedTask implements Task {
+//
+//    private final List<Task> tasks;
+//
+//    @Override
+//    public TaskResult execute(Map<String, DataValue> inputs) {
+//        TaskResult lastResult = null;
+//        for (Task task : tasks) {
+//            lastResult = task.execute(inputs);
+//        }
+//        return lastResult;
+//    }
+//}

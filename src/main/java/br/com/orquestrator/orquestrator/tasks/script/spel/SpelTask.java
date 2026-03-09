@@ -2,32 +2,28 @@ package br.com.orquestrator.orquestrator.tasks.script.spel;
 
 import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
-import br.com.orquestrator.orquestrator.tasks.base.Configurable;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
-import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import lombok.RequiredArgsConstructor;
 
+import java.util.Map;
+
+/**
+ * SpelTask: Executa expressões SpEL.
+ */
 @RequiredArgsConstructor
-public class SpelTask implements Task, Configurable<SpelTaskConfiguration> {
+public class SpelTask implements Task {
 
     private final ExpressionEngine expressionEngine;
+    private final SpelTaskConfiguration config;
 
     @Override
-    public Class<SpelTaskConfiguration> getConfigClass() {
-        return SpelTaskConfiguration.class;
-    }
-
-    @Override
-    public TaskResult execute(TaskContext context) {
-        SpelTaskConfiguration config = context.getConfig();
-        
+    public TaskResult execute(Map<String, DataValue> inputs) {
         if (config.expression() == null || config.expression().isBlank()) {
             return TaskResult.success(DataValue.EMPTY);
         }
 
-        // OTIMIZAÇÃO: Compila e avalia
-        DataValue result = expressionEngine.compile(config.expression()).evaluate(context.inputs());
+        DataValue result = expressionEngine.compile(config.expression()).evaluate(inputs);
         return TaskResult.success(result);
     }
 }

@@ -19,12 +19,12 @@ public final class DataValueNavigator {
         
         DataValue current = source;
         String[] parts = path.getParts();
-        
+
         for (String part : parts) {
             current = current.get(part);
             if (current.isEmpty()) return DataValue.EMPTY;
         }
-        
+
         return current;
     }
 }

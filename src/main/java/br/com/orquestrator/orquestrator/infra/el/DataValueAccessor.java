@@ -1,7 +1,6 @@
 package br.com.orquestrator.orquestrator.infra.el;
 
 import br.com.orquestrator.orquestrator.domain.model.DataValue;
-import br.com.orquestrator.orquestrator.domain.model.DataValueFactory;
 import br.com.orquestrator.orquestrator.domain.model.DataValueNavigator;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.expression.EvaluationContext;
@@ -13,23 +12,34 @@ import java.util.Map;
 
 /**
  * DataValueAccessor: O único acessor necessário para o motor SpEL.
- * Agora usa DataValueNavigator para consistência de navegação.
+ * Agora suporta Map para desembrulhar DataValues automaticamente.
  */
 @Component
 public class DataValueAccessor implements PropertyAccessor {
 
     @Override
     public Class<?>[] getSpecificTargetClasses() {
-        return new Class<?>[]{DataValue.class, DataValue.Mapping.class, JsonNode.class};
+        // Adicionamos Map.class para interceptar o acesso ao root context
+        return new Class<?>[]{DataValue.class, DataValue.Mapping.class, JsonNode.class, Map.class};
     }
 
     @Override
     public boolean canRead(EvaluationContext context, Object target, String name) {
-        return target instanceof DataValue || target instanceof JsonNode;
+        return target instanceof DataValue || target instanceof JsonNode || target instanceof Map;
     }
 
     @Override
     public TypedValue read(EvaluationContext context, Object target, String name) {
+        if (target instanceof Map<?, ?> map) {
+            Object value = map.get(name);
+            if (value instanceof DataValue dv) {
+                // O PULO DO GATO: Desembrulha o DataValue para o valor real (raw)
+                // Isso permite que #{cpf} retorne a String "123" e não o objeto DataValue
+                return unwrap(dv);
+            }
+            return new TypedValue(value);
+        }
+
         if (target instanceof JsonNode node) {
             return readFromJsonNode(node, name);
         }
@@ -63,6 +73,7 @@ public class DataValueAccessor implements PropertyAccessor {
             case DataValue.Text(var s, var type) -> new TypedValue(s);
             case DataValue.Logic(var b, var type) -> new TypedValue(b);
             case DataValue.DomainObject(var obj, var type) -> new TypedValue(obj);
+            // Se for complexo (Map/List/Json), retorna o próprio DataValue para continuar a navegação
             default -> new TypedValue(dv);
         };
     }

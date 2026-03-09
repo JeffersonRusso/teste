@@ -14,7 +14,6 @@ import java.util.Optional;
 
 /**
  * CacheInterceptor: Gerencia o cache de resultados de tarefas.
- * Agora desacoplado do ContextHolder e focado no Shadow Context.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -27,11 +26,10 @@ public class CacheInterceptor implements TaskInterceptor {
 
     @Override
     public TaskResult intercept(Chain chain) {
-        if (config == null || config.key() == null) return chain.proceed(chain.context());
+        if (config == null || config.key() == null) return chain.proceed(chain.inputs());
 
         try {
-            // Gera a chave do cache usando os inputs da task (Shadow Context)
-            DataValue keyDv = expressionEngine.compile(config.key()).evaluate(chain.context().inputs());
+            DataValue keyDv = expressionEngine.compile(config.key()).evaluate(chain.inputs());
             String cacheKey = keyDv.as(String.class).orElse(keyDv.raw().toString());
 
             Optional<DataValue> cached = cacheEngine.get(nodeId, cacheKey);
@@ -41,7 +39,7 @@ public class CacheInterceptor implements TaskInterceptor {
                 return TaskResult.success(cached.get(), Map.of("cache_hit", true));
             }
 
-            TaskResult result = chain.proceed(chain.context());
+            TaskResult result = chain.proceed(chain.inputs());
             if (result != null && result.isSuccess()) {
                 cacheEngine.put(nodeId, cacheKey, result.body(), config.ttlMs());
             }
@@ -49,7 +47,7 @@ public class CacheInterceptor implements TaskInterceptor {
 
         } catch (Exception e) {
             log.error("Falha na operação de cache para {}: {}", nodeId, e.getMessage());
-            return chain.proceed(chain.context());
+            return chain.proceed(chain.inputs());
         }
     }
 }

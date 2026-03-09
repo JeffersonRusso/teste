@@ -9,50 +9,44 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * SignalRegistry: Gerenciador de canais de sinais (Dataflow).
- * Blindado para alta concorrência e Virtual Threads.
+ * Instrumentado para diagnóstico de latência.
  */
 @Slf4j
 public class SignalRegistry {
 
     private final Map<String, CompletableFuture<DataValue>> channels = new ConcurrentHashMap<>(64);
 
-    /**
-     * Emite um sinal de forma atômica.
-     */
     public void emit(String signalName, DataValue value) {
         CompletableFuture<DataValue> channel = getChannel(signalName);
         if (channel.isDone()) {
-            log.warn("Sinal [{}] já foi emitido anteriormente. Ignorando segunda emissão.", signalName);
             return;
         }
-        log.debug("Emitindo sinal: {} com valor: {}", signalName, value);
+        // log.error("[PROFILER] SignalRegistry - EMIT: {} | TS: {}", signalName, System.nanoTime());
         channel.complete(value != null ? value : DataValue.EMPTY);
     }
 
-    /**
-     * Propaga uma falha para o canal de forma segura.
-     */
     public void fail(String signalName, Throwable cause) {
         log.error("Falha no sinal {}: {}", signalName, cause.getMessage());
         getChannel(signalName).completeExceptionally(cause);
     }
 
-    /**
-     * Aguarda um sinal respeitando um timeout de segurança.
-     */
     public DataValue await(String signalName) {
+        long start = System.nanoTime();
         try {
-            // Timeout longo para o await individual, o motor controla o timeout global
-            return getChannel(signalName).get(60, TimeUnit.SECONDS);
+            DataValue result = getChannel(signalName).get(60, TimeUnit.SECONDS);
+            long duration = System.nanoTime() - start;
+            
+            // Loga apenas se o tempo de espera for significativo (> 5ms) para não poluir demais
+            if (duration > 5_000_000) {
+                log.error("[PROFILER] SignalRegistry - AWAIT: {} | Waited: {}ms", signalName, duration / 1_000_000.0);
+            }
+            return result;
         } catch (Exception e) {
             log.error("Dependência não satisfeita para o sinal {}: {}", signalName, e.getMessage());
             throw new RuntimeException("Falha ao obter dado do sinal: " + signalName, e);
         }
     }
 
-    /**
-     * Tira um snapshot thread-safe do estado atual dos sinais.
-     */
     public Map<String, Object> snapshot() {
         Map<String, Object> photo = new ConcurrentHashMap<>();
         channels.forEach((name, future) -> {
@@ -65,7 +59,6 @@ public class SignalRegistry {
     }
 
     private CompletableFuture<DataValue> getChannel(String signalName) {
-        // computeIfAbsent é atômico no ConcurrentHashMap
         return channels.computeIfAbsent(signalName, k -> new CompletableFuture<>());
     }
 }

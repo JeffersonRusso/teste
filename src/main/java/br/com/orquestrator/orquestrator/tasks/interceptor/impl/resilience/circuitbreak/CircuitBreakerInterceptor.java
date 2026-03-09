@@ -5,6 +5,9 @@ import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * CircuitBreakerInterceptor: Aplica o padrão Circuit Breaker.
+ */
 @RequiredArgsConstructor
 public class CircuitBreakerInterceptor implements TaskInterceptor {
 
@@ -12,6 +15,6 @@ public class CircuitBreakerInterceptor implements TaskInterceptor {
 
     @Override
     public TaskResult intercept(Chain chain) {
-        return circuitBreaker.executeSupplier(() -> chain.proceed(chain.context()));
+        return circuitBreaker.executeSupplier(() -> chain.proceed(chain.inputs()));
     }
 }

@@ -1,14 +1,19 @@
 package br.com.orquestrator.orquestrator.domain.vo;
 
+import br.com.orquestrator.orquestrator.infra.cache.CacheFactory;
+import com.github.benmanes.caffeine.cache.Cache;
+
 /**
  * DataPath: Value Object de ultra-performance.
- * Pré-calcula tudo no startup para garantir alocação ZERO no caminho quente.
+ * Usa Caffeine para interning seguro e monitorado.
  */
 public final class DataPath {
 
+    private static final Cache<String, DataPath> CACHE = CacheFactory.createHotCache(1024);
+
     private final String value;
     private final String root;
-    private final DataPath subPathObject; // O segredo: sub-path já é um objeto
+    private final DataPath subPathObject;
     private final String leafName;
     private final String[] parts;
     private final boolean signalOnly;
@@ -19,19 +24,18 @@ public final class DataPath {
     private DataPath(String value, boolean isInternal) {
         this.value = value != null ? value.trim() : "";
         this.parts = this.value.isEmpty() ? new String[0] : this.value.split(SEPARATOR_REGEX);
-        
+
         int firstDot = this.value.indexOf(SEPARATOR);
-        String subPathStr;
+
         if (firstDot == -1) {
             this.root = this.value;
-            subPathStr = ".";
             this.subPathObject = null;
             this.signalOnly = true;
         } else {
             this.root = this.value.substring(0, firstDot);
-            subPathStr = this.value.substring(firstDot + 1);
-            // Recursão controlada: cria o objeto do sub-path apenas uma vez
-            this.subPathObject = isInternal ? null : new DataPath(subPathStr, true);
+            String subPathStr = this.value.substring(firstDot + 1);
+            // Recursão controlada: usa o cache para o sub-path também!
+            this.subPathObject = isInternal ? null : DataPath.of(subPathStr);
             this.signalOnly = false;
         }
 
@@ -40,7 +44,8 @@ public final class DataPath {
     }
 
     public static DataPath of(String path) {
-        return new DataPath(path, false);
+        String key = (path == null) ? "" : path;
+        return CACHE.get(key, k -> new DataPath(k, false));
     }
 
     public String getRoot() { return root; }
@@ -51,6 +56,7 @@ public final class DataPath {
     public String value() { return value; }
 
     public boolean provides(DataPath other) {
+        if (this == other) return true;
         if (this.value.equals(other.value)) return true;
         if (this.value.isEmpty()) return false;
         return other.value.startsWith(this.value + SEPARATOR);

@@ -5,6 +5,9 @@ import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 import io.github.resilience4j.retry.Retry;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * RetryInterceptor: Aplica política de retentativa.
+ */
 @RequiredArgsConstructor
 public class RetryInterceptor implements TaskInterceptor {
 
@@ -12,6 +15,6 @@ public class RetryInterceptor implements TaskInterceptor {
 
     @Override
     public TaskResult intercept(Chain chain) {
-        return retry.executeSupplier(() -> chain.proceed(chain.context()));
+        return retry.executeSupplier(() -> chain.proceed(chain.inputs()));
     }
 }

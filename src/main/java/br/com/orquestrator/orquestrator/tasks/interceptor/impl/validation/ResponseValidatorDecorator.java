@@ -10,6 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 
+/**
+ * ResponseValidatorDecorator: Valida o resultado da tarefa contra regras SpEL.
+ */
 @Slf4j
 @RequiredArgsConstructor
 public class ResponseValidatorDecorator implements TaskInterceptor {
@@ -20,7 +23,7 @@ public class ResponseValidatorDecorator implements TaskInterceptor {
 
     @Override
     public TaskResult intercept(Chain chain) {
-        TaskResult result = chain.proceed(chain.context());
+        TaskResult result = chain.proceed(chain.inputs());
 
         if (result != null && result.isSuccess()) {
             validate(result);

@@ -18,14 +18,14 @@ VALUES ('a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'CREDIT_ANALYSIS', 1, 30000, '["
 -- 3. NÍVEL 0: NORMALIZAÇÃO
 INSERT INTO tb_pipeline_node (node_id, pipeline_id, name, type, configuration) VALUES
 ('f0eebc99-9c0b-4ef8-bb6d-6bb9bd380f00', 'a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'standardizer', 'NORMALIZATION',
- '{"rules": {"id": "raw.customer.id", "cpf": "raw.customer.document"}}');
+ '{"rules": {"cliente_id": "raw.customer.id", "cliente_cpf": "raw.customer.document"}}');
 
 INSERT INTO tb_pipeline_node_input (node_id, local_key, source_path) VALUES
 ('f0eebc99-9c0b-4ef8-bb6d-6bb9bd380f00', 'raw', 'raw');
 
 INSERT INTO tb_pipeline_node_output (node_id, local_key, target_key) VALUES
-('f0eebc99-9c0b-4ef8-bb6d-6bb9bd380f00', 'id', 'dados_cliente.id'),
-('f0eebc99-9c0b-4ef8-bb6d-6bb9bd380f00', 'cpf', 'dados_cliente.cpf');
+('f0eebc99-9c0b-4ef8-bb6d-6bb9bd380f00', 'cliente_id', 'cliente_id'),
+('f0eebc99-9c0b-4ef8-bb6d-6bb9bd380f00', 'cliente_cpf', 'cliente_cpf');
 
 -- 4. NÍVEL 1: FUNDAÇÃO
 INSERT INTO tb_pipeline_node (node_id, pipeline_id, name, type, configuration) VALUES
@@ -33,7 +33,7 @@ INSERT INTO tb_pipeline_node (node_id, pipeline_id, name, type, configuration) V
 ('c2eebc99-9c0b-4ef8-bb6d-6bb9bd380c02', 'a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'get_cliente', 'HTTP', '{"url": "http://127.0.0.1:9999/v1/cliente/#{doc}", "method": "GET"}');
 
 INSERT INTO tb_pipeline_node_input (node_id, local_key, source_path) VALUES
-('c2eebc99-9c0b-4ef8-bb6d-6bb9bd380c02', 'doc', 'dados_cliente.cpf');
+('c2eebc99-9c0b-4ef8-bb6d-6bb9bd380c02', 'doc', 'cliente_cpf');
 
 INSERT INTO tb_pipeline_node_output (node_id, local_key, target_key) VALUES
 ('b1eebc99-9c0b-4ef8-bb6d-6bb9bd380b01', 'access_token', 'token_sessao'),
@@ -47,13 +47,13 @@ INSERT INTO tb_pipeline_node (node_id, pipeline_id, name, type, configuration) V
 
 INSERT INTO tb_pipeline_node_input (node_id, local_key, source_path) VALUES
 ('d3eebc99-9c0b-4ef8-bb6d-6bb9bd380d01', 'cid', 'perfil_cliente.id'),
-('d3eebc99-9c0b-4ef8-bb6d-6bb9bd380d02', 'cpf', 'dados_cliente.cpf'),
-('d3eebc99-9c0b-4ef8-bb6d-6bb9bd380d03', 'cpf', 'dados_cliente.cpf');
+('d3eebc99-9c0b-4ef8-bb6d-6bb9bd380d02', 'cpf', 'cliente_cpf'),
+('d3eebc99-9c0b-4ef8-bb6d-6bb9bd380d03', 'cpf', 'cliente_cpf');
 
 INSERT INTO tb_pipeline_node_output (node_id, local_key, target_key) VALUES
-('d3eebc99-9c0b-4ef8-bb6d-6bb9bd380d01', 'id_conta', 'dados_conta.id_conta'),
-('d3eebc99-9c0b-4ef8-bb6d-6bb9bd380d02', 'score_atual', 'dados_score.score_atual'),
-('d3eebc99-9c0b-4ef8-bb6d-6bb9bd380d03', 'status', 'dados_hotlist.status');
+('d3eebc99-9c0b-4ef8-bb6d-6bb9bd380d01', 'id_conta', 'id_conta'),
+('d3eebc99-9c0b-4ef8-bb6d-6bb9bd380d02', 'score_atual', 'score_atual'),
+('d3eebc99-9c0b-4ef8-bb6d-6bb9bd380d03', 'status', 'status_hotlist');
 
 -- 6. NÍVEL 3: DETALHAMENTO
 INSERT INTO tb_pipeline_node (node_id, pipeline_id, name, type, configuration) VALUES
@@ -61,12 +61,12 @@ INSERT INTO tb_pipeline_node (node_id, pipeline_id, name, type, configuration) V
 ('e4eebc99-9c0b-4ef8-bb6d-6bb9bd380e02', 'a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'get_cartoes', 'HTTP', '{"url": "http://127.0.0.1:9999/v1/cartoes/#{aid}", "method": "GET"}');
 
 INSERT INTO tb_pipeline_node_input (node_id, local_key, source_path) VALUES
-('e4eebc99-9c0b-4ef8-bb6d-6bb9bd380e01', 'aid', 'dados_conta.id_conta'),
-('e4eebc99-9c0b-4ef8-bb6d-6bb9bd380e02', 'aid', 'dados_conta.id_conta');
+('e4eebc99-9c0b-4ef8-bb6d-6bb9bd380e01', 'aid', 'id_conta'),
+('e4eebc99-9c0b-4ef8-bb6d-6bb9bd380e02', 'aid', 'id_conta');
 
 INSERT INTO tb_pipeline_node_output (node_id, local_key, target_key) VALUES
-('e4eebc99-9c0b-4ef8-bb6d-6bb9bd380e01', 'patrimonio_total', 'dados_investimentos.patrimonio_total'),
-('e4eebc99-9c0b-4ef8-bb6d-6bb9bd380e02', 'id_cartao', 'dados_cartoes.id_cartao');
+('e4eebc99-9c0b-4ef8-bb6d-6bb9bd380e01', 'patrimonio_total', 'patrimonio_total'),
+('e4eebc99-9c0b-4ef8-bb6d-6bb9bd380e02', 'id_cartao', 'id_cartao');
 
 -- 7. DECISÃO FINAL
 INSERT INTO tb_pipeline_node (node_id, pipeline_id, name, type, configuration) VALUES
@@ -74,17 +74,17 @@ INSERT INTO tb_pipeline_node (node_id, pipeline_id, name, type, configuration) V
  '{"expression": "#{score > 600 && status == ''LIBERADO'' && patrimonio > 10000 ? ''APROVADO'' : ''NEGADO''}"}');
 
 INSERT INTO tb_pipeline_node_input (node_id, local_key, source_path) VALUES
-('99999999-9999-9999-9999-999999999999', 'score', 'dados_score.score_atual'),
-('99999999-9999-9999-9999-999999999999', 'status', 'dados_hotlist.status'),
-('99999999-9999-9999-9999-999999999999', 'patrimonio', 'dados_investimentos.patrimonio_total');
+('99999999-9999-9999-9999-999999999999', 'score', 'score_atual'),
+('99999999-9999-9999-9999-999999999999', 'status', 'status_hotlist'),
+('99999999-9999-9999-9999-999999999999', 'patrimonio', 'patrimonio_total');
 
 INSERT INTO tb_pipeline_node_output (node_id, local_key, target_key) VALUES
 ('99999999-9999-9999-9999-999999999999', '.', 'decisao_final');
 
 -- 8. CONTRATO
 INSERT INTO tb_data_contract (context_key, data_type, is_required) VALUES
-('dados_cliente.id', 'STRING', TRUE),
-('dados_score.score_atual', 'NUMBER', TRUE),
-('dados_hotlist.status', 'STRING', TRUE),
-('dados_investimentos.patrimonio_total', 'NUMBER', TRUE),
+('cliente_id', 'STRING', TRUE),
+('score_atual', 'NUMBER', TRUE),
+('status_hotlist', 'STRING', TRUE),
+('patrimonio_total', 'NUMBER', TRUE),
 ('decisao_final', 'STRING', TRUE);

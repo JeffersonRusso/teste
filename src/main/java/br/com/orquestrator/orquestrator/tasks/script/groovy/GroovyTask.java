@@ -1,39 +1,45 @@
 package br.com.orquestrator.orquestrator.tasks.script.groovy;
 
+import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.domain.model.DataValueFactory;
-import br.com.orquestrator.orquestrator.tasks.base.Configurable;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
-import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
-import br.com.orquestrator.orquestrator.tasks.script.ScriptTaskConfiguration;
 import groovy.lang.Binding;
-import groovy.lang.GroovyShell;
+import groovy.lang.Script;
 import lombok.RequiredArgsConstructor;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
- * GroovyTask: Executa scripts Groovy usando o Shadow Context.
+ * GroovyTask: Executa scripts Groovy pré-compilados.
  */
 @RequiredArgsConstructor
-public class GroovyTask implements Task, Configurable<ScriptTaskConfiguration> {
+public class GroovyTask implements Task {
 
-    private final GroovyBindingFactory bindingFactory;
-    private final GroovyShell shell = new GroovyShell();
-
-    @Override
-    public Class<ScriptTaskConfiguration> getConfigClass() {
-        return ScriptTaskConfiguration.class;
-    }
+    private final Class<? extends Script> scriptClass;
+    private final String nodeId;
 
     @Override
-    public TaskResult execute(TaskContext context) {
-        ScriptTaskConfiguration config = context.getConfig();
-        
-        // Prepara o ambiente do script com os dados do Shadow Context
-        Binding binding = bindingFactory.createBinding(context);
-        
-        // Executa o script
-        Object result = shell.evaluate(config.script());
-        
-        return TaskResult.success(DataValueFactory.of(result));
+    public TaskResult execute(Map<String, DataValue> inputs) {
+        try {
+            Script script = scriptClass.getDeclaredConstructor().newInstance();
+            
+            // Prepara o binding com os dados puros
+            Map<String, Object> rawInputs = new HashMap<>();
+            inputs.forEach((k, v) -> rawInputs.put(k, v.raw()));
+            
+            Binding binding = new Binding();
+            binding.setVariable("inputs", rawInputs);
+            binding.setVariable("ctx", rawInputs);
+            binding.setVariable("nodeId", nodeId);
+            
+            script.setBinding(binding);
+            Object result = script.run();
+            
+            return TaskResult.success(DataValueFactory.of(result));
+        } catch (Exception e) {
+            throw new RuntimeException("Falha ao executar script Groovy no nó: " + nodeId, e);
+        }
     }
 }

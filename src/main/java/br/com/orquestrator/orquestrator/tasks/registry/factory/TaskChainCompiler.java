@@ -37,12 +37,9 @@ public class TaskChainCompiler {
         // Constrói a cadeia de interceptores
         List<TaskInterceptor> interceptors = new DecoratorPipelineBuilder(context, def)
                 .withInfra()
-                .withData(null)
-                // Se for dinâmico, adiciona o resolvedor de runtime. Se for estático, passa o objeto pronto.
+                .withData()
                 .withConfigResolution(isDynamic ? configClass : null, staticConfig)
-                .withOutput(null)
                 .withFeatures()
-                .withGuard()
                 .withValidation()
                 .buildInterceptors();
 

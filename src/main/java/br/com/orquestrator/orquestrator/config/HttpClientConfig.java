@@ -13,7 +13,7 @@ import org.springframework.web.client.RestClient;
 
 /**
  * HttpClientConfig: Configuração de Pool de Conexões de Alta Performance.
- * Otimizado para suportar milhares de requisições simultâneas via Virtual Threads.
+ * Destravado para 10k conexões simultâneas.
  */
 @Configuration
 public class HttpClientConfig {
@@ -21,9 +21,9 @@ public class HttpClientConfig {
     @Bean
     public PoolingHttpClientConnectionManager connectionManager() {
         PoolingHttpClientConnectionManager manager = new PoolingHttpClientConnectionManager();
-        // Configurações agressivas para alta volumetria
-        manager.setMaxTotal(2000); // Total de conexões no pool
-        manager.setDefaultMaxPerRoute(1000); // Conexões simultâneas por host (ex: WireMock)
+        // Configurações agressivas para 1.5k+ RPS
+        manager.setMaxTotal(10000); 
+        manager.setDefaultMaxPerRoute(5000); // Evita gargalo no WireMock/Go
         return manager;
     }
 
@@ -37,7 +37,7 @@ public class HttpClientConfig {
         return HttpClients.custom()
                 .setConnectionManager(connectionManager)
                 .setDefaultRequestConfig(requestConfig)
-                .disableAutomaticRetries() // Deixamos o Orquestrador controlar retries
+                .disableAutomaticRetries()
                 .build();
     }
 
