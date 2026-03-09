@@ -1,7 +1,6 @@
 package br.com.orquestrator.orquestrator.core.pipeline;
 
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
-import br.com.orquestrator.orquestrator.domain.vo.DataPath;
 import br.com.orquestrator.orquestrator.exception.PipelineException;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedAcyclicGraph;
@@ -13,7 +12,7 @@ import java.util.Map;
 
 /**
  * TaskGraphBuilder: Transforma uma lista de tarefas em um Grafo Acíclico Dirigido (DAG).
- * Agora entende a Soberania de Sinais para ligar produtores e consumidores.
+ * Agora usa SignalBinding para resolver dependências.
  */
 @Component
 public class TaskGraphBuilder {
@@ -26,7 +25,10 @@ public class TaskGraphBuilder {
         Map<String, TaskDefinition> signalProducers = new HashMap<>();
         for (var task : tasks) {
             if (task.outputs() != null) {
-                task.outputs().values().forEach(out -> signalProducers.put(DataPath.of(out).getRoot(), task));
+                // O output ainda é Map<String, String> (localKey -> targetSignal)
+                task.outputs().values().forEach(targetSignal -> 
+                    signalProducers.put(targetSignal, task)
+                );
             }
         }
 
@@ -42,10 +44,10 @@ public class TaskGraphBuilder {
                                      Map<String, TaskDefinition> signalProducers) {
         if (consumer.inputs() == null) return;
 
-        for (String inputPath : consumer.inputs().values()) {
-            // Resolve o produtor pela raiz do sinal (ex: de 'perfil_cliente.id' busca 'perfil_cliente')
-            String signalRoot = DataPath.of(inputPath).getRoot();
-            TaskDefinition producer = signalProducers.get(signalRoot);
+        for (var binding : consumer.inputs().values()) {
+            // A dependência é baseada no nome do sinal
+            String signalName = binding.signalName();
+            TaskDefinition producer = signalProducers.get(signalName);
             
             if (producer != null && !producer.equals(consumer)) {
                 try {
@@ -53,7 +55,7 @@ public class TaskGraphBuilder {
                 } catch (IllegalArgumentException e) {
                     throw new PipelineException(String.format(
                         "Ciclo detectado! A task [%s] cria uma dependência circular via sinal '%s'", 
-                        consumer.nodeId().value(), signalRoot), e);
+                        consumer.nodeId().value(), signalName), e);
                 }
             }
         }

@@ -10,6 +10,7 @@ import br.com.orquestrator.orquestrator.core.pipeline.PipelineRepository;
 import br.com.orquestrator.orquestrator.core.pipeline.TaskRepository;
 import br.com.orquestrator.orquestrator.domain.model.PipelineDefinition;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
+import br.com.orquestrator.orquestrator.domain.vo.SignalBinding;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -17,12 +18,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * JpaPipelineRepositoryAdapter: Adaptador para persistência de pipelines via JPA.
- * Agora alinhado com o padrão source_path.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -40,6 +38,11 @@ public class JpaPipelineRepositoryAdapter implements PipelineRepository, TaskRep
     }
 
     @Override
+    public Set<String> findAllActiveOperationTypes() {
+        return versionRepository.findAllActiveOperationTypes();
+    }
+
+    @Override
     @Cacheable(value = "task_definitions", key = "#name")
     public Optional<TaskDefinition> findByName(String name) {
         return nodeRepository.findByName(name)
@@ -51,9 +54,11 @@ public class JpaPipelineRepositoryAdapter implements PipelineRepository, TaskRep
                 .map(PipelineNodeEntity::toDomain)
                 .toList();
 
-        // Carrega normalização usando o novo campo sourcePath
-        Map<String, String> inputMapping = normalizationRepository.findByOperationType(version.getOperationType()).stream()
-                .collect(Collectors.toMap(InputNormalizationEntity::getTargetField, InputNormalizationEntity::getSourcePath));
+        Map<String, SignalBinding> inputMapping = normalizationRepository.findByOperationType(version.getOperationType()).stream()
+                .collect(Collectors.toMap(
+                    InputNormalizationEntity::getTargetField, 
+                    i -> new SignalBinding(i.getSourceSignal(), i.getSourcePath())
+                ));
 
         return new PipelineDefinition(
                 version.getOperationType(),

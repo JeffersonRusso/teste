@@ -13,7 +13,7 @@ import java.util.Set;
 public record Pipeline(
     Map<String, ExecutionNode> nodes,
     Duration timeout,
-    Set<DataPath> requiredOutputs
+    Set<String> requiredOutputs // Agora usa Strings puras
 ) {
     public Collection<ExecutionNode> getNodes() { return nodes.values(); }
 }

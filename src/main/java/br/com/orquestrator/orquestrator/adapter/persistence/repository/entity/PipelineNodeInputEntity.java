@@ -22,6 +22,9 @@ public class PipelineNodeInputEntity {
     @Column(name = "local_key")
     private String localKey;
 
+    @Column(name = "source_signal")
+    private String sourceSignal;
+
     @Column(name = "source_path")
     private String sourcePath;
 

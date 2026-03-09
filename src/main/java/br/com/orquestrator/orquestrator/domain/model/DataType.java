@@ -1,5 +1,6 @@
-package br.com.orquestrator.orquestrator.domain.model;
-
-public enum DataType {
-    STRING, NUMBER, BOOLEAN, OBJECT, DATE
-}
+// package br.com.orquestrator.orquestrator.domain.model;
+//
+// /**
+//  * OBSOLETO: Movido para br.com.orquestrator.orquestrator.core.engine.validation.DataType
+//  */
+// public enum DataType { }

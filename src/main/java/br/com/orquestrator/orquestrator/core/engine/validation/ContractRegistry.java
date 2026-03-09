@@ -1,9 +1,9 @@
 package br.com.orquestrator.orquestrator.core.engine.validation;
 
-import br.com.orquestrator.orquestrator.domain.model.DataContract;
-import com.networknt.schema.JsonSchema;
-import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.SpecVersion;
+import br.com.orquestrator.orquestrator.adapter.persistence.repository.DataContractRepository;
+import br.com.orquestrator.orquestrator.adapter.persistence.repository.entity.DataContractEntity;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -15,21 +15,39 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class ContractRegistry {
 
-    private final Map<String, CompiledContract> cache = new ConcurrentHashMap<>(1024);
-    private final JsonSchemaFactory schemaFactory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7);
+    private final DataContractRepository repository;
+    private final ObjectMapper objectMapper;
+    private final Map<String, CompiledContract> cache = new ConcurrentHashMap<>();
 
-    public void register(DataContract contract) {
-        JsonSchema compiledSchema = null;
-        if (contract.schemaDefinition() != null) {
-            // COMPILAÇÃO NO BUILD-TIME/WARMUP: O custo pesado acontece aqui, apenas uma vez.
-            compiledSchema = schemaFactory.getSchema(contract.schemaDefinition());
+    public record CompiledContract(
+        String key,
+        JsonNode schema,
+        boolean isRequired
+    ) {}
+
+    public Optional<CompiledContract> get(String key) {
+        return Optional.ofNullable(cache.computeIfAbsent(key, this::compile));
+    }
+
+    private CompiledContract compile(String key) {
+        return repository.findById(key)
+                .map(this::toCompiled)
+                .orElse(null);
+    }
+
+    private CompiledContract toCompiled(DataContractEntity entity) {
+        try {
+            JsonNode schema = entity.getSchemaDefinition() != null 
+                ? objectMapper.readTree(entity.getSchemaDefinition()) 
+                : null;
+            
+            return new CompiledContract(
+                entity.getContextKey(),
+                schema,
+                entity.getIsRequired()
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Falha ao compilar contrato de dados: " + entity.getContextKey(), e);
         }
-        cache.put(contract.contextKey(), new CompiledContract(contract, compiledSchema));
     }
-
-    public Optional<CompiledContract> get(String contextKey) {
-        return Optional.ofNullable(cache.get(contextKey));
-    }
-
-    public record CompiledContract(DataContract definition, JsonSchema schema) {}
 }

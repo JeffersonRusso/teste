@@ -1,20 +1,17 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.impl.cache;
 
 import br.com.orquestrator.orquestrator.core.engine.runtime.CacheEngine;
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 import br.com.orquestrator.orquestrator.tasks.interceptor.config.CacheConfig;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * CacheInterceptor: Gerencia o cache de resultados de tarefas.
- */
 @Slf4j
 @RequiredArgsConstructor
 public class CacheInterceptor implements TaskInterceptor {
@@ -29,10 +26,10 @@ public class CacheInterceptor implements TaskInterceptor {
         if (config == null || config.key() == null) return chain.proceed(chain.inputs());
 
         try {
-            DataValue keyDv = expressionEngine.compile(config.key()).evaluate(chain.inputs());
-            String cacheKey = keyDv.as(String.class).orElse(keyDv.raw().toString());
+            JsonNode keyNode = expressionEngine.compile(config.key()).evaluate(chain.inputs());
+            String cacheKey = keyNode.asText();
 
-            Optional<DataValue> cached = cacheEngine.get(nodeId, cacheKey);
+            Optional<JsonNode> cached = cacheEngine.get(nodeId, cacheKey);
 
             if (cached.isPresent()) {
                 log.debug("Cache HIT [{}] key [{}]", nodeId, cacheKey);

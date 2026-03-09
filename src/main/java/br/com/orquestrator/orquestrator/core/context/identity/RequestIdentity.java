@@ -1,23 +1,23 @@
 package br.com.orquestrator.orquestrator.core.context.identity;
 
+import io.micrometer.observation.Observation;
+import lombok.Getter;
+
 import java.util.Set;
 
-/**
- * RequestIdentity: Identidade única da requisição.
- * Agora inclui tags para suportar a resolução de pipelines dinâmicos.
- */
-public record RequestIdentity(
-    String correlationId,
-    String operationType,
-    String orderId,
-    String executionId,
-    Set<String> tags
-) {
-    public RequestIdentity {
-        tags = tags != null ? Set.copyOf(tags) : Set.of();
-    }
+@Getter
+public class RequestIdentity extends Observation.Context {
+    private final String correlationId;
+    private final String operationType;
+    private final String orderId;
+    private final String executionId;
+    private final Set<String> activeTags;
 
-    public String getOperationType() { return operationType; }
-    public String getCorrelationId() { return correlationId; }
-    public Set<String> getTags() { return tags; }
+    public RequestIdentity(String correlationId, String operationType, String orderId, String executionId, Set<String> activeTags) {
+        this.correlationId = correlationId;
+        this.operationType = operationType;
+        this.orderId = orderId;
+        this.executionId = executionId;
+        this.activeTags = activeTags;
+    }
 }

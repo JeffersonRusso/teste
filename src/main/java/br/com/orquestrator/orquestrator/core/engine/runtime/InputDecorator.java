@@ -1,11 +1,9 @@
 package br.com.orquestrator.orquestrator.core.engine.runtime;
 
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
 import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
 import lombok.RequiredArgsConstructor;
 
-import java.util.Map;
 import java.util.Set;
 
 /**

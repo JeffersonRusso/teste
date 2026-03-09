@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * ContractValidator: Valida a integridade do grafo de sinais (Dataflow).
- * SRP: Atua como o juiz que coordena a validação, delegando a inteligência para o SignalSchema.
+ * Agora usa SignalBinding para validar dependências.
  */
 @Slf4j
 @Component
@@ -43,11 +43,12 @@ public class ContractValidator {
         for (var task : tasks) {
             if (task.inputs() == null) continue;
 
-            for (String required : task.inputs().values()) {
-                if (!schema.canProvide(required)) {
+            for (var binding : task.inputs().values()) {
+                // Valida se o sinal requerido existe
+                if (!schema.canProvide(binding.signalName())) {
                     throw new PipelineException(String.format(
-                        "Erro de Contrato: A task [%s] requer o dado '%s', mas ele não será produzido.", 
-                        task.nodeId().value(), required));
+                        "Erro de Contrato: A task [%s] requer o sinal '%s', mas ele não será produzido.", 
+                        task.nodeId().value(), binding.signalName()));
                 }
             }
         }
@@ -57,6 +58,8 @@ public class ContractValidator {
         if (def.defaultRequiredOutputs() == null) return;
 
         for (String required : def.defaultRequiredOutputs()) {
+            // O requiredOutput é um caminho completo (ex: /decisao_final)
+            // O schema valida se a raiz desse caminho existe
             if (!schema.canProvide(required)) {
                 throw new PipelineException(String.format(
                     "Erro de Contrato: O pipeline para '%s' prometeu entregar '%s', mas esse dado não será produzido.", 

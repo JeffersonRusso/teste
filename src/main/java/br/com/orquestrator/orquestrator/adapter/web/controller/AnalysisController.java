@@ -1,38 +1,50 @@
 package br.com.orquestrator.orquestrator.adapter.web.controller;
 
-import br.com.orquestrator.orquestrator.core.RiskAnalysisService;
-import br.com.orquestrator.orquestrator.core.context.identity.IdentityResolver;
 import br.com.orquestrator.orquestrator.core.context.identity.RequestIdentity;
+import br.com.orquestrator.orquestrator.core.engine.runtime.ExecutionSession;
+import br.com.orquestrator.orquestrator.infra.IdGenerator;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.util.Set;
 
-/**
- * AnalysisController: Ponto de entrada para as análises de risco.
- * Gerencia a identidade soberana da requisição.
- */
 @Slf4j
 @RestController
 @RequestMapping("/v1/analysis")
 @RequiredArgsConstructor
 public class AnalysisController {
 
-    private final RiskAnalysisService riskAnalysisService;
-    private final IdentityResolver identityResolver;
+    private final ExecutionSession executionSession;
+    private final ObservationRegistry observationRegistry;
+    private final IdGenerator idGenerator;
+
+    public record AnalysisRequest(
+        String operationType,
+        String orderId,
+        Map<String, Object> operation
+    ) {}
 
     @PostMapping
-    public Map<String, Object> analyze(@RequestHeader Map<String, String> headers, 
-                                       @RequestBody Map<String, Object> body) {
-        
-        // 1. Resolve a identidade soberana
-        RequestIdentity identity = identityResolver.resolve(headers, body);
-        
-        log.info("Iniciando análise. CorrelationId: {} | ExecutionId: {} | Operation: {}", 
-                identity.correlationId(), identity.executionId(), identity.operationType());
+    public Map<String, Object> analyze(@RequestBody AnalysisRequest request) {
+        RequestIdentity identity = new RequestIdentity(
+            idGenerator.generateFastId(),
+            request.operationType(),
+            request.orderId(),
+            idGenerator.generateFastId(),
+            Set.of()
+        );
 
-        // 2. Executa o serviço de análise
-        return riskAnalysisService.analyze(identity, headers, body);
+        log.info("Iniciando análise. CorrelationId: {} | ExecutionId: {} | Operation: {}",
+                identity.getCorrelationId(), identity.getExecutionId(), identity.getOperationType());
+
+        return Observation.createNotStarted("pipeline.execution", () -> identity, observationRegistry)
+                .observe(() -> executionSession.execute(identity, request.operation()));
     }
 }

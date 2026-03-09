@@ -1,10 +1,12 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.api;
 
-import br.com.orquestrator.orquestrator.tasks.base.TaskChain;
-import br.com.orquestrator.orquestrator.tasks.base.TaskContext;
-import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
+import br.com.orquestrator.orquestrator.tasks.base.Task;
+import lombok.RequiredArgsConstructor;
 
-@FunctionalInterface
-public interface TaskDecorator {
-    TaskResult apply(TaskContext context, TaskChain next);
+/**
+ * OBSOLETO: A lógica de decoração agora é feita via InterceptorTask e DecoratorPipelineBuilder.
+ */
+@RequiredArgsConstructor
+public abstract class TaskDecorator implements Task {
+    protected final Task decoratedTask;
 }

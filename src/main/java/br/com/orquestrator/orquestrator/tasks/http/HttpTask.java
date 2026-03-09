@@ -1,7 +1,5 @@
 package br.com.orquestrator.orquestrator.tasks.http;
 
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
-import br.com.orquestrator.orquestrator.domain.model.DataValueFactory;
 import br.com.orquestrator.orquestrator.infra.el.CompiledExpression;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
@@ -10,8 +8,8 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpMethod;
 import org.springframework.web.client.RestClient;
@@ -24,10 +22,7 @@ import java.util.Set;
 
 /**
  * HttpTask: Executa chamadas HTTP com alocação mínima de objetos.
- * Otimizada para 100k+ RPS:
- * 1. Expressões pré-compiladas no startup.
- * 2. Zero-copy de inputs (usa o mapa original).
- * 3. Extração cirúrgica via streaming.
+ * Agora usa JsonNode puro.
  */
 @Slf4j
 public class HttpTask implements Task {
@@ -52,7 +47,6 @@ public class HttpTask implements Task {
         this.bodyExpression = config.body() != null ? engine.compile(config.body().toString()) : null;
         this.requiredFields = requiredFields;
         
-        // Pré-compila headers
         this.headerExpressions = new java.util.HashMap<>();
         if (config.headers() != null) {
             config.headers().forEach((k, v) -> this.headerExpressions.put(k, engine.compile(v)));
@@ -60,22 +54,29 @@ public class HttpTask implements Task {
     }
 
     @Override
-    public TaskResult execute(Map<String, DataValue> inputs) {
-        // 1. Resolve URL usando o mapa original (Zero-Copy)
-        String resolvedUrl = urlExpression.evaluate(inputs).raw().toString();
+    public TaskResult execute(Map<String, JsonNode> inputs) {
+        // 1. Resolve URL
+        JsonNode urlNode = urlExpression.evaluate(inputs);
+        String resolvedUrl = urlNode.asText();
         
-        var requestSpec = restClient.method(method).uri(resolvedUrl);
+        if (resolvedUrl.startsWith("\"") && resolvedUrl.endsWith("\"")) {
+            resolvedUrl = resolvedUrl.substring(1, resolvedUrl.length() - 1);
+        }
+        
+        var requestSpec = restClient.method(method).uri(URI.create(resolvedUrl));
 
         // 2. Resolve Headers
         if (!headerExpressions.isEmpty()) {
-            requestSpec.headers(h -> headerExpressions.forEach((k, expr) -> 
-                h.add(k, expr.evaluate(inputs).raw().toString())));
+            requestSpec.headers(h -> headerExpressions.forEach((k, expr) -> {
+                JsonNode val = expr.evaluate(inputs);
+                h.add(k, val.asText());
+            }));
         }
 
         // 3. Resolve Body
         if (bodyExpression != null) {
-            Object bodyValue = bodyExpression.evaluate(inputs).raw();
-            if (bodyValue != null) requestSpec.body(bodyValue);
+            JsonNode bodyValue = bodyExpression.evaluate(inputs);
+            if (bodyValue != null && !bodyValue.isMissingNode()) requestSpec.body(bodyValue);
         }
 
         return requestSpec.exchange((req, res) -> {
@@ -84,12 +85,12 @@ public class HttpTask implements Task {
             }
 
             try (InputStream is = res.getBody()) {
-                if (is == null) return TaskResult.success(DataValue.EMPTY);
+                if (is == null) return TaskResult.success(null);
                 try (JsonParser parser = objectMapper.getFactory().createParser(is)) {
-                    if (parser.nextToken() == null) return TaskResult.success(DataValue.EMPTY);
-
+                    if (parser.nextToken() == null) return TaskResult.success(null);
+                    
                     JsonNode resultNode = extractSelective(parser, requiredFields);
-                    return TaskResult.success(DataValueFactory.fromJsonNode(resultNode, null), Map.of("status", res.getStatusCode().value()));
+                    return TaskResult.success(resultNode, Map.of("status", res.getStatusCode().value()));
                 }
             } catch (IOException e) {
                 throw new RuntimeException("Falha no streaming de dados HTTP", e);

@@ -12,12 +12,12 @@ public class TaskValidator {
     public void validate(TaskDefinition def, Map<String, Object> resolvedInputs) {
         if (def.inputs() == null) return;
 
-        def.inputs().forEach((localKey, globalKey) -> {
+        def.inputs().forEach((localKey, binding) -> {
             // Verifica se o dado obrigatório está presente no mapa resolvido
             if (resolvedInputs.get(localKey) == null) {
                 throw new PipelineException(
                     String.format("Erro de Contrato: A task [%s] requer o dado '%s' (mapeado de '%s'), mas ele está nulo.", 
-                    def.nodeId().value(), localKey, globalKey)
+                    def.nodeId().value(), localKey, binding)
                 );
             }
         });

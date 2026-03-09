@@ -1,52 +1,60 @@
 package br.com.orquestrator.orquestrator.core.engine.runtime;
 
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
-import br.com.orquestrator.orquestrator.domain.model.DataValueNavigator;
-import br.com.orquestrator.orquestrator.domain.vo.DataPath;
+import br.com.orquestrator.orquestrator.domain.vo.SignalBinding;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * DefaultSignalProjector: Implementação soberana e ultra-simples.
- * SRP: Apenas transporta dados entre o Registry e as Tasks.
- * Não realiza montagem de objetos (Reshaping), apenas nomeia sinais.
+ * Delega 100% da navegação para o Jackson.
  */
 @RequiredArgsConstructor
 public class DefaultSignalProjector implements SignalProjector {
 
-    private final Map<String, DataPath> mappings;
+    private final Map<String, SignalBinding> inputMappings;
+    private final Map<String, String> outputMappings;
 
-    public static DefaultSignalProjector compile(Map<String, String> rawMappings) {
-        Map<String, DataPath> compiled = rawMappings.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> DataPath.of(e.getValue())));
-        return new DefaultSignalProjector(compiled);
+    public static DefaultSignalProjector compileInputs(Map<String, SignalBinding> inputs) {
+        return new DefaultSignalProjector(inputs != null ? Map.copyOf(inputs) : Map.of(), Map.of());
+    }
+
+    public static DefaultSignalProjector compileOutputs(Map<String, String> outputs) {
+        return new DefaultSignalProjector(Map.of(), outputs != null ? Map.copyOf(outputs) : Map.of());
     }
 
     @Override
-    public Map<String, DataValue> projectIn(SignalRegistry signals) {
-        Map<String, DataValue> inputs = new HashMap<>((int)(mappings.size() / 0.75) + 1);
-        mappings.forEach((localKey, path) -> {
-            DataValue signalValue = signals.await(path.getRoot());
-            inputs.put(localKey, DataValueNavigator.navigate(signalValue, path.getSubPathObject()));
+    public Map<String, JsonNode> projectIn(SignalRegistry signals) {
+        if (inputMappings.isEmpty()) return Map.of();
+        
+        Map<String, JsonNode> inputs = new HashMap<>((int)(inputMappings.size() / 0.75) + 1);
+        inputMappings.forEach((localKey, binding) -> {
+            JsonNode signalValue = signals.await(binding.signalName());
+            if (binding.hasPath()) {
+                inputs.put(localKey, signalValue.at(binding.dataPath()));
+            } else {
+                inputs.put(localKey, signalValue);
+            }
         });
         return inputs;
     }
 
     @Override
-    public void projectOut(DataValue result, SignalRegistry signals) {
-        // ALOCAÇÃO ZERO & COMPLEXIDADE ZERO:
-        // Apenas emite o que a task produziu sob o nome do sinal desejado.
-        mappings.forEach((localKey, path) -> {
-            DataValue val = DataValueNavigator.navigate(result, localKey);
-            signals.emit(path.value(), val);
+    public void projectOut(JsonNode result, SignalRegistry signals) {
+        if (outputMappings.isEmpty()) return;
+
+        outputMappings.forEach((localKey, targetSignalName) -> {
+            // Se localKey for '.', usa o resultado todo. Senão, navega com / (JSON Pointer).
+            JsonNode val = ".".equals(localKey) ? result : result.at("/" + localKey);
+            signals.emit(targetSignalName, val);
         });
     }
 
     @Override
     public void fail(SignalRegistry signals, Throwable cause) {
-        mappings.values().forEach(path -> signals.fail(path.getRoot(), cause));
+        // Falha apenas os sinais de saída
+        outputMappings.values().forEach(signalName -> signals.fail(signalName, cause));
     }
 }

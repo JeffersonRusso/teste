@@ -1,9 +1,9 @@
 package br.com.orquestrator.orquestrator.tasks.script.dmn;
 
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
-import br.com.orquestrator.orquestrator.domain.model.DataValueFactory;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import lombok.RequiredArgsConstructor;
 import org.camunda.bpm.dmn.engine.DmnDecision;
 import org.camunda.bpm.dmn.engine.DmnDecisionTableResult;
@@ -22,13 +22,13 @@ public class DmnTask implements Task {
     private final DmnDecision decision;
 
     @Override
-    public TaskResult execute(Map<String, DataValue> inputs) {
+    public TaskResult execute(Map<String, JsonNode> inputs) {
         Map<String, Object> rawInputs = new HashMap<>();
-        inputs.forEach((k, v) -> rawInputs.put(k, v.raw()));
+        inputs.forEach((k, v) -> rawInputs.put(k, v));
 
         DmnDecisionTableResult result = dmnEngine.evaluateDecisionTable(decision, rawInputs);
         
         Object output = result.isEmpty() ? null : result.getFirstResult().getEntryMap();
-        return TaskResult.success(DataValueFactory.of(output));
+        return TaskResult.success(JsonNodeFactory.instance.pojoNode(output));
     }
 }

@@ -4,8 +4,8 @@ import br.com.orquestrator.orquestrator.adapter.persistence.repository.entity.Pi
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface PipelineVersionRepository extends JpaRepository<PipelineVersionEntity, UUID> {
@@ -14,5 +14,5 @@ public interface PipelineVersionRepository extends JpaRepository<PipelineVersion
     Optional<PipelineVersionEntity> findActive(String operationType);
 
     @Query("SELECT DISTINCT p.operationType FROM PipelineVersionEntity p WHERE p.isActive = true")
-    List<String> findAllActiveOperations();
+    Set<String> findAllActiveOperationTypes();
 }

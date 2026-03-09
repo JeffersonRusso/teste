@@ -1,19 +1,18 @@
 package br.com.orquestrator.orquestrator.core.engine.runtime;
 
-import br.com.orquestrator.orquestrator.domain.vo.DataPath;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
  * SignalSchema: Representação estática do SignalRegistry para validação de contratos.
- * Centraliza a inteligência de "quem provê o quê" no grafo de sinais.
+ * Agora usa Strings puras para validação de provisão.
  */
 public class SignalSchema {
-    private final Set<DataPath> available = new HashSet<>();
+    private final Set<String> available = new HashSet<>();
 
     public void register(String path) {
         if (path != null && !path.isBlank()) {
-            available.add(DataPath.of(path));
+            available.add(path);
         }
     }
 
@@ -21,9 +20,17 @@ public class SignalSchema {
      * Verifica se um caminho solicitado pode ser satisfeito pelos sinais registrados.
      */
     public boolean canProvide(String requiredPath) {
-        DataPath req = DataPath.of(requiredPath);
-        // Um caminho é satisfeito se ele mesmo existe, se um pai existe (container)
-        // ou se ele é um prefixo de algo que existe (provisão parcial).
-        return available.stream().anyMatch(prov -> prov.provides(req) || req.provides(prov));
+        if (requiredPath == null || requiredPath.isBlank()) return false;
+        
+        // Normaliza para garantir comparação correta (assume padrão JSON Pointer)
+        String req = requiredPath.startsWith("/") ? requiredPath : "/" + requiredPath;
+        
+        return available.stream().anyMatch(prov -> {
+            String p = prov.startsWith("/") ? prov : "/" + prov;
+            // Um caminho é satisfeito se ele mesmo existe, ou se um pai/filho existe.
+            // Ex: /cliente é satisfeito por /cliente/id
+            // Ex: /cliente/id é satisfeito por /cliente
+            return p.equals(req) || req.startsWith(p + "/") || p.startsWith(req + "/");
+        });
     }
 }

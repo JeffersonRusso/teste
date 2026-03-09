@@ -1,8 +1,8 @@
 package br.com.orquestrator.orquestrator.tasks.s3;
 
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
@@ -17,12 +17,12 @@ public class S3Task implements Task {
     private final S3TaskConfiguration config;
 
     @Override
-    public TaskResult execute(Map<String, DataValue> inputs) {
+    public TaskResult execute(Map<String, JsonNode> inputs) {
         return s3Executor.upload(
             config.bucket(),
             config.key(),
             config.region(),
-            config.content()
+            String.valueOf(config.content()) // Converte o conteúdo para String
         );
     }
 }

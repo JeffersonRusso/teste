@@ -1,40 +1,39 @@
 package br.com.orquestrator.orquestrator.tasks.base;
 
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
-import br.com.orquestrator.orquestrator.domain.model.DataValueFactory;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.MissingNode;
+
 import java.util.Map;
 
 /**
- * TaskResult: Contrato único de saída para qualquer Task.
- * Exige DataValue para garantir a tipagem desde a origem.
+ * TaskResult: Resultado da execução de uma tarefa.
+ * Agora usa JsonNode.
  */
 public record TaskResult(
-    DataValue body,
-    int status,
-    Map<String, Object> metadata
+    Status status,
+    JsonNode body,
+    Map<String, Object> metadata,
+    String errorMessage
 ) {
-    public static TaskResult success(DataValue body) {
-        return new TaskResult(body, 200, Map.of());
+    public enum Status { SUCCESS, ERROR, SKIPPED }
+
+    public static TaskResult success(JsonNode body) {
+        return new TaskResult(Status.SUCCESS, body != null ? body : MissingNode.getInstance(), Map.of(), null);
     }
 
-    // Sobrecarga de conveniência para facilitar a criação (converte automaticamente via Factory)
-    public static TaskResult success(Object body) {
-        return new TaskResult(DataValueFactory.of(body), 200, Map.of());
+    public static TaskResult success(JsonNode body, Map<String, Object> metadata) {
+        return new TaskResult(Status.SUCCESS, body != null ? body : MissingNode.getInstance(), metadata, null);
     }
 
-    public static TaskResult success(DataValue body, Map<String, Object> metadata) {
-        return new TaskResult(body, 200, metadata);
+    public static TaskResult error(int code, String message) {
+        return new TaskResult(Status.ERROR, MissingNode.getInstance(), Map.of("code", code), message);
+    }
+    
+    public static TaskResult failure(Map<String, Object> errorData) {
+        // CORREÇÃO: Usando pojoNode para converter o mapa
+        return new TaskResult(Status.ERROR, JsonNodeFactory.instance.pojoNode(errorData), Map.of(), "Falha na execução");
     }
 
-    public static TaskResult error(int status, String message) {
-        return new TaskResult(DataValue.EMPTY, status, Map.of("error_message", message));
-    }
-
-    public static TaskResult failure(Map<String, Object> errorBody) {
-        return new TaskResult(DataValueFactory.of(errorBody), 500, Map.of());
-    }
-
-    public boolean isSuccess() {
-        return status >= 200 && status < 300;
-    }
+    public boolean isSuccess() { return status == Status.SUCCESS; }
 }

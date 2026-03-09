@@ -22,8 +22,8 @@ public class PipelineNodeOutputEntity {
     @Column(name = "local_key")
     private String localKey;
 
-    @Column(name = "target_key")
-    private String targetKey;
+    @Column(name = "target_signal")
+    private String targetSignal;
 
     @Column(name = "produced_semantic_type")
     private String producedSemanticType;

@@ -1,8 +1,8 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.api;
 
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
@@ -18,9 +18,7 @@ public class InterceptorTask implements Task {
     private final List<TaskInterceptor> interceptors;
 
     @Override
-    public TaskResult execute(Map<String, DataValue> inputs) {
-        // Adaptamos o novo contrato para a cadeia de interceptores existente
-        // Nota: No futuro, podemos simplificar a Chain para não usar TaskContext
+    public TaskResult execute(Map<String, JsonNode> inputs) {
         TaskInterceptor.Chain chain = new RealInterceptorChain(interceptors, 0, inputs, coreTask);
         return chain.proceed(inputs);
     }

@@ -3,6 +3,7 @@ package br.com.orquestrator.orquestrator.adapter.persistence.repository.entity;
 import br.com.orquestrator.orquestrator.adapter.persistence.repository.entity.json.TaskConfig;
 import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.NodeId;
+import br.com.orquestrator.orquestrator.domain.vo.SignalBinding;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -64,11 +65,18 @@ public class PipelineNodeEntity {
         String finalType = type != null ? type : (template != null ? template.getType() : "UNKNOWN");
         Map<String, Object> finalConfig = configuration != null ? configuration.toFullMap() : Map.of();
         
-        Map<String, String> inputMap = inputs != null ? inputs.stream()
-                .collect(Collectors.toMap(PipelineNodeInputEntity::getLocalKey, PipelineNodeInputEntity::getSourcePath)) : Map.of();
+        // Mapeia diretamente para SignalBinding
+        Map<String, SignalBinding> inputMap = inputs != null ? inputs.stream()
+                .collect(Collectors.toMap(
+                    PipelineNodeInputEntity::getLocalKey, 
+                    i -> new SignalBinding(i.getSourceSignal(), i.getSourcePath())
+                )) : Map.of();
 
         Map<String, String> outputMap = outputs != null ? outputs.stream()
-                .collect(Collectors.toMap(PipelineNodeOutputEntity::getLocalKey, PipelineNodeOutputEntity::getTargetKey)) : Map.of();
+                .collect(Collectors.toMap(
+                    PipelineNodeOutputEntity::getLocalKey, 
+                    PipelineNodeOutputEntity::getTargetSignal
+                )) : Map.of();
 
         return new TaskDefinition(
             new NodeId(nodeId.toString()), 1, name, finalType, 

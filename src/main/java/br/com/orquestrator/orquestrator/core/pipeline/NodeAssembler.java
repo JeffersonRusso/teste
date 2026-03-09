@@ -31,8 +31,8 @@ public class NodeAssembler {
         var executableTask = taskChainCompiler.compile(coreTask, def);
 
         // 1. Compilação das Projeções (Soldagem de Sinais)
-        SignalProjector inputProjector = DefaultSignalProjector.compile(def.inputs());
-        SignalProjector outputProjector = DefaultSignalProjector.compile(def.outputs());
+        SignalProjector inputProjector = DefaultSignalProjector.compileInputs(def.inputs());
+        SignalProjector outputProjector = DefaultSignalProjector.compileOutputs(def.outputs());
 
         // 2. Pré-cálculo de campos obrigatórios para a Task
         Set<String> requiredFields = def.getRequiredFields();

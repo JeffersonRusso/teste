@@ -2,14 +2,15 @@ package br.com.orquestrator.orquestrator.domain.model;
 
 import br.com.orquestrator.orquestrator.domain.FeatureDefinition;
 import br.com.orquestrator.orquestrator.domain.vo.NodeId;
+import br.com.orquestrator.orquestrator.domain.vo.SignalBinding;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * TaskDefinition: Definição imutável de uma tarefa no pipeline.
+ * Agora usa SignalBinding para inputs tipados.
  */
 public record TaskDefinition(
     NodeId nodeId,
@@ -20,7 +21,7 @@ public record TaskDefinition(
     Map<String, Object> config,
     List<FeatureDefinition> features,
     boolean failFast,
-    Map<String, String> inputs,
+    Map<String, SignalBinding> inputs, // Tipado!
     Map<String, String> outputs,
     Set<String> activationTags,
     String guardCondition,
@@ -36,10 +37,6 @@ public record TaskDefinition(
         activationTags = activationTags != null ? Set.copyOf(activationTags) : Set.of("default");
     }
 
-    /**
-     * Identifica quais campos a tarefa pretende produzir (baseado nas chaves de saída).
-     * Útil para otimizações de extração (ex: HttpTask).
-     */
     public Set<String> getRequiredFields() {
         if (outputs == null || outputs.isEmpty()) return Set.of(".");
         return outputs.keySet();

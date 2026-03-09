@@ -1,7 +1,6 @@
 package br.com.orquestrator.orquestrator.core.pipeline;
 
 import br.com.orquestrator.orquestrator.domain.model.PipelineDefinition;
-import br.com.orquestrator.orquestrator.domain.vo.DataPath;
 import br.com.orquestrator.orquestrator.domain.vo.Pipeline;
 import br.com.orquestrator.orquestrator.infra.Flow;
 import lombok.extern.slf4j.Slf4j;
@@ -9,13 +8,13 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * PipelineCompiler: Transforma definições em executáveis usando um DAG de compilação.
- * Agora simplificado para o modelo de Dataflow puro.
+ * Agora usa Strings puras para os outputs requeridos.
  */
 @Slf4j
 @Component
@@ -45,11 +44,10 @@ public class PipelineCompiler {
     private Pipeline buildFinalPipeline(CompilationSession session) {
         PipelineDefinition def = session.getDefinition();
 
-        Set<DataPath> requiredPaths = def.defaultRequiredOutputs().stream()
-                .map(DataPath::of)
-                .collect(Collectors.toSet());
+        Set<String> requiredPaths = def.defaultRequiredOutputs() != null 
+            ? new HashSet<>(def.defaultRequiredOutputs()) 
+            : Set.of();
 
-        // O Pipeline agora é apenas o Grafo de Nós e metadados de execução
         return new Pipeline(
             session.getNodes(), 
             Duration.ofMillis(def.timeoutMs()), 

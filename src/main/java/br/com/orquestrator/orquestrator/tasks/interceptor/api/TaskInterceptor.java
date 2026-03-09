@@ -1,17 +1,17 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.api;
 
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.util.Map;
 
 /**
- * TaskInterceptor: Unidade de lógica linear (telemetria, erro, validação).
+ * TaskInterceptor: Unidade de lógica linear.
  */
 public interface TaskInterceptor {
     TaskResult intercept(Chain chain);
 
     interface Chain {
-        Map<String, DataValue> inputs();
-        TaskResult proceed(Map<String, DataValue> inputs);
+        Map<String, JsonNode> inputs();
+        TaskResult proceed(Map<String, JsonNode> inputs);
     }
 }

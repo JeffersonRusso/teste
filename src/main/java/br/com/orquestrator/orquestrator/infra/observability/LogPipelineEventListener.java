@@ -2,33 +2,36 @@ package br.com.orquestrator.orquestrator.infra.observability;
 
 import br.com.orquestrator.orquestrator.core.context.identity.RequestIdentity;
 import br.com.orquestrator.orquestrator.core.engine.observability.PipelineEventListener;
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.time.format.DateTimeFormatter;
+import java.util.Map;
 
-/**
- * LogPipelineEventListener: Registra eventos de execução no log do sistema.
- * Agora desacoplado do ContextHolder.
- */
 @Slf4j
 @Component
 public class LogPipelineEventListener implements PipelineEventListener {
 
     @Override
-    public void onPipelineFinished(RequestIdentity identity, boolean success) {
-        String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
-        log.info("[{}] Pipeline finalizado | Operação: {} | ID: {} | Sucesso: {}", 
-                timestamp, identity.operationType(), identity.correlationId(), success);
+    public void onPipelineStart(RequestIdentity identity, Map<String, Object> input) {
+        log.info("[{}] Pipeline iniciado | Operação: {} | ID: {}", 
+            Instant.now(), identity.getOperationType(), identity.getCorrelationId());
     }
 
     @Override
-    public void onTaskFinished(String nodeId, DataValue result, long durationMs) {
-        if (log.isDebugEnabled()) {
-            log.debug("Task [{}] finalizada em {}ms. Tipo de Retorno: {}", 
-                nodeId, durationMs, result.getClass().getSimpleName());
-        }
+    public void onPipelineFinished(RequestIdentity identity, Map<String, Object> output, boolean success) {
+        log.info("[{}] Pipeline finalizado | Operação: {} | ID: {} | Sucesso: {}", 
+            Instant.now(), identity.getOperationType(), identity.getCorrelationId(), success);
+    }
+
+    @Override
+    public void onTaskStart(String nodeId) {
+        log.debug("Iniciando task: {}", nodeId);
+    }
+
+    @Override
+    public void onTaskFinished(String nodeId, JsonNode result, long durationMs) {
+        log.debug("Task [{}] finalizada em {}ms | Resultado: {}", nodeId, durationMs, result);
     }
 }

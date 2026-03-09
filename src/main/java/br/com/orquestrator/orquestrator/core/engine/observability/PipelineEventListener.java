@@ -1,13 +1,13 @@
 package br.com.orquestrator.orquestrator.core.engine.observability;
 
 import br.com.orquestrator.orquestrator.core.context.identity.RequestIdentity;
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
+import com.fasterxml.jackson.databind.JsonNode;
 
-/**
- * PipelineEventListener: Contrato para escutar eventos de execução.
- */
+import java.util.Map;
+
 public interface PipelineEventListener {
-    default void onPipelineStarted(RequestIdentity identity) {}
-    void onPipelineFinished(RequestIdentity identity, boolean success);
-    void onTaskFinished(String nodeId, DataValue result, long durationMs);
+    void onPipelineStart(RequestIdentity identity, Map<String, Object> input);
+    void onPipelineFinished(RequestIdentity identity, Map<String, Object> output, boolean success);
+    void onTaskStart(String nodeId);
+    void onTaskFinished(String nodeId, JsonNode result, long durationMs);
 }

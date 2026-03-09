@@ -1,19 +1,15 @@
 package br.com.orquestrator.orquestrator.infra.el;
 
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
-import br.com.orquestrator.orquestrator.domain.model.DataValueFactory;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import lombok.RequiredArgsConstructor;
 
-/**
- * ConstantCompiledExpression: Bolinha de valor fixo.
- */
 @RequiredArgsConstructor
-public final class ConstantCompiledExpression implements CompiledExpression {
-    
+public class ConstantCompiledExpression implements CompiledExpression {
     private final Object value;
 
     @Override
-    public DataValue evaluate(Object root) {
-        return DataValueFactory.of(value);
+    public JsonNode evaluate(Object root) {
+        return JsonNodeFactory.instance.pojoNode(value);
     }
 }

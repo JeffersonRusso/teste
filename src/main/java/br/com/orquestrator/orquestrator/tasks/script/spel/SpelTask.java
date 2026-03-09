@@ -1,9 +1,10 @@
 package br.com.orquestrator.orquestrator.tasks.script.spel;
 
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
 import br.com.orquestrator.orquestrator.tasks.base.Task;
 import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.MissingNode;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
@@ -18,12 +19,12 @@ public class SpelTask implements Task {
     private final SpelTaskConfiguration config;
 
     @Override
-    public TaskResult execute(Map<String, DataValue> inputs) {
+    public TaskResult execute(Map<String, JsonNode> inputs) {
         if (config.expression() == null || config.expression().isBlank()) {
-            return TaskResult.success(DataValue.EMPTY);
+            return TaskResult.success(MissingNode.getInstance());
         }
 
-        DataValue result = expressionEngine.compile(config.expression()).evaluate(inputs);
+        JsonNode result = expressionEngine.compile(config.expression()).evaluate(inputs);
         return TaskResult.success(result);
     }
 }

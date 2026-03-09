@@ -2,46 +2,38 @@ package br.com.orquestrator.orquestrator.infra.observability;
 
 import br.com.orquestrator.orquestrator.core.context.identity.RequestIdentity;
 import br.com.orquestrator.orquestrator.core.engine.observability.PipelineEventPublisher;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationHandler;
 import lombok.RequiredArgsConstructor;
-import org.aspectj.lang.JoinPoint;
-import org.aspectj.lang.annotation.AfterReturning;
-import org.aspectj.lang.annotation.AfterThrowing;
-import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
+import java.util.Map;
 
-/**
- * ObservabilityAspect: Captura eventos de ciclo de vida do pipeline para telemetria.
- * Agora desacoplado do ContextHolder e focado na RequestIdentity.
- */
-@Aspect
+@Slf4j
 @Component
 @RequiredArgsConstructor
-public class ObservabilityAspect {
+public class ObservabilityAspect implements ObservationHandler<RequestIdentity> {
 
     private final PipelineEventPublisher eventPublisher;
 
-    @Before("execution(* br.com.orquestrator.orquestrator.core.engine.runtime.ExecutionSession.run(..))")
-    public void beforeExecute(JoinPoint joinPoint) {
-        findIdentity(joinPoint).ifPresent(eventPublisher::publishPipelineStarted);
+    @Override
+    public void onStart(RequestIdentity context) {
+        eventPublisher.publishPipelineStart(context, Map.of());
     }
 
-    @AfterReturning("execution(* br.com.orquestrator.orquestrator.core.engine.runtime.ExecutionSession.run(..))")
-    public void afterExecuteSuccess(JoinPoint joinPoint) {
-        findIdentity(joinPoint).ifPresent(id -> eventPublisher.publishPipelineFinished(id, true));
+    @Override
+    public void onStop(RequestIdentity context) {
+        eventPublisher.publishPipelineFinished(context, Map.of(), true);
     }
 
-    @AfterThrowing("execution(* br.com.orquestrator.orquestrator.core.engine.runtime.ExecutionSession.run(..))")
-    public void afterExecuteFailure(JoinPoint joinPoint) {
-        findIdentity(joinPoint).ifPresent(id -> eventPublisher.publishPipelineFinished(id, false));
+    @Override
+    public void onError(RequestIdentity context) {
+        eventPublisher.publishPipelineFinished(context, Map.of(), false);
     }
 
-    private java.util.Optional<RequestIdentity> findIdentity(JoinPoint joinPoint) {
-        return Arrays.stream(joinPoint.getArgs())
-                .filter(arg -> arg instanceof RequestIdentity)
-                .map(arg -> (RequestIdentity) arg)
-                .findFirst();
+    @Override
+    public boolean supportsContext(Observation.Context context) {
+        return context instanceof RequestIdentity;
     }
 }

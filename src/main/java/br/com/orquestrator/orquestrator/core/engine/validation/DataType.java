@@ -3,4 +3,4 @@
 // /**
 //  * OBSOLETO: Removido para simplificar o sistema de validação.
 //  */
-// public class StructuredValidationStrategy { }
+// public enum DataType { }

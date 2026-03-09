@@ -1,12 +1,11 @@
 package br.com.orquestrator.orquestrator.infra.el;
 
-import br.com.orquestrator.orquestrator.domain.model.DataValue;
-import br.com.orquestrator.orquestrator.domain.model.DataValueFactory;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.TextNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
-import org.springframework.expression.spel.ast.PropertyOrFieldReference;
-import org.springframework.expression.spel.standard.SpelExpression;
 
 /**
  * SpelCompiledExpression: Bolinha de lógica dinâmica baseada em SpEL.
@@ -18,13 +17,14 @@ public final class SpelCompiledExpression implements CompiledExpression {
     private final SpelContextFactory contextFactory;
 
     @Override
-    public DataValue evaluate(Object root) {
+    public JsonNode evaluate(Object root) {
         EvaluationContext context = contextFactory.create(root);
         try {
             Object value = expression.getValue(context);
-            return DataValueFactory.of(value);
+            if (value instanceof JsonNode jn) return jn;
+            return JsonNodeFactory.instance.pojoNode(value);
         } catch (Exception e) {
-            return DataValueFactory.of(expression.getExpressionString());
+            return new TextNode(expression.getExpressionString());
         }
     }
 
@@ -36,26 +36,5 @@ public final class SpelCompiledExpression implements CompiledExpression {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    @Override
-    public String rootField() {
-        if (expression instanceof SpelExpression spel) {
-            var node = spel.getAST();
-            while (node != null) {
-                if (node instanceof PropertyOrFieldReference prop) return prop.getName();
-                if (node.getChildCount() > 0) node = node.getChild(0);
-                else break;
-            }
-        }
-        return "";
-    }
-
-    @Override
-    public void setValue(Object root, Object value) {
-        EvaluationContext context = contextFactory.create(root);
-        try {
-            expression.setValue(context, value);
-        } catch (Exception ignored) {}
     }
 }
