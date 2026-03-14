@@ -1,27 +1,22 @@
 package br.com.orquestrator.orquestrator.domain.model;
 
-import java.util.Optional;
-
 /**
- * SemanticHandler: Define o comportamento de um tipo conceitual.
- * Permite que tipos "fakes" tenham comportamentos reais (soma, concat, máscara).
+ * SemanticHandler: Interface de domínio para manipular dados baseados em tipagem semântica.
  */
 public interface SemanticHandler {
-    /** O nome do tipo que este handler atende (ex: CPF, VALOR_DESTINO). */
+    
+    /**
+     * Formata um valor para exibição/exposição (ex: log).
+     */
+    Object format(Object value);
+
+    /**
+     * Valida um valor baseado nas regras semânticas do domínio.
+     */
+    boolean isValid(Object value);
+
+    /**
+     * Retorna o nome do tipo semântico associado a este handler.
+     */
     String getTypeName();
-
-    /** Como transformar o valor em String (Máscaras). */
-    default String format(Object value) {
-        return value != null ? value.toString() : "";
-    }
-
-    /** Operação de soma customizada. */
-    default Object plus(Object value, Object other) {
-        throw new UnsupportedOperationException("Operação '+' não suportada para o tipo " + getTypeName());
-    }
-
-    /** Operação de concatenação customizada. */
-    default Object concat(Object value, Object other) {
-        return value.toString() + other.toString();
-    }
 }

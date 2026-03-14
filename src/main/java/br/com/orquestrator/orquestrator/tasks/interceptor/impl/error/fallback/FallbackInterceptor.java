@@ -1,28 +1,46 @@
 package br.com.orquestrator.orquestrator.tasks.interceptor.impl.error.fallback;
 
-import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
-import br.com.orquestrator.orquestrator.tasks.interceptor.api.TaskInterceptor;
-import br.com.orquestrator.orquestrator.tasks.interceptor.config.FallbackConfig;
+import br.com.orquestrator.orquestrator.api.task.TaskChain;
+import br.com.orquestrator.orquestrator.api.task.TaskInterceptor;
+import br.com.orquestrator.orquestrator.api.task.TaskResult;
+import br.com.orquestrator.orquestrator.core.engine.binding.CompiledConfiguration;
+import br.com.orquestrator.orquestrator.core.ports.output.DataFactory;
+import br.com.orquestrator.orquestrator.domain.model.TaskExecutionContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * FallbackInterceptor: Retorna um valor padrão em caso de falha na tarefa.
+ * FallbackInterceptor: Middleware de contingência agnóstico.
  */
 @Slf4j
 @RequiredArgsConstructor
-public class FallbackInterceptor implements TaskInterceptor {
+public final class FallbackInterceptor implements TaskInterceptor {
 
-    private final FallbackConfig config;
-    private final String nodeId;
+    private final CompiledConfiguration<FallbackConfig> config;
+    private final DataFactory dataFactory;
 
     @Override
-    public TaskResult intercept(Chain chain) {
+    public TaskResult intercept(TaskExecutionContext context, TaskChain chain) {
+        String nodeId = context.getTaskName();
+
         try {
-            return chain.proceed(chain.inputs());
+            TaskResult result = chain.proceed(context);
+            if (result instanceof TaskResult.Failure) {
+                return applyFallback(context, nodeId, null);
+            }
+            return result;
         } catch (Exception e) {
-            log.warn("Acionando Fallback para o nó [{}]: {}", nodeId, e.getMessage());
-            return TaskResult.success(config.value());
+            return applyFallback(context, nodeId, e);
         }
+    }
+
+    private TaskResult applyFallback(TaskExecutionContext context, String nodeId, Exception e) {
+        String reason = (e != null) ? e.getMessage() : "Resultado de falha retornado";
+        log.warn("Acionando Fallback para o nó [{}]. Motivo: {}", nodeId, reason);
+        
+        FallbackConfig resolvedConfig = config.resolve(context.getInputs());
+        
+        // CORREÇÃO: Usa DataFactory para criar o resultado de contingência
+        return TaskResult.success(dataFactory.createValue(resolvedConfig.value()));
     }
 }

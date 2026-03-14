@@ -8,5 +8,5 @@ public record HttpTaskConfiguration(
     String url,
     String method,
     Map<String, String> headers,
-    Object body // Agora recebe o objeto real resolvido
+    Object body
 ) {}

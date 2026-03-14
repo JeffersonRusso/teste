@@ -1,3 +1,4 @@
+/*
 package br.com.orquestrator.orquestrator.adapter.persistence.repository.entity;
 
 import jakarta.persistence.*;
@@ -26,3 +27,4 @@ public class TaskTemplateEntity {
 
     private String description;
 }
+*/

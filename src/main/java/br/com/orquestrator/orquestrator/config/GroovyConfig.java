@@ -22,7 +22,6 @@ public class GroovyConfig {
                 "java.util",
                 "java.math",
                 "java.time",
-                "org.decimal4j.immutable",
                 "com.fasterxml.jackson.databind",
                 "br.com.orquestrator.orquestrator.domain" // Útil para acessar seus modelos
         );

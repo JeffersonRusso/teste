@@ -1,11 +1,12 @@
 package br.com.orquestrator.orquestrator.infra.observability;
 
 import br.com.orquestrator.orquestrator.core.context.identity.RequestIdentity;
-import br.com.orquestrator.orquestrator.core.engine.observability.PipelineEventPublisher;
+import br.com.orquestrator.orquestrator.core.engine.observability.PipelineEvent;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -15,21 +16,18 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ObservabilityAspect implements ObservationHandler<RequestIdentity> {
 
-    private final PipelineEventPublisher eventPublisher;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public void onStart(RequestIdentity context) {
-        eventPublisher.publishPipelineStart(context, Map.of());
+        eventPublisher.publishEvent(new PipelineEvent.PipelineStarted(context, Map.of()));
     }
 
-    @Override
-    public void onStop(RequestIdentity context) {
-        eventPublisher.publishPipelineFinished(context, Map.of(), true);
-    }
+    @Override public void onStop(RequestIdentity context) { /* Gerido pelo UseCase */ }
 
     @Override
     public void onError(RequestIdentity context) {
-        eventPublisher.publishPipelineFinished(context, Map.of(), false);
+        eventPublisher.publishEvent(new PipelineEvent.PipelineFinished(context, Map.of(), false));
     }
 
     @Override

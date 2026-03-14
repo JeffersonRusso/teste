@@ -1,25 +1,33 @@
+/*
 package br.com.orquestrator.orquestrator.core.engine.validation;
 
-import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
-import br.com.orquestrator.orquestrator.exception.PipelineException;
+import br.com.orquestrator.orquestrator.core.engine.runtime.SignalSchema;
+import br.com.orquestrator.orquestrator.domain.model.definition.TaskDefinition;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
+// CLASSE DESCONTINUADA: A validação de topologia agora é feita pelos CompilationSteps.
+@Slf4j
 @Component
 public class TaskValidator {
 
-    public void validate(TaskDefinition def, Map<String, Object> resolvedInputs) {
-        if (def.inputs() == null) return;
+    public void validate(TaskDefinition task, SignalSchema schema) {
+        List<String> missing = new ArrayList<>();
 
-        def.inputs().forEach((localKey, binding) -> {
-            // Verifica se o dado obrigatório está presente no mapa resolvido
-            if (resolvedInputs.get(localKey) == null) {
-                throw new PipelineException(
-                    String.format("Erro de Contrato: A task [%s] requer o dado '%s' (mapeado de '%s'), mas ele está nulo.", 
-                    def.nodeId().value(), localKey, binding)
-                );
+        task.getInputsAsMap().values().forEach(binding -> {
+            String requiredSignal = binding.signalName();
+            if (!schema.canProvide(requiredSignal)) {
+                missing.add(requiredSignal);
             }
         });
+
+        if (!missing.isEmpty()) {
+            throw new IllegalStateException("Tarefa [" + task.nodeId().value() + 
+                "] possui dependências não satisfeitas: " + missing);
+        }
     }
 }
+*/

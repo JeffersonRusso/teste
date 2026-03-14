@@ -1,6 +1,5 @@
 package br.com.orquestrator.orquestrator.infra.cache;
 
-import br.com.orquestrator.orquestrator.core.engine.runtime.CacheEngine;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.benmanes.caffeine.cache.Cache;
 import org.springframework.stereotype.Component;

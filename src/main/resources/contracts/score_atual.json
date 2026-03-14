@@ -1,0 +1,8 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Score de Crédito",
+  "type": "number",
+  "minimum": 0,
+  "maximum": 1000,
+  "description": "Pontuação de crédito do cliente entre 0 e 1000"
+}

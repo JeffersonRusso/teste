@@ -1,0 +1,7 @@
+  {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Patrimônio Total",
+  "type": "number",
+  "minimum": 0,
+  "description": "Valor total dos bens e investimentos do cliente"
+}

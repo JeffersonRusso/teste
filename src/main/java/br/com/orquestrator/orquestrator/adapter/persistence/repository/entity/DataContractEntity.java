@@ -14,23 +14,8 @@ public class DataContractEntity {
     @Column(name = "context_key")
     private String contextKey;
 
-    @Column(name = "semantic_type")
-    private String semanticType;
-
-    @Column(name = "format_rule")
-    private String formatRule;
-
     @Column(name = "schema_definition", columnDefinition = "TEXT")
     private String schemaDefinition;
-
-    @Column(name = "min_value")
-    private Double minValue;
-
-    @Column(name = "max_value")
-    private Double maxValue;
-
-    @Column(name = "is_required")
-    private Boolean isRequired;
 
     private String description;
 }

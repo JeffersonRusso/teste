@@ -1,58 +1,42 @@
 package br.com.orquestrator.orquestrator.core.engine.binding;
 
-import br.com.orquestrator.orquestrator.infra.cache.CacheFactory;
+import br.com.orquestrator.orquestrator.core.ports.output.DataConverter;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
-import br.com.orquestrator.orquestrator.exception.TaskConfigurationException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.github.benmanes.caffeine.cache.Cache;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
- * TaskBindingResolver: Resolve expressões dinâmicas na configuração.
- * Agora usa JsonNode.
+ * TaskBindingResolver: Motor de compilação de configurações agnóstico.
  */
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class TaskBindingResolver {
 
     private final ExpressionEngine expressionEngine;
-    private final ObjectMapper objectMapper;
-    
-    private final Cache<Class<?>, ObjectReader> readerCache = CacheFactory.createHotCache(128);
+    private final DataConverter dataConverter; // Injeção via Porta
+    private static final Pattern EXPRESSION_PATTERN = Pattern.compile("#\\{([^}]+)\\}");
 
-    public <T> T resolve(Map<String, Object> rawConfig, Map<String, JsonNode> inputs, Class<T> targetClass) {
-        if (rawConfig == null || rawConfig.isEmpty()) {
-            return convert(Map.of(), targetClass);
+    public <T> CompiledConfiguration<T> compile(Map<String, Object> configMap, Class<T> configClass) {
+        Map<String, Object> rawConfig = new HashMap<>();
+        Map<String, br.com.orquestrator.orquestrator.infra.el.CompiledExpression> expressions = new HashMap<>();
+
+        if (configMap != null) {
+            configMap.forEach((key, value) -> {
+                if (value instanceof String s) {
+                    Matcher matcher = EXPRESSION_PATTERN.matcher(s);
+                    if (matcher.find()) {
+                        expressions.put(key, expressionEngine.compile(s));
+                    }
+                }
+                rawConfig.put(key, value);
+            });
         }
 
-        try {
-            Map<String, Object> resolvedMap = new HashMap<>();
-            rawConfig.forEach((key, value) -> 
-                resolvedMap.put(key, expressionEngine.compile(value).evaluate(inputs))
-            );
-
-            return convert(resolvedMap, targetClass);
-            
-        } catch (Exception e) {
-            throw new TaskConfigurationException("Falha ao resolver binding para " + targetClass.getSimpleName(), e);
-        }
-    }
-
-    private <T> T convert(Map<String, Object> map, Class<T> targetClass) {
-        try {
-            ObjectReader reader = readerCache.get(targetClass, objectMapper::readerFor);
-            JsonNode node = objectMapper.valueToTree(map);
-            return reader.readValue(node);
-        } catch (Exception e) {
-            return objectMapper.convertValue(map, targetClass);
-        }
+        return new CompiledConfiguration<>(rawConfig, configClass, expressions, dataConverter);
     }
 }

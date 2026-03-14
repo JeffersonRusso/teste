@@ -1,9 +1,8 @@
 package br.com.orquestrator.orquestrator.infra.cache;
 
-import br.com.orquestrator.orquestrator.adapter.persistence.repository.PipelineNodeRepository;
-import br.com.orquestrator.orquestrator.adapter.persistence.repository.entity.PipelineNodeEntity;
-import br.com.orquestrator.orquestrator.core.engine.runtime.BackgroundExecutionEngine;
-import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
+import br.com.orquestrator.orquestrator.core.engine.executor.BackgroundExecutionEngine;
+import br.com.orquestrator.orquestrator.core.ports.output.TaskRepository;
+import br.com.orquestrator.orquestrator.domain.model.definition.TaskDefinition;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -15,27 +14,29 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * GlobalTaskScheduler: Responsável apenas pelo AGENDAMENTO de tarefas.
- * Delega a execução para o BackgroundExecutionEngine.
+ * GlobalTaskScheduler: Responsável pelo AGENDAMENTO de tarefas globais.
+ * Corrigido para usar o Domínio Rico do TaskDefinition.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class GlobalTaskScheduler {
 
-    private final PipelineNodeRepository nodeRepository;
+    private final TaskRepository taskRepository;
     private final TaskScheduler taskScheduler;
     private final BackgroundExecutionEngine backgroundEngine;
 
     @EventListener(ApplicationReadyEvent.class)
     public void init() {
         log.info("Escaneando tasks globais para agendamento...");
-        List<PipelineNodeEntity> allNodes = nodeRepository.findAll();
+        List<TaskDefinition> allTasks = taskRepository.findAll();
 
-        for (var node : allNodes) {
-            var config = node.getConfiguration();
-            if (config != null && Boolean.TRUE.equals(config.getGlobal()) && config.getCron() != null) {
-                schedule(node.toDomain(), config.getCron());
+        for (TaskDefinition task : allTasks) {
+            // Agora usamos o TaskBehavior rico definido no domínio
+            var behavior = task.behavior();
+            
+            if (behavior.isGlobal() && behavior.cron() != null && !behavior.cron().isBlank()) {
+                schedule(task, behavior.cron());
             }
         }
     }

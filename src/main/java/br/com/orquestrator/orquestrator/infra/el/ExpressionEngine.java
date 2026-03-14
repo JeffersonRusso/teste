@@ -1,13 +1,11 @@
 package br.com.orquestrator.orquestrator.infra.el;
 
 /**
- * ExpressionEngine: Fábrica de bolinhas de lógica.
+ * ExpressionEngine: O contrato para o motor de lógica dinâmica.
  */
 public interface ExpressionEngine {
     
-    /** 
-     * Compila um valor em uma expressão executável.
-     * Se for String, parseia como SpEL. Se for outro objeto, vira uma constante.
-     */
-    CompiledExpression compile(Object value);
+    /** Compila um objeto em uma expressão executável. */
+    CompiledExpression compile(Object expression);
+
 }

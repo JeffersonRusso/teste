@@ -26,10 +26,6 @@ public class UndertowConfig {
             factory.addBuilderCustomizers(builder -> {
                 builder.setByteBufferPool(new DefaultByteBufferPool(true, 16384, -1, 0));
                 builder.setIoThreads(Runtime.getRuntime().availableProcessors());
-                
-                // DESTRAVADO: Removemos o limite artificial de 100 threads.
-                // Deixamos o Undertow gerenciar o pool nativo (padrão ~256) para aceitar conexões.
-                // O processamento real acontece nas Virtual Threads acima.
             });
         };
     }

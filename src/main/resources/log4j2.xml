@@ -17,7 +17,7 @@
         <!-- Silenciamos a telemetria no log para salvar CPU -->
         <Logger name="br.com.orquestrator.orquestrator.core.engine.runtime.TelemetryDecorator" level="ERROR"/>
 
-        <Root level="ERROR">
+        <Root level="DEBUG">
             <AppenderRef ref="Async"/>
         </Root>
     </Loggers>

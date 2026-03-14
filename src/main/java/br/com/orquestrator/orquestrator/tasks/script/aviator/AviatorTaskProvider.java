@@ -1,41 +1,27 @@
 package br.com.orquestrator.orquestrator.tasks.script.aviator;
 
+import br.com.orquestrator.orquestrator.api.task.Task;
+import br.com.orquestrator.orquestrator.core.engine.binding.CompiledConfiguration;
 import br.com.orquestrator.orquestrator.core.engine.binding.TaskBindingResolver;
-import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
-import br.com.orquestrator.orquestrator.tasks.TaskProvider;
-import br.com.orquestrator.orquestrator.tasks.base.Task;
-import br.com.orquestrator.orquestrator.tasks.script.ScriptTaskConfiguration;
-import com.googlecode.aviator.AviatorEvaluator;
-import com.googlecode.aviator.Expression;
-import lombok.RequiredArgsConstructor;
+import br.com.orquestrator.orquestrator.core.ports.output.AbstractTaskProvider;
+import br.com.orquestrator.orquestrator.core.ports.output.DataFactory;
+import br.com.orquestrator.orquestrator.domain.model.definition.TaskDefinition;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-import java.util.Optional;
-
-/**
- * AviatorTaskProvider: Fábrica para tarefas Aviator.
- * Compila o script no startup para performance máxima.
- */
 @Component
-@RequiredArgsConstructor
-public class AviatorTaskProvider implements TaskProvider {
+public class AviatorTaskProvider extends AbstractTaskProvider<AviatorTaskConfiguration> {
 
-    private final TaskBindingResolver bindingResolver;
+    private final DataFactory dataFactory;
 
-    @Override public String getType() { return "AVIATOR"; }
-    
-    @Override public Optional<Class<?>> getConfigClass() { 
-        return Optional.of(ScriptTaskConfiguration.class); 
+    public AviatorTaskProvider(TaskBindingResolver bindingResolver, DataFactory dataFactory) {
+        super(bindingResolver, AviatorTaskConfiguration.class);
+        this.dataFactory = dataFactory;
     }
 
+    @Override public String getType() { return "AVIATOR"; }
+
     @Override
-    public Task create(TaskDefinition definition) {
-        ScriptTaskConfiguration config = bindingResolver.resolve(definition.config(), Map.of(), ScriptTaskConfiguration.class);
-        
-        // Compila o script uma única vez no startup
-        Expression compiledScript = AviatorEvaluator.compile(config.script(), true);
-        
-        return new AviatorTask(compiledScript);
+    protected Task createTask(TaskDefinition definition, CompiledConfiguration<AviatorTaskConfiguration> config) {
+        return new AviatorTask(config, dataFactory);
     }
 }

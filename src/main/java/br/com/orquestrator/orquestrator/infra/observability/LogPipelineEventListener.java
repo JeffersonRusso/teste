@@ -1,37 +1,40 @@
 package br.com.orquestrator.orquestrator.infra.observability;
 
-import br.com.orquestrator.orquestrator.core.context.identity.RequestIdentity;
-import br.com.orquestrator.orquestrator.core.engine.observability.PipelineEventListener;
-import com.fasterxml.jackson.databind.JsonNode;
+import br.com.orquestrator.orquestrator.core.engine.observability.PipelineEvent;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.util.Map;
 
+/**
+ * LogPipelineEventListener: Adapter que agora utiliza o mecanismo nativo de eventos do Spring.
+ */
 @Slf4j
 @Component
-public class LogPipelineEventListener implements PipelineEventListener {
+public class LogPipelineEventListener {
 
-    @Override
-    public void onPipelineStart(RequestIdentity identity, Map<String, Object> input) {
-        log.info("[{}] Pipeline iniciado | Operação: {} | ID: {}", 
-            Instant.now(), identity.getOperationType(), identity.getCorrelationId());
-    }
+    @EventListener
+    public void onPipelineEvent(PipelineEvent event) {
+        switch (event) {
+            case PipelineEvent.PipelineStarted e -> 
+                log.info("[{}] Pipeline iniciado | Operação: {} | ID: {}", 
+                        Instant.now(), e.operationType(), e.correlationId());
 
-    @Override
-    public void onPipelineFinished(RequestIdentity identity, Map<String, Object> output, boolean success) {
-        log.info("[{}] Pipeline finalizado | Operação: {} | ID: {} | Sucesso: {}", 
-            Instant.now(), identity.getOperationType(), identity.getCorrelationId(), success);
-    }
+            case PipelineEvent.PipelineFinished e -> 
+                log.info("[{}] Pipeline finalizado | Operação: {} | ID: {} | Sucesso: {}", 
+                        Instant.now(), e.operationType(), e.correlationId(), e.success());
 
-    @Override
-    public void onTaskStart(String nodeId) {
-        log.debug("Iniciando task: {}", nodeId);
-    }
+            case PipelineEvent.TaskStarted e -> 
+                log.debug("Task [{}] iniciada.", e.nodeId());
 
-    @Override
-    public void onTaskFinished(String nodeId, JsonNode result, long durationMs) {
-        log.debug("Task [{}] finalizada em {}ms | Resultado: {}", nodeId, durationMs, result);
+            case PipelineEvent.TaskFinished e -> 
+                log.debug("Task [{}] finalizada em {}ms | Resultado: {}", 
+                        e.nodeId(), e.durationMs(), e.result());
+
+            case PipelineEvent.TaskFailed e -> 
+                log.error("Task [{}] FALHOU em {}ms | Causa: {}", 
+                        e.nodeId(), e.durationMs(), e.cause().getMessage());
+        }
     }
 }

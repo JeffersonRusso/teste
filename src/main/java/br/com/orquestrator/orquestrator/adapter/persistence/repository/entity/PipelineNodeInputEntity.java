@@ -6,6 +6,9 @@ import lombok.Setter;
 
 import java.util.UUID;
 
+/**
+ * PipelineNodeInputEntity: Representação relacional das entradas de um nó.
+ */
 @Entity
 @Table(name = "tb_pipeline_node_input")
 @Getter
@@ -28,7 +31,7 @@ public class PipelineNodeInputEntity {
     @Column(name = "source_path")
     private String sourcePath;
 
-    @Column(name = "expected_semantic_type")
+    @Column(name = "expected_semantic_type") // Novo campo para Tipagem Semântica
     private String expectedSemanticType;
 
     @Column(name = "is_required")

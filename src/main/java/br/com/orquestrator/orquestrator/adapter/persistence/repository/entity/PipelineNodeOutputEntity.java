@@ -6,6 +6,9 @@ import lombok.Setter;
 
 import java.util.UUID;
 
+/**
+ * PipelineNodeOutputEntity: Representação relacional das saídas de um nó.
+ */
 @Entity
 @Table(name = "tb_pipeline_node_output")
 @Getter
@@ -25,6 +28,6 @@ public class PipelineNodeOutputEntity {
     @Column(name = "target_signal")
     private String targetSignal;
 
-    @Column(name = "produced_semantic_type")
+    @Column(name = "produced_semantic_type") // Novo campo para Tipagem Semântica
     private String producedSemanticType;
 }

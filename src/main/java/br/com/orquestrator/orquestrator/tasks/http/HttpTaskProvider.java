@@ -1,48 +1,29 @@
 package br.com.orquestrator.orquestrator.tasks.http;
 
+import br.com.orquestrator.orquestrator.api.task.Task;
+import br.com.orquestrator.orquestrator.core.engine.binding.CompiledConfiguration;
 import br.com.orquestrator.orquestrator.core.engine.binding.TaskBindingResolver;
-import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
-import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
-import br.com.orquestrator.orquestrator.tasks.TaskProvider;
-import br.com.orquestrator.orquestrator.tasks.base.Task;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import br.com.orquestrator.orquestrator.core.ports.output.AbstractTaskProvider;
+import br.com.orquestrator.orquestrator.core.ports.output.DataFactory;
+import br.com.orquestrator.orquestrator.domain.model.definition.TaskDefinition;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import java.util.Map;
-import java.util.Optional;
+@Component("HTTP") // Nomeado para descoberta nativa
+public class HttpTaskProvider extends AbstractTaskProvider<HttpTaskConfiguration> {
 
-/**
- * HttpTaskProvider: Fábrica para tarefas HTTP.
- * Resolve a configuração estática no startup e prepara a task.
- */
-@Component
-@RequiredArgsConstructor
-public class HttpTaskProvider implements TaskProvider {
+    private final RestClient restClient;
+    private final DataFactory dataFactory;
 
-    private final RestClient.Builder restClientBuilder;
-    private final ExpressionEngine expressionEngine;
-    private final TaskBindingResolver bindingResolver;
-    private final ObjectMapper objectMapper;
-
-    @Override public String getType() { return "HTTP"; }
-    
-    @Override public Optional<Class<?>> getConfigClass() { 
-        return Optional.of(HttpTaskConfiguration.class); 
+    public HttpTaskProvider(TaskBindingResolver bindingResolver, RestClient restClient, DataFactory dataFactory) {
+        super(bindingResolver, HttpTaskConfiguration.class);
+        this.restClient = restClient;
+        this.dataFactory = dataFactory;
     }
 
+
     @Override
-    public Task create(TaskDefinition definition) {
-        // Resolve a configuração (estática ou com placeholders) no startup
-        HttpTaskConfiguration config = bindingResolver.resolve(definition.config(), Map.of(), HttpTaskConfiguration.class);
-        
-        return new HttpTask(
-            restClientBuilder.build(), 
-            expressionEngine, 
-            objectMapper, 
-            config, 
-            definition.getRequiredFields()
-        );
+    protected Task createTask(TaskDefinition definition, CompiledConfiguration<HttpTaskConfiguration> config) {
+        return new HttpTask(restClient, dataFactory, config);
     }
 }

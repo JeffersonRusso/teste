@@ -1,6 +1,6 @@
 package br.com.orquestrator.orquestrator.tasks.registry;
 
-import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
+import br.com.orquestrator.orquestrator.domain.model.definition.TaskDefinition;
 import java.util.Optional;
 
 /**

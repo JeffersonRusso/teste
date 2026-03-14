@@ -1,35 +1,30 @@
 package br.com.orquestrator.orquestrator.tasks.script.spel;
 
+import br.com.orquestrator.orquestrator.api.task.Task;
+import br.com.orquestrator.orquestrator.core.engine.binding.CompiledConfiguration;
 import br.com.orquestrator.orquestrator.core.engine.binding.TaskBindingResolver;
-import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
+import br.com.orquestrator.orquestrator.core.ports.output.AbstractTaskProvider;
+import br.com.orquestrator.orquestrator.core.ports.output.DataFactory;
+import br.com.orquestrator.orquestrator.domain.model.definition.TaskDefinition;
 import br.com.orquestrator.orquestrator.infra.el.ExpressionEngine;
-import br.com.orquestrator.orquestrator.tasks.TaskProvider;
-import br.com.orquestrator.orquestrator.tasks.base.Task;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-import java.util.Optional;
-
-/**
- * SpelTaskProvider: Fábrica para tarefas SpEL.
- */
-@Component
-@RequiredArgsConstructor
-public class SpelTaskProvider implements TaskProvider {
+@Component("SPEL") // Nomeado
+public class SpelTaskProvider extends AbstractTaskProvider<SpelTaskConfiguration> {
 
     private final ExpressionEngine expressionEngine;
-    private final TaskBindingResolver bindingResolver;
+    private final DataFactory dataFactory;
 
-    @Override public String getType() { return "SPEL"; }
-    
-    @Override public Optional<Class<?>> getConfigClass() { 
-        return Optional.of(SpelTaskConfiguration.class); 
+    public SpelTaskProvider(TaskBindingResolver bindingResolver, ExpressionEngine expressionEngine, DataFactory dataFactory) {
+        super(bindingResolver, SpelTaskConfiguration.class);
+        this.expressionEngine = expressionEngine;
+        this.dataFactory = dataFactory;
     }
 
+    @Override public String getType() { return "SPEL"; }
+
     @Override
-    public Task create(TaskDefinition definition) {
-        SpelTaskConfiguration config = bindingResolver.resolve(definition.config(), Map.of(), SpelTaskConfiguration.class);
-        return new SpelTask(expressionEngine, config);
+    protected Task createTask(TaskDefinition definition, CompiledConfiguration<SpelTaskConfiguration> config) {
+        return new SpelTask(expressionEngine, config, dataFactory);
     }
 }

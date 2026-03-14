@@ -1,53 +1,42 @@
 package br.com.orquestrator.orquestrator.core.engine.validation;
 
-import br.com.orquestrator.orquestrator.adapter.persistence.repository.DataContractRepository;
-import br.com.orquestrator.orquestrator.adapter.persistence.repository.entity.DataContractEntity;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import br.com.orquestrator.orquestrator.core.ports.output.DataContractProvider;
+import br.com.orquestrator.orquestrator.core.ports.output.DataContractFactory;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * ContractRegistry: Registro centralizado de contratos.
+ * 100% Hexagonal: Desacoplado de implementações técnicas via Portas de Saída.
+ */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class ContractRegistry {
 
-    private final DataContractRepository repository;
-    private final ObjectMapper objectMapper;
-    private final Map<String, CompiledContract> cache = new ConcurrentHashMap<>();
+    private final DataContractProvider contractProvider;
+    private final DataContractFactory contractFactory; // Injeção via Porta
+    private final Map<String, DataContract> cache = new ConcurrentHashMap<>();
 
-    public record CompiledContract(
-        String key,
-        JsonNode schema,
-        boolean isRequired
-    ) {}
-
-    public Optional<CompiledContract> get(String key) {
-        return Optional.ofNullable(cache.computeIfAbsent(key, this::compile));
+    /**
+     * Recupera um contrato compilado.
+     */
+    public Optional<DataContract> get(String key) {
+        return Optional.ofNullable(cache.computeIfAbsent(key, this::loadAndCompile));
     }
 
-    private CompiledContract compile(String key) {
-        return repository.findById(key)
-                .map(this::toCompiled)
+    private DataContract loadAndCompile(String key) {
+        return contractProvider.findByKey(key)
+                .map(contract -> {
+                    log.info("Compilando contrato para a chave: {}", key);
+                    // Core chama a porta de fábrica
+                    return contractFactory.create(contract.key(), contract.schemaDefinition());
+                })
                 .orElse(null);
-    }
-
-    private CompiledContract toCompiled(DataContractEntity entity) {
-        try {
-            JsonNode schema = entity.getSchemaDefinition() != null 
-                ? objectMapper.readTree(entity.getSchemaDefinition()) 
-                : null;
-            
-            return new CompiledContract(
-                entity.getContextKey(),
-                schema,
-                entity.getIsRequired()
-            );
-        } catch (Exception e) {
-            throw new RuntimeException("Falha ao compilar contrato de dados: " + entity.getContextKey(), e);
-        }
     }
 }

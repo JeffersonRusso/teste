@@ -1,44 +1,38 @@
 package br.com.orquestrator.orquestrator.tasks.script.groovy;
 
-import br.com.orquestrator.orquestrator.tasks.base.Task;
-import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import br.com.orquestrator.orquestrator.api.task.Task;
+import br.com.orquestrator.orquestrator.api.task.TaskResult;
+import br.com.orquestrator.orquestrator.core.engine.binding.CompiledConfiguration;
+import br.com.orquestrator.orquestrator.core.ports.output.DataFactory;
+import br.com.orquestrator.orquestrator.domain.model.TaskExecutionContext;
 import groovy.lang.Binding;
-import groovy.lang.Script;
+import groovy.lang.GroovyShell;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
-import java.util.HashMap;
-import java.util.Map;
-
-/**
- * GroovyTask: Executa scripts Groovy pré-compilados.
- */
+@Slf4j
 @RequiredArgsConstructor
-public class GroovyTask implements Task {
+public final class GroovyTask implements Task {
 
-    private final Class<? extends Script> scriptClass;
-    private final String nodeId;
+    private final CompiledConfiguration<GroovyTaskConfiguration> config;
+    private final DataFactory dataFactory;
 
     @Override
-    public TaskResult execute(Map<String, JsonNode> inputs) {
+    public TaskResult execute(TaskExecutionContext context) {
+        GroovyTaskConfiguration resolved = config.resolve(context.getInputs());
+
         try {
-            Script script = scriptClass.getDeclaredConstructor().newInstance();
-            
-            Map<String, Object> rawInputs = new HashMap<>();
-            inputs.forEach((k, v) -> rawInputs.put(k, v));
-            
-            Binding binding = new Binding();
-            binding.setVariable("inputs", rawInputs);
-            binding.setVariable("ctx", rawInputs);
-            binding.setVariable("nodeId", nodeId);
-            
-            script.setBinding(binding);
-            Object result = script.run();
-            
-            return TaskResult.success(JsonNodeFactory.instance.pojoNode(result));
+            // CORREÇÃO: Chamada sem parâmetros ao getNativeInputs()
+            Binding binding = new Binding(context.getNativeInputs());
+            GroovyShell shell = new GroovyShell(binding);
+
+            Object result = shell.evaluate(resolved.script());
+
+            return TaskResult.success(dataFactory.createValue(result));
+
         } catch (Exception e) {
-            throw new RuntimeException("Falha ao executar script Groovy no nó: " + nodeId, e);
+            log.error("Erro no script Groovy [{}]: {}", context.getTaskName(), e.getMessage());
+            return TaskResult.error(500, "Falha no script Groovy: " + e.getMessage());
         }
     }
 }

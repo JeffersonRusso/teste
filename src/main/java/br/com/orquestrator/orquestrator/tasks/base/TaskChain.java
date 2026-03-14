@@ -1,25 +1,27 @@
+/*
 package br.com.orquestrator.orquestrator.tasks.base;
 
-import java.util.LinkedList;
-import java.util.List;
+import br.com.orquestrator.orquestrator.api.task.Task;
+import br.com.orquestrator.orquestrator.api.task.TaskResult;
+import br.com.orquestrator.orquestrator.domain.model.TaskExecutionContext;
+import com.fasterxml.jackson.databind.JsonNode;
+import lombok.RequiredArgsConstructor;
 
-/**
- * OBSOLETO: A lógica de cadeia agora é feita via InterceptorTask e RealInterceptorChain.
- */
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+// CLASSE DESCONTINUADA: A nova implementação de Chain é a DefaultTaskChain no pacote core.engine.runtime.
+// Esta classe antiga não suporta o novo TaskExecutionContext.
+@RequiredArgsConstructor
 public class TaskChain implements Task {
 
-    private final List<Task> tasks = new LinkedList<>();
-
-    public void addTask(Task task) {
-        tasks.add(task);
-    }
+    private final List<Task> tasks;
 
     @Override
-    public TaskResult execute(java.util.Map<String, com.fasterxml.jackson.databind.JsonNode> inputs) {
-        TaskResult lastResult = null;
-        for (Task task : tasks) {
-            lastResult = task.execute(inputs);
-        }
-        return lastResult;
+    public TaskResult execute(TaskExecutionContext context) {
+        // Implementação antiga incompatível
+        return null; 
     }
 }
+*/

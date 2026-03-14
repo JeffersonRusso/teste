@@ -10,6 +10,9 @@ import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * PipelineVersionEntity: Representação relacional da versão de um pipeline.
+ */
 @Entity
 @Table(name = "tb_pipeline_version")
 @Getter
@@ -28,9 +31,16 @@ public class PipelineVersionEntity {
     @Column(name = "timeout_ms")
     private Long timeoutMs;
 
-    @Column(name = "required_outputs")
+    /**
+     * requiredOutputs: Mapeado como JSON nativo.
+     * O Hibernate cuida da conversão de/para Set<String> automaticamente.
+     */
     @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "required_outputs")
     private Set<String> requiredOutputs;
+
+    @Column(name = "execution_strategy")
+    private String executionStrategy;
 
     @Column(name = "is_active")
     private Boolean isActive;

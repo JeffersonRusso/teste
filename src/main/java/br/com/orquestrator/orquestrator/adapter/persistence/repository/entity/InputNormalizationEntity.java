@@ -1,8 +1,11 @@
+/*
 package br.com.orquestrator.orquestrator.adapter.persistence.repository.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.UUID;
 
 @Entity
 @Table(name = "tb_input_normalization")
@@ -14,18 +17,16 @@ public class InputNormalizationEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "operation_type")
-    private String operationType;
+    @Column(name = "node_id")
+    private UUID nodeId;
 
-    @Column(name = "target_field")
-    private String targetField;
+    @Column(name = "local_key")
+    private String localKey;
 
-    @Column(name = "source_signal")
-    private String sourceSignal;
+    @Column(name = "normalization_type")
+    private String normalizationType;
 
-    @Column(name = "source_path")
-    private String sourcePath;
-
-    @Column(name = "transformation_expression")
-    private String transformationExpression;
+    @Column(name = "normalization_params")
+    private String normalizationParams;
 }
+*/

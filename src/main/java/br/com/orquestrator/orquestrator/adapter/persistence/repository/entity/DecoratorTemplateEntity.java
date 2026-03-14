@@ -1,3 +1,4 @@
+/*
 package br.com.orquestrator.orquestrator.adapter.persistence.repository.entity;
 
 import jakarta.persistence.*;
@@ -19,11 +20,11 @@ public class DecoratorTemplateEntity {
     private String templateId;
 
     private String type;
-    private String phase;
 
-    @Column(name = "default_configuration")
+    @Column(name = "base_configuration")
     @JdbcTypeCode(SqlTypes.JSON)
-    private Map<String, Object> defaultConfiguration;
+    private Map<String, Object> baseConfiguration;
 
     private String description;
 }
+*/

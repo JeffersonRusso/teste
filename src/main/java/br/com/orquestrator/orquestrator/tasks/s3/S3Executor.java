@@ -1,18 +1,23 @@
 package br.com.orquestrator.orquestrator.tasks.s3;
 
-import br.com.orquestrator.orquestrator.tasks.base.TaskResult;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import br.com.orquestrator.orquestrator.api.task.TaskResult;
+import br.com.orquestrator.orquestrator.core.ports.output.DataFactory;
+import com.fasterxml.jackson.databind.JsonNode;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-
+/**
+ * S3Executor: Responsável pela comunicação técnica com o Amazon S3.
+ */
 @Component
+@RequiredArgsConstructor
 public class S3Executor {
-    public TaskResult upload(String bucket, String key, String region, String content) {
-        // Lógica de upload para o S3
-        return TaskResult.success(JsonNodeFactory.instance.pojoNode(content), Map.of(
-            "bucket", bucket,
-            "key", key
-        ));
+
+    private final DataFactory dataFactory;
+
+    public TaskResult execute(S3TaskConfiguration config, JsonNode input) {
+        // TODO: Implementar lógica real de S3 (AWS SDK)
+        // Por enquanto, retornamos um sucesso vazio seguindo o novo padrão DataNode.
+        return TaskResult.success(dataFactory.missing());
     }
 }

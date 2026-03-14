@@ -1,8 +1,8 @@
 package br.com.orquestrator.orquestrator.core.pipeline;
 
-import br.com.orquestrator.orquestrator.core.engine.runtime.ExecutionNode;
-import br.com.orquestrator.orquestrator.domain.model.PipelineDefinition;
-import br.com.orquestrator.orquestrator.domain.model.TaskDefinition;
+import br.com.orquestrator.orquestrator.core.engine.flow.ExecutionNode;
+import br.com.orquestrator.orquestrator.domain.model.definition.PipelineDefinition;
+import br.com.orquestrator.orquestrator.domain.model.definition.TaskDefinition;
 import lombok.Getter;
 import lombok.Setter;
 

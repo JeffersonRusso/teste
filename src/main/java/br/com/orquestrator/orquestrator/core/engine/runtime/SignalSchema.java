@@ -1,36 +1,42 @@
 package br.com.orquestrator.orquestrator.core.engine.runtime;
 
+import br.com.orquestrator.orquestrator.api.signal.CoreSignals;
+import br.com.orquestrator.orquestrator.api.signal.Signal;
+import br.com.orquestrator.orquestrator.domain.model.definition.TaskDefinition;
+
+
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
- * SignalSchema: Representação estática do SignalRegistry para validação de contratos.
- * Agora usa Strings puras para validação de provisão.
+ * SignalSchema: Validador de topologia de sinais.
  */
 public class SignalSchema {
     private final Set<String> available = new HashSet<>();
 
-    public void register(String path) {
-        if (path != null && !path.isBlank()) {
-            available.add(path);
+    public static SignalSchema from(List<TaskDefinition> tasks) {
+        SignalSchema schema = new SignalSchema();
+        schema.register(CoreSignals.RAW);
+        
+        if (tasks != null) {
+            tasks.forEach(task -> {
+                // CORREÇÃO DEMÉTER: Pede apenas os nomes dos sinais produzidos.
+                task.getProducedSignalNames().forEach(schema::register);
+            });
         }
+        return schema;
     }
 
-    /**
-     * Verifica se um caminho solicitado pode ser satisfeito pelos sinais registrados.
-     */
-    public boolean canProvide(String requiredPath) {
-        if (requiredPath == null || requiredPath.isBlank()) return false;
-        
-        // Normaliza para garantir comparação correta (assume padrão JSON Pointer)
-        String req = requiredPath.startsWith("/") ? requiredPath : "/" + requiredPath;
-        
-        return available.stream().anyMatch(prov -> {
-            String p = prov.startsWith("/") ? prov : "/" + prov;
-            // Um caminho é satisfeito se ele mesmo existe, ou se um pai/filho existe.
-            // Ex: /cliente é satisfeito por /cliente/id
-            // Ex: /cliente/id é satisfeito por /cliente
-            return p.equals(req) || req.startsWith(p + "/") || p.startsWith(req + "/");
-        });
+    public void register(Signal signal) {
+        if (signal != null) available.add(signal.signalName());
+    }
+
+    public void register(String signalName) {
+        if (signalName != null && !signalName.isBlank()) available.add(signalName);
+    }
+
+    public boolean canProvide(String signalName) {
+        return signalName != null && available.contains(signalName);
     }
 }

@@ -1,20 +1,20 @@
 package br.com.orquestrator.orquestrator.infra.el;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-
 /**
- * CompiledExpression: O contrato para uma bolinha de lógica.
- * Agora retorna JsonNode.
+ * CompiledExpression: Representa uma expressão pré-compilada agnóstica.
  */
 public interface CompiledExpression {
     
-    JsonNode evaluate(Object root);
-
-    default <T> T evaluate(Object root, Class<T> targetType) {
-        // Implementação padrão pode ser sobrescrita
-        return null; 
+    /** 
+     * Avalia a expressão contra um objeto raiz.
+     * Implementação padrão delega para a versão genérica.
+     */
+    default Object evaluate(Object root) {
+        return evaluate(root, Object.class);
     }
 
-    CompiledExpression IDENTITY = (root) -> JsonNodeFactory.instance.pojoNode(root);
+    /** 
+     * Avalia a expressão retornando um tipo específico.
+     */
+    <T> T evaluate(Object root, Class<T> targetType);
 }

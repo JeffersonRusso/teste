@@ -1,19 +1,21 @@
 package br.com.orquestrator.orquestrator.domain.vo;
 
-import br.com.orquestrator.orquestrator.core.engine.runtime.ExecutionNode;
+import br.com.orquestrator.orquestrator.core.engine.flow.ExecutionNode;
+import br.com.orquestrator.orquestrator.domain.model.vo.NodeId;
+
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Pipeline: O plano de execução final e otimizado.
- * Representa um Grafo de Nós (DAG) pronto para ser processado pelo motor de sinais.
+ * Pipeline: Representa o grafo de execução compilado e suas propriedades de execução.
  */
 public record Pipeline(
-    Map<String, ExecutionNode> nodes,
+    Map<NodeId, ExecutionNode> nodes,
     Duration timeout,
-    Set<String> requiredOutputs // Agora usa Strings puras
+    Set<String> requiredOutputs,
+    String executionStrategy // Estratégia de execução preferencial
 ) {
     public Collection<ExecutionNode> getNodes() { return nodes.values(); }
 }

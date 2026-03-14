@@ -1,3 +1,4 @@
+/*
 package br.com.orquestrator.orquestrator.adapter.persistence.repository.entity;
 
 import jakarta.persistence.*;
@@ -13,25 +14,23 @@ import java.util.UUID;
 @Table(name = "tb_pipeline_node_decorator")
 @Getter
 @Setter
-@IdClass(PipelineNodeDecoratorId.class)
 public class PipelineNodeDecoratorEntity {
 
-    @Id
-    @Column(name = "node_id")
+    @EmbeddedId
+    private PipelineNodeDecoratorId id;
+
+    @Column(name = "node_id", insertable = false, updatable = false)
     private UUID nodeId;
 
-    @Id
-    @Column(name = "template_id")
-    private String templateId;
-
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "template_id", insertable = false, updatable = false)
-    private DecoratorTemplateEntity template;
+    @Column(name = "execution_order")
+    private Integer executionOrder;
 
     @Column(name = "override_configuration")
     @JdbcTypeCode(SqlTypes.JSON)
     private Map<String, Object> overrideConfiguration;
 
-    @Column(name = "execution_order")
-    private Integer executionOrder;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "template_id")
+    private DecoratorTemplateEntity template;
 }
+*/

@@ -1,0 +1,8 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ID do Cliente",
+  "type": "string",
+  "minLength": 5,
+  "pattern": "^[0-9]+$",
+  "description": "Identificador único numérico do cliente"
+}
